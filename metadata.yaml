@@ -1,0 +1,9 @@
+# Copyright 2020 Paul Collins
+# See LICENSE file for licensing details.
+name: microk8s
+series: [focal]
+summary: summary
+description: description
+peers:
+  cluster:
+    interface: microk8s-cluster
