@@ -9,6 +9,9 @@ import subprocess
 from ops.charm import CharmBase, RelationEvent
 from ops.main import main
 from ops.framework import EventSource, Object, ObjectEvents, StoredState
+from ops.model import ActiveStatus, MaintenanceStatus
+
+from utils import join_url_from_add_node_output
 
 logger = logging.getLogger(__name__)
 
@@ -125,16 +128,24 @@ class MicroK8sCharm(CharmBase):
         self.framework.observe(self.cluster.on.node_added, self._on_node_added)
 
     def _on_add_unit(self, event):
-        logger.info('MICROK8S: ran add-node, got join URL')
-        event.join_url = 'join URL for {}'.format(event.unit.name)
+        self.unit.status = MaintenanceStatus('adding node to cluster')
+        output = subprocess.check_output(['/snap/bin/microk8s', 'add-node']).decode('utf-8')
+        url = join_url_from_add_node_output(output)
+        logger.debug('Generated join URL: {}'.format(url))
+        event.join_url = url
+        self.unit.status = ActiveStatus()
 
     def _on_node_added(self, event):
+        self.unit.status = MaintenanceStatus('joining cluster')
         url = event.join_url
-        logger.info('MICROK8S: run join with {}'.format(url))
+        logger.debug('Using join URL: {}'.format(url))
+        subprocess.check_call(['/snap/bin/microk8s', 'join', url])
+        self.unit.status = ActiveStatus()
 
     def _on_install(self, _):
-        logger.info('Installing microk8s.')
-        subprocess.check_call(['snap', 'install', '-classic', 'microk8s'])
+        self.unit.status = MaintenanceStatus('installing microk8s')
+        subprocess.check_call(['/usr/bin/snap', 'install', '--classic', 'microk8s'])
+        self.unit.status = ActiveStatus()
 
 
 if __name__ == "__main__":
