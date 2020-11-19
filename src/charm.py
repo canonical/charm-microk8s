@@ -4,6 +4,7 @@
 
 import json
 import logging
+import subprocess
 
 from ops.charm import CharmBase, RelationEvent
 from ops.main import main
@@ -118,7 +119,6 @@ class MicroK8sCharm(CharmBase):
     def __init__(self, *args):
         super().__init__(*args)
         self.framework.observe(self.on.install, self._on_install)
-        self.framework.observe(self.on.config_changed, self._on_config_changed)
 
         self.cluster = MicroK8sCluster(self, 'cluster')
         self.framework.observe(self.cluster.on.add_unit, self._on_add_unit)
@@ -132,11 +132,9 @@ class MicroK8sCharm(CharmBase):
         url = event.join_url
         logger.info('MICROK8S: run join with {}'.format(url))
 
-    def _on_config_changed(self, _):
-        logger.info('MICROK8S: no config yet')
-
     def _on_install(self, _):
-        logger.info('MICROK8S: snap install --classic microk8s')
+        logger.info('Installing microk8s.')
+        subprocess.check_call(['snap', 'install', '-classic', 'microk8s'])
 
 
 if __name__ == "__main__":
