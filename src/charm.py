@@ -22,19 +22,19 @@ class MicroK8sClusterEvent(RelationEvent):
         self._local_unit = local_unit
 
     @property
-    def join_code(self):
-        """Retrieve join code for local unit stored by the remote unit."""
-        joins = json.loads(self.relation.data[self.app].get('joins', '{}'))
-        return joins.get(self._local_unit.name)
+    def join_url(self):
+        """Retrieve join URL for local unit."""
+        join_urls = json.loads(self.relation.data[self.app].get('join_urls', '{}'))
+        return join_urls.get(self._local_unit.name)
 
-    @join_code.setter
-    def join_code(self, code):
-        """Record join code generated for remote unit."""
-        joins = json.loads(self.relation.data[self.app].get('joins', '{}'))
-        if self.unit.name in joins:
+    @join_url.setter
+    def join_url(self, url):
+        """Record join URL for remote unit."""
+        join_urls = json.loads(self.relation.data[self.app].get('join_urls', '{}'))
+        if self.unit.name in join_urls:
             raise MultipleJoinError('{} is already joined to this cluster'.format(self.unit.name))
-        joins[self.unit.name] = code
-        self.relation.data[self.app]['joins'] = json.dumps(joins)
+        join_urls[self.unit.name] = url
+        self.relation.data[self.app]['join_urls'] = json.dumps(join_urls)
 
     def snapshot(self):
         s = [
@@ -50,12 +50,12 @@ class MicroK8sClusterEvent(RelationEvent):
 
 
 class MicroK8sClusterNewNodeEvent(MicroK8sClusterEvent):
-    """charm runs add-node in response to this event, passes join code back somehow"""
+    """charm runs add-node in response to this event, passes join URL back somehow"""
     pass
 
 
 class MicroK8sClusterNodeAddedEvent(MicroK8sClusterEvent):
-    """charm runs join in response to this event using supplied join code"""
+    """charm runs join in response to this event using supplied join URL"""
     pass
 
 
@@ -88,42 +88,38 @@ class MicroK8sCluster(Object):
         # Remember: reads are remote and writes are local!
         #
         # So, we'll:
-        #  - load "joins" from application settings
+        #  - load "join_urls" from application settings
         #  - check to see if there's a join for the remote unit
-        #  - if there isn't, run `add-node`, store joins in app settings, store joins in relation unit settings
+        #  - if there isn't, run `add-node`, store join_urls in app settings, store join_urls in relation unit settings
         #
-        # We also must handle "seeding" the cluster.  We can tell if we need to do this by "joins" being
+        # We also must handle "seeding" the cluster.  We can tell if we need to do this by "join_urls" being
         # absent from the relation's application settings.
         if not event.unit:
             return
         if event.unit not in event.relation.data:
-            logger.critical('MICROK8S: weird event for {} that has no relation data!'.format(event.unit.name))
+            logger.error('Received event for {} that has no relation data!  Please file a bug.'.format(event.unit.name))
             return
         if self.model.unit.is_leader():
-            joins = json.loads(event.relation.data[event.app].get('joins', '{}'))
-            if not joins:
-                logger.info('MICROK8S: We are the seed node.')
+            join_urls = json.loads(event.relation.data[event.app].get('join_urls', '{}'))
+            if not join_urls:
+                logger.debug('We are the seed node.')
                 self._state.joined = True
                 # The seed node is implicity joined, so no event to fire.
-            if event.unit.name in joins:
-                logger.info('MICROK8S: already joined {}'.format(event.unit.name))
+            if event.unit.name in join_urls:
+                logger.debug('Already added {} to the cluster.'.format(event.unit.name))
                 return
-            logger.info('MICROK8S: joining {}'.format(event.unit.name))
-            # fire add node event here? then what?
-            #   charm code receives add node event
-            #   runs add-node
-            #   sets join code in event, which updates relation data
+            logger.info('Adding {} to the cluster.'.format(event.unit.name))
             self.on.add_unit.emit(**self._event_args(event))
         else:
             if self._state.joined:
                 return
-            if 'joins' not in event.relation.data[event.app]:
+            if 'join_urls' not in event.relation.data[event.app]:
                 return
-            joins = json.loads(event.relation.data[event.app]['joins'])
-            if self.model.unit.name not in joins:
-                logger.info('MICROK8S: no join yet!')
+            join_urls = json.loads(event.relation.data[event.app]['join_urls'])
+            if self.model.unit.name not in join_urls:
+                logger.debug('No join URL for {} yet.'.format(self.model.unit.name))
                 return
-            logger.info('MICROK8S: WE HAVE A JOIN! {}'.format(joins[self.model.unit.name]))
+            logger.info('We have a join URL.')
             self.on.node_added.emit(**self._event_args(event))
             self._state.joined = True
 
@@ -141,12 +137,12 @@ class MicroK8sCharm(CharmBase):
         self.framework.observe(self.cluster.on.node_added, self._on_node_added)
 
     def _on_add_unit(self, event):
-        logger.info('MICROK8S: ran add-node, got join code')
-        event.join_code = 'join code for {}'.format(event.unit.name)
+        logger.info('MICROK8S: ran add-node, got join URL')
+        event.join_url = 'join URL for {}'.format(event.unit.name)
 
     def _on_node_added(self, event):
-        code = event.join_code
-        logger.info('MICROK8S: run join with {}'.format(code))
+        url = event.join_url
+        logger.info('MICROK8S: run join with {}'.format(url))
 
     def _on_config_changed(self, _):
         logger.info('MICROK8S: no config yet')
