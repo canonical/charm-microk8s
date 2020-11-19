@@ -84,16 +84,6 @@ class MicroK8sCluster(Object):
         )
 
     def _on_relation_changed(self, event):
-        # On application relation settings: https://bugs.launchpad.net/juju/+bug/1869915/comments/1
-        # Remember: reads are remote and writes are local!
-        #
-        # So, we'll:
-        #  - load "join_urls" from application settings
-        #  - check to see if there's a join for the remote unit
-        #  - if there isn't, run `add-node`, store join_urls in app settings, store join_urls in relation unit settings
-        #
-        # We also must handle "seeding" the cluster.  We can tell if we need to do this by "join_urls" being
-        # absent from the relation's application settings.
         if not event.unit:
             return
         if event.unit not in event.relation.data:
@@ -103,8 +93,8 @@ class MicroK8sCluster(Object):
             join_urls = json.loads(event.relation.data[event.app].get('join_urls', '{}'))
             if not join_urls:
                 logger.debug('We are the seed node.')
+                # The seed node is implicitly joined, so there's no need to emit an event.
                 self._state.joined = True
-                # The seed node is implicity joined, so no event to fire.
             if event.unit.name in join_urls:
                 logger.debug('Already added {} to the cluster.'.format(event.unit.name))
                 return
