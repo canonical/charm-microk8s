@@ -19,6 +19,10 @@ logger = logging.getLogger(__name__)
 
 # FIXME(pjdc): All of the join_urls and hostnames manipulation below should be encapsulated.
 
+class EventError(Exception):
+    pass
+
+
 class MultipleJoinError(Exception):
     pass
 
@@ -27,6 +31,9 @@ class MicroK8sClusterEvent(RelationEvent):
     def __init__(self, handle, relation, app, unit, local_unit, departing_unit_name):
         super().__init__(handle, relation, app, unit)
         self._local_unit = local_unit
+        # We capture JUJU_DEPARTING_UNIT so that we can freely defer
+        # these events and refer to the value later, even outside a
+        # cluster-relation-departed hook context.
         self._departing_unit_name = departing_unit_name
 
     @property
@@ -78,12 +85,16 @@ class MicroK8sClusterNodeAddedEvent(MicroK8sClusterEvent):
 
 
 class MicroK8sClusterOtherNodeRemovedEvent(MicroK8sClusterEvent):
-    """Another unit has been removed from the cluster."""
+    """Another unit has been removed from the cluster.
+
+    This event is never emitted on the departing unit."""
     pass
 
 
 class MicroK8sClusterThisNodeRemovedEvent(MicroK8sClusterEvent):
-    """This unit has been removed from the cluster."""
+    """This unit has been removed from the cluster.
+
+    This event is only emitted on the departing unit."""
     pass
 
 
@@ -161,26 +172,15 @@ class MicroK8sCluster(Object):
         """Clean up the remnants of a removed unit."""
         if not event.unit:
             return
+
         departing_unit_name = get_departing_unit_name()
         if not departing_unit_name:
-            logger.error('BUG: No departing unit in departed relation!')
-            return
+            raise EventError('BUG: relation-departed event with departing_unit_name not available!')
 
-        join_urls = json.loads(event.relation.data[event.app].get('join_urls', '{}'))
-        if not self.model.unit.is_leader():
-            logger.debug('Deferring event in case we become leader.')
-            event.defer()
-            return
-
-        if departing_unit_name in join_urls:
-            logger.debug('Removing {} from join_urls.'.format(departing_unit_name))
-            del(join_urls[departing_unit_name])
-            event.relation.data[event.app]['join_urls'] = json.dumps(join_urls)
-
-        if self.model.unit.name != departing_unit_name:
-            self.on.other_node_removed.emit(**self._event_args(event))
-        else:
+        if self.model.unit.name == departing_unit_name:
             self.on.this_node_removed.emit(**self._event_args(event))
+        else:
+            self.on.other_node_removed.emit(**self._event_args(event))
 
 
 class MicroK8sCharm(CharmBase):
@@ -211,16 +211,23 @@ class MicroK8sCharm(CharmBase):
 
     def _on_other_node_removed(self, event):
         departing_unit = self.framework.model.get_unit(event.departing_unit_name)
-        if departing_unit and departing_unit in event.relation.data:
+        # The unit can disappear from `relation-list` before its
+        # `cluster-relation-departed` hook has finished executing, so
+        # this doesn't work in all cases... or at all, in my testing.
+        if departing_unit and departing_unit in event.relation.units:
             logger.info('{} is still around.  Waiting for it to go away.'.format(event.departing_unit_name))
             event.defer()
+        # If the unit has now gone away and was formerly the leader, we assume there is now a new leader.
+        if not self.model.unit.is_leader():
+            logger.debug('Only the leader should remove nodes from the cluster.')
+            return
         hostnames = json.loads(event.relation.data[event.app].get('hostnames', '{}'))
         hostname = hostnames.get(event.departing_unit_name)
         if not hostname:
-            logger.info('Cannot remove node: hostname for {} not found.'.format(event.departing_unit_name))
+            logger.error('Cannot remove node: hostname for {} not found.'.format(event.departing_unit_name))
             return
-        self.unit.status = MaintenanceStatus('removing {} (hostname={}) from cluster'.format(
-            event.departing_unit_name, hostname))
+        self.unit.status = MaintenanceStatus('removing {} from the microk8s cluster'.format(event.departing_unit_name))
+        logger.debug('Removing {} (hostname {}) from the cluster.'.format(event.departing_unit_name, hostname))
         subprocess.check_call(['/snap/bin/microk8s', 'remove-node', hostname])
         self.unit.status = ActiveStatus()
 

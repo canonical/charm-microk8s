@@ -58,5 +58,3 @@ Excellent.
 The problem with both schemes above is that we need to run
 `remove-node` *after* `cluster-relation-broken` has been handled on
 the departing node.  Don't we?
-
-Does a crash in a deferred event lose the event?  Looks like it.
