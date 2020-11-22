@@ -4,6 +4,7 @@ name: microk8s
 series: [focal]
 summary: summary
 description: description
+min-juju-version: 2.8.0
 peers:
   cluster:
     interface: microk8s-cluster

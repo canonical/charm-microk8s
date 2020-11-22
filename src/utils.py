@@ -1,4 +1,11 @@
+import os
 import subprocess
+
+
+def get_departing_unit(framework):
+    departing_unit = os.environ.get('JUJU_DEPARTING_UNIT')
+    if departing_unit:
+        return framework.model.get_unit(departing_unit)
 
 
 def join_url_from_add_node_output(output):

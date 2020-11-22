@@ -54,3 +54,8 @@ Q: What is the "node" argument to `remove-node`?  Just the name from
 `kubectl get nodes`?  No,
 [it's an IP address](https://microk8s.io/docs/commands#heading--microk8s-remove-node).
 Excellent.
+
+The problem with both schemes above is that we need to run
+`remove-node` *after* `cluster-relation-broken` has been handled on
+the departing node.  Don't we?
+
