@@ -12,7 +12,7 @@ from ops.main import main
 from ops.framework import EventSource, Object, ObjectEvents, StoredState
 from ops.model import ActiveStatus, MaintenanceStatus
 
-from utils import get_departing_unit, join_url_from_add_node_output
+from utils import get_departing_unit_name, join_url_from_add_node_output
 
 logger = logging.getLogger(__name__)
 
@@ -24,15 +24,15 @@ class MultipleJoinError(Exception):
 
 
 class MicroK8sClusterEvent(RelationEvent):
-    def __init__(self, handle, relation, app, unit, local_unit, departing_unit):
+    def __init__(self, handle, relation, app, unit, local_unit, departing_unit_name):
         super().__init__(handle, relation, app, unit)
         self._local_unit = local_unit
-        self._departing_unit = departing_unit
+        self._departing_unit_name = departing_unit_name
 
     @property
-    def departing_unit(self):
+    def departing_unit_name(self):
         """The unit that is departing this relation."""
-        return self._departing_unit
+        return self._departing_unit_name
 
     @property
     def join_url(self):
@@ -53,7 +53,7 @@ class MicroK8sClusterEvent(RelationEvent):
         s = [
             super().snapshot(),
             dict(
-                departing_unit_name=self._departing_unit.name if self.departing_unit else None,
+                departing_unit_name=self._departing_unit_name,
                 local_unit_name=self._local_unit.name,
             ),
         ]
@@ -64,9 +64,7 @@ class MicroK8sClusterEvent(RelationEvent):
         super().restore(sup)
         # NOTE(pjdc): How is self.framework not set in __init__ but set here?!
         self._local_unit = self.framework.model.get_unit(mine["local_unit_name"])
-        self._departing_unit = None
-        if mine["departing_unit_name"]:
-            self._departing_unit = self.framework.model.get_unit(mine["departing_unit_name"])
+        self._departing_unit_name = mine['departing_unit_name']
 
 
 class MicroK8sClusterNewNodeEvent(MicroK8sClusterEvent):
@@ -114,7 +112,7 @@ class MicroK8sCluster(Object):
             app=relation_event.app,
             unit=relation_event.unit,
             local_unit=self.model.unit,
-            departing_unit=get_departing_unit(self.framework),
+            departing_unit_name=get_departing_unit_name(),
         )
 
     def _on_relation_changed(self, event):
@@ -163,8 +161,8 @@ class MicroK8sCluster(Object):
         """Clean up the remnants of a removed unit."""
         if not event.unit:
             return
-        departing_unit = get_departing_unit(self.framework)
-        if not departing_unit:
+        departing_unit_name = get_departing_unit_name()
+        if not departing_unit_name:
             logger.error('BUG: No departing unit in departed relation!')
             return
 
@@ -174,12 +172,12 @@ class MicroK8sCluster(Object):
             event.defer()
             return
 
-        if departing_unit.name in join_urls:
-            logger.debug('Removing {} from join_urls.'.format(departing_unit.name))
-            del(join_urls[departing_unit.name])
+        if departing_unit_name in join_urls:
+            logger.debug('Removing {} from join_urls.'.format(departing_unit_name))
+            del(join_urls[departing_unit_name])
             event.relation.data[event.app]['join_urls'] = json.dumps(join_urls)
 
-        if self.model.unit != departing_unit:
+        if self.model.unit.name != departing_unit_name:
             self.on.other_node_removed.emit(**self._event_args(event))
         else:
             self.on.this_node_removed.emit(**self._event_args(event))
@@ -212,15 +210,17 @@ class MicroK8sCharm(CharmBase):
         self.unit.status = ActiveStatus()
 
     def _on_other_node_removed(self, event):
-        if event.departing_unit in event.relation.data:
-            logger.info('{} is still around.  Waiting for it to go away.'.format(event.departing_unit.name))
+        departing_unit = self.framework.model.get_unit(event.departing_unit_name)
+        if departing_unit and departing_unit in event.relation.data:
+            logger.info('{} is still around.  Waiting for it to go away.'.format(event.departing_unit_name))
             event.defer()
         hostnames = json.loads(event.relation.data[event.app].get('hostnames', '{}'))
-        hostname = hostnames.get(event.departing_unit.name)
+        hostname = hostnames.get(event.departing_unit_name)
         if not hostname:
-            logger.info('Canot remove node: hostname for {} not found.'.format(event.departing_unit.name))
+            logger.info('Cannot remove node: hostname for {} not found.'.format(event.departing_unit_name))
             return
-        self.unit.status = MaintenanceStatus('removing {} from cluster'.format(event.departing_unit.name))
+        self.unit.status = MaintenanceStatus('removing {} (hostname={}) from cluster'.format(
+            event.departing_unit_name, hostname))
         subprocess.check_call(['/snap/bin/microk8s', 'remove-node', hostname])
         self.unit.status = ActiveStatus()
 
