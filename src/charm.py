@@ -12,7 +12,11 @@ from ops.main import main
 from ops.framework import EventSource, Object, ObjectEvents, StoredState
 from ops.model import ActiveStatus, MaintenanceStatus
 
-from utils import get_departing_unit_name, join_url_from_add_node_output
+from utils import (
+    get_departing_unit_name,
+    get_microk8s_node,
+    join_url_from_add_node_output,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -211,23 +215,32 @@ class MicroK8sCharm(CharmBase):
 
     def _on_other_node_removed(self, event):
         departing_unit = self.framework.model.get_unit(event.departing_unit_name)
-        # The unit can disappear from `relation-list` before its
-        # `cluster-relation-departed` hook has finished executing, so
-        # this doesn't work in all cases... or at all, in my testing.
+        # The unit can disappear before its `cluster-relation-departed`
+        # hook has finished executing, so this doesn't work in all cases...
+        # or perhaps, as in my testing, it doesn't work at all?
         if departing_unit and departing_unit in event.relation.units:
             logger.info('{} is still around.  Waiting for it to go away.'.format(event.departing_unit_name))
             event.defer()
-        # If the unit has now gone away and was formerly the leader, we assume there is now a new leader.
-        if not self.model.unit.is_leader():
-            logger.debug('Only the leader should remove nodes from the cluster.')
             return
         hostnames = json.loads(event.relation.data[event.app].get('hostnames', '{}'))
         hostname = hostnames.get(event.departing_unit_name)
         if not hostname:
             logger.error('Cannot remove node: hostname for {} not found.'.format(event.departing_unit_name))
             return
+        node = get_microk8s_node(hostname)
+        if not node.exists():
+            logger.debug('Node {} does not exist, nothing to do.'.format(hostname))
+            return
+        if not self.model.unit.is_leader():
+            logger.debug('Waiting for leadership in case it falls on us to delete the node.')
+            event.defer()
+            return
+        if node.ready():
+            logger.debug('Node {} is still ready; deferring event.'.format(hostname))
+            event.defer()
+            return
         self.unit.status = MaintenanceStatus('removing {} from the microk8s cluster'.format(event.departing_unit_name))
-        logger.debug('Removing {} (hostname {}) from the cluster.'.format(event.departing_unit_name, hostname))
+        logger.info('Removing {} (hostname {}) from the cluster.'.format(event.departing_unit_name, hostname))
         subprocess.check_call(['/snap/bin/microk8s', 'remove-node', hostname])
         self.unit.status = ActiveStatus()
 

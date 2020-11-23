@@ -1,3 +1,4 @@
+import json
 import os
 import subprocess
 
@@ -14,11 +15,40 @@ def join_url_from_add_node_output(output):
     return lines[0].split()[2]
 
 
-def microk8s_ready():
-    """Check if microk8s is ready.
+class KubectlFailedError(Exception):
+    pass
 
-    Since `microk8s status` always exits 0, we do this by parsing its output.
 
-    """
-    output = subprocess.check_output(['/snap/bin/microk8s', 'status']).decode('utf-8')
-    return output.startswith('microk8s is running')
+class MicroK8sNode:
+    def __init__(self, result):
+        self._result = result
+
+    def exists(self):
+        if self._result.returncode == 0:
+            return True
+        if 'NotFound' in self._result.stderr:
+            return False
+        raise KubectlFailedError('kubectl failed with no error output, rc={}'.format(self._result.returncode))
+
+    def ready(self):
+        if not self.exists():
+            return False
+        parsed = json.loads(self._result.stdout)
+        conditions = parsed.get('status', {}).get('conditions', [])
+        ready_conditions = [
+            condition for condition in conditions
+            if condition.get('type') == 'Ready' and condition.get('reason') == 'KubeletReady'
+        ]
+        if len(ready_conditions) != 1:
+            return
+        return ready_conditions[0].get('status') == 'True'
+
+
+def get_microk8s_node(node_name):
+    return MicroK8sNode(
+        subprocess.run(
+            ['/snap/bin/microk8s', 'kubectl', 'get', 'node', node_name, '-o', 'json'],
+            capture_output=True,
+            encoding='utf-8',
+        )
+    )
