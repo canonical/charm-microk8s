@@ -52,3 +52,11 @@ def get_microk8s_node(node_name):
             encoding='utf-8',
         )
     )
+
+
+def hostname_key(unit):
+    return unit.name + '.hostname'
+
+
+def join_url_key(unit):
+    return unit.name + '.join_url'

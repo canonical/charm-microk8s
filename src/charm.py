@@ -14,7 +14,9 @@ from ops.model import ActiveStatus, MaintenanceStatus
 from utils import (
     get_departing_unit_name,
     get_microk8s_node,
+    hostname_key,
     join_url_from_add_node_output,
+    join_url_key,
 )
 
 logger = logging.getLogger(__name__)
@@ -41,12 +43,12 @@ class MicroK8sClusterEvent(RelationEvent):
     @property
     def join_url(self):
         """Retrieve join URL for local unit."""
-        return self.relation.data[self.app].get('{}.join_url'.format(self._local_unit.name))
+        return self.relation.data[self.app].get(join_url_key(self._local_unit))
 
     @join_url.setter
     def join_url(self, url):
         """Record join URL for remote unit."""
-        self.relation.data[self.app]['{}.join_url'.format(self.unit)] = url
+        self.relation.data[self.app][join_url_key(self.unit)] = url
 
     def snapshot(self):
         s = [
@@ -131,17 +133,17 @@ class MicroK8sCluster(Object):
 
         if self.model.unit.is_leader():
             # We're the leader, so we have to self-identify.
-            event.relation.data[event.app]['{}.hostname'.format(self.model.unit.name)] = our_hostname
+            event.relation.data[event.app][hostname_key(self.model.unit)] = our_hostname
             peer_hostname = event.relation.data[event.unit].get('hostname')
             if peer_hostname:
-                event.relation.data[event.app]['{}.hostname'.format(event.unit.name)] = peer_hostname
+                event.relation.data[event.app][hostname_key(event.unit)] = peer_hostname
 
             keys = [key for key in event.relation.data[event.app].keys() if key.endswith('.join_url')]
             if not keys:
                 logger.debug('We are the seed node.')
                 # The seed node is implicitly joined, so there's no need to emit an event.
                 self._state.joined = True
-            if '{}.join_url'.format(event.unit.name) in keys:
+            if join_url_key(event.unit) in keys:
                 logger.debug('Already added {} to the cluster.'.format(event.unit.name))
                 return
             logger.debug('Add {} to the cluster, emitting event.'.format(event.unit.name))
@@ -149,7 +151,7 @@ class MicroK8sCluster(Object):
         else:
             if self._state.joined:
                 return
-            join_url = event.relation.data[event.app].get('{}.join_url'.format(self.model.unit.name))
+            join_url = event.relation.data[event.app].get(join_url_key(self.model.unit))
             if not join_url:
                 logger.debug('No join URL for {} yet.'.format(self.model.unit.name))
                 return
@@ -207,7 +209,7 @@ class MicroK8sCharm(CharmBase):
             logger.info('{} is still around.  Waiting for it to go away.'.format(event.departing_unit_name))
             event.defer()
             return
-        hostname = event.relation.data[event.app].get('{}.hostname'.format(event.unit.name))
+        hostname = event.relation.data[event.app].get(hostname_key(event.unit))
         if not hostname:
             logger.error('Cannot remove node: hostname for {} not found.'.format(event.departing_unit_name))
             return
