@@ -2,7 +2,6 @@
 # Copyright 2020 Paul Collins
 # See LICENSE file for licensing details.
 
-import json
 import logging
 import socket
 import subprocess
@@ -131,12 +130,11 @@ class MicroK8sCluster(Object):
         event.relation.data[self.model.unit]['hostname'] = our_hostname
 
         if self.model.unit.is_leader():
-            hostnames = json.loads(event.relation.data[event.app].get('hostnames', '{}'))
             # We're the leader, so we have to self-identify.
-            hostnames[self.model.unit.name] = our_hostname
-            if 'hostname' in event.relation.data[event.unit]:
-                hostnames[event.unit.name] = event.relation.data[event.unit]['hostname']
-            event.relation.data[event.app]['hostnames'] = json.dumps(hostnames)
+            event.relation.data[event.app]['{}.hostname'.format(self.model.unit.name)] = our_hostname
+            peer_hostname = event.relation.data[event.unit].get('hostname')
+            if peer_hostname:
+                event.relation.data[event.app]['{}.hostname'.format(event.unit.name)] = peer_hostname
 
             keys = [key for key in event.relation.data[event.app].keys() if key.endswith('.join_url')]
             if not keys:
@@ -209,8 +207,7 @@ class MicroK8sCharm(CharmBase):
             logger.info('{} is still around.  Waiting for it to go away.'.format(event.departing_unit_name))
             event.defer()
             return
-        hostnames = json.loads(event.relation.data[event.app].get('hostnames', '{}'))
-        hostname = hostnames.get(event.departing_unit_name)
+        hostname = event.relation.data[event.app].get('{}.hostname'.format(event.unit.name))
         if not hostname:
             logger.error('Cannot remove node: hostname for {} not found.'.format(event.departing_unit_name))
             return
