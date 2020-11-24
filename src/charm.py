@@ -21,13 +21,7 @@ from utils import (
 logger = logging.getLogger(__name__)
 
 
-# FIXME(pjdc): All of the join_urls and hostnames manipulation below should be encapsulated.
-
 class EventError(Exception):
-    pass
-
-
-class MultipleJoinError(Exception):
     pass
 
 
@@ -48,17 +42,12 @@ class MicroK8sClusterEvent(RelationEvent):
     @property
     def join_url(self):
         """Retrieve join URL for local unit."""
-        join_urls = json.loads(self.relation.data[self.app].get('join_urls', '{}'))
-        return join_urls.get(self._local_unit.name)
+        return self.relation.data[self.app].get('{}.join_url'.format(self._local_unit.name))
 
     @join_url.setter
     def join_url(self, url):
         """Record join URL for remote unit."""
-        join_urls = json.loads(self.relation.data[self.app].get('join_urls', '{}'))
-        if self.unit.name in join_urls:
-            raise MultipleJoinError('{} is already joined to this cluster'.format(self.unit.name))
-        join_urls[self.unit.name] = url
-        self.relation.data[self.app]['join_urls'] = json.dumps(join_urls)
+        self.relation.data[self.app]['{}.join_url'.format(self.unit)] = url
 
     def snapshot(self):
         s = [
@@ -149,12 +138,12 @@ class MicroK8sCluster(Object):
                 hostnames[event.unit.name] = event.relation.data[event.unit]['hostname']
             event.relation.data[event.app]['hostnames'] = json.dumps(hostnames)
 
-            join_urls = json.loads(event.relation.data[event.app].get('join_urls', '{}'))
-            if not join_urls:
+            keys = [key for key in event.relation.data[event.app].keys() if key.endswith('.join_url')]
+            if not keys:
                 logger.debug('We are the seed node.')
                 # The seed node is implicitly joined, so there's no need to emit an event.
                 self._state.joined = True
-            if event.unit.name in join_urls:
+            if '{}.join_url'.format(event.unit.name) in keys:
                 logger.debug('Already added {} to the cluster.'.format(event.unit.name))
                 return
             logger.debug('Add {} to the cluster, emitting event.'.format(event.unit.name))
@@ -162,10 +151,8 @@ class MicroK8sCluster(Object):
         else:
             if self._state.joined:
                 return
-            if 'join_urls' not in event.relation.data[event.app]:
-                return
-            join_urls = json.loads(event.relation.data[event.app]['join_urls'])
-            if self.model.unit.name not in join_urls:
+            join_url = event.relation.data[event.app].get('{}.join_url'.format(self.model.unit.name))
+            if not join_url:
                 logger.debug('No join URL for {} yet.'.format(self.model.unit.name))
                 return
             logger.debug('We have a join URL, emitting event.')
