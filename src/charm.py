@@ -17,9 +17,14 @@ from utils import (
     hostname_key,
     join_url_from_add_node_output,
     join_url_key,
+    open_port,
 )
 
 logger = logging.getLogger(__name__)
+
+
+DNS_ADDON_RELATION_KEY = 'microk8s.addons.dns.state'
+INGRESS_ADDON_RELATION_KEY = 'microk8s.addons.ingress.state'
 
 
 class EventError(Exception):
@@ -68,33 +73,39 @@ class MicroK8sClusterEvent(RelationEvent):
         self._departing_unit_name = mine['departing_unit_name']
 
 
+class MicroK8sClusterCreatedEvent(MicroK8sClusterEvent):
+    """Emitted once when the cluster is created."""
+
+
 class MicroK8sClusterNewNodeEvent(MicroK8sClusterEvent):
     """charm runs add-node in response to this event, passes join URL back somehow"""
-    pass
+
+
+class MicroK8sClusterIngressAddonEnabledEvent(MicroK8sClusterEvent):
+    """The ingress addon has been enabled."""
 
 
 class MicroK8sClusterNodeAddedEvent(MicroK8sClusterEvent):
     """charm runs join in response to this event using supplied join URL"""
-    pass
 
 
 class MicroK8sClusterOtherNodeRemovedEvent(MicroK8sClusterEvent):
     """Another unit has been removed from the cluster.
 
     This event is never emitted on the departing unit."""
-    pass
 
 
 class MicroK8sClusterThisNodeRemovedEvent(MicroK8sClusterEvent):
     """This unit has been removed from the cluster.
 
     This event is only emitted on the departing unit."""
-    pass
 
 
 class MicroK8sClusterEvents(ObjectEvents):
     add_unit = EventSource(MicroK8sClusterNewNodeEvent)
+    cluster_created = EventSource(MicroK8sClusterCreatedEvent)
     node_added = EventSource(MicroK8sClusterNodeAddedEvent)
+    ingress_addon_enabled = EventSource(MicroK8sClusterIngressAddonEnabledEvent)
     other_node_removed = EventSource(MicroK8sClusterOtherNodeRemovedEvent)
     this_node_removed = EventSource(MicroK8sClusterThisNodeRemovedEvent)
 
@@ -106,8 +117,9 @@ class MicroK8sCluster(Object):
     def __init__(self, charm, relation_name):
         super().__init__(charm, relation_name)
         self.relation_name = relation_name
-        self._state.set_default(joined=False)
+        self._state.set_default(previous_ingress_addon_state=False, joined=False)
 
+        self.framework.observe(charm.on[relation_name].relation_created, self._on_relation_created)
         self.framework.observe(charm.on[relation_name].relation_changed, self._on_relation_changed)
         self.framework.observe(charm.on[relation_name].relation_departed, self._on_relation_departed)
 
@@ -119,6 +131,11 @@ class MicroK8sCluster(Object):
             local_unit=self.model.unit,
             departing_unit_name=get_departing_unit_name(),
         )
+
+    def _on_relation_created(self, event):
+        # TODO(pjdc): Turns out -created is fired once on every unit.  Maybe this will work?
+        if self.model.unit.is_leader() and len(event.relation.units) == 1:
+            self.on.cluster_created.emit(**self._event_args(event))
 
     def _on_relation_changed(self, event):
         if not event.unit:
@@ -148,6 +165,7 @@ class MicroK8sCluster(Object):
                 return
             logger.debug('Add {} to the cluster, emitting event.'.format(event.unit.name))
             self.on.add_unit.emit(**self._event_args(event))
+
         else:
             if self._state.joined:
                 return
@@ -158,6 +176,11 @@ class MicroK8sCluster(Object):
             logger.debug('We have a join URL, emitting event.')
             self.on.node_added.emit(**self._event_args(event))
             self._state.joined = True
+
+        status = event.relation.data[event.app].get(INGRESS_ADDON_RELATION_KEY)
+        if status == 'enabled' and not self._state.previous_ingress_addon_state:
+            self.on.ingress_addon_enabled.emit(**self._event_args(event))
+            self._state.previous_ingress_addon_state = True
 
     def _on_relation_departed(self, event):
         """Clean up the remnants of a removed unit."""
@@ -181,6 +204,7 @@ class MicroK8sCharm(CharmBase):
 
         self.cluster = MicroK8sCluster(self, 'cluster')
         self.framework.observe(self.cluster.on.add_unit, self._on_add_unit)
+        self.framework.observe(self.cluster.on.ingress_addon_enabled, self._on_ingress_addon_enabled)
         self.framework.observe(self.cluster.on.node_added, self._on_node_added)
         self.framework.observe(self.cluster.on.other_node_removed, self._on_other_node_removed)
         self.framework.observe(self.cluster.on.this_node_removed, self._on_this_node_removed)
@@ -193,11 +217,24 @@ class MicroK8sCharm(CharmBase):
         event.join_url = url
         self.unit.status = ActiveStatus()
 
+    def _on_cluster_created(self, event):
+        # FIXME(pjdc): These addons are enabled on install, and so
+        # they will be enabled on any node that joins the cluster.
+        event.relation.data[event.app][DNS_ADDON_RELATION_KEY] = 'enabled'
+        event.relation.data[event.app][INGRESS_ADDON_RELATION_KEY] = 'enabled'
+        self._on_ingress_addon_enabled(self, event)
+
     def _on_node_added(self, event):
         self.unit.status = MaintenanceStatus('joining the microk8s cluster')
         url = event.join_url
         logger.debug('Using join URL: {}'.format(url))
         subprocess.check_call(['/snap/bin/microk8s', 'join', url])
+        self.unit.status = ActiveStatus()
+
+    def _on_ingress_addon_enabled(self, event):
+        self.unit.status = MaintenanceStatus('opening ingress ports')
+        open_port('80/tcp')
+        open_port('443/tcp')
         self.unit.status = ActiveStatus()
 
     def _on_other_node_removed(self, event):
@@ -238,6 +275,8 @@ class MicroK8sCharm(CharmBase):
     def _on_install(self, _):
         self.unit.status = MaintenanceStatus('installing microk8s')
         subprocess.check_call(['/usr/bin/snap', 'install', '--classic', 'microk8s'])
+        self.unit.status = MaintenanceStatus('enabling microk8s addons')
+        subprocess.check_call(['/snap/bin/microk8s', 'enable', 'dns', 'ingress'])
         self.unit.status = ActiveStatus()
 
 

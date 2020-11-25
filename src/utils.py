@@ -60,3 +60,7 @@ def hostname_key(unit):
 
 def join_url_key(unit):
     return unit.name + '.join_url'
+
+
+def open_port(port):
+    subprocess.check_call(['open-port', port])
