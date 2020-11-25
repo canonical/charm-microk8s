@@ -210,7 +210,7 @@ class MicroK8sCharm(CharmBase):
         self.framework.observe(self.cluster.on.other_node_removed, self._on_other_node_removed)
         self.framework.observe(self.cluster.on.this_node_removed, self._on_this_node_removed)
 
-        self.portmanager = PortManager(self, 'cluster')
+        self.ports = PortManager(self, 'cluster')
 
     def _on_add_unit(self, event):
         self.unit.status = MaintenanceStatus('adding {} to the microk8s cluster'.format(event.unit.name))
@@ -237,8 +237,8 @@ class MicroK8sCharm(CharmBase):
     def _on_ingress_addon_enabled(self, event):
         if self.model.unit.is_leader():
             self.unit.status = MaintenanceStatus('opening ingress ports')
-            self.portmanager.open_port('80/tcp')
-            self.portmanager.open_port('443/tcp')
+            self.ports.open('80/tcp')
+            self.ports.open('443/tcp')
             self.unit.status = ActiveStatus()
 
     def _on_other_node_removed(self, event):
