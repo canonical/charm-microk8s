@@ -24,8 +24,11 @@ from utils import (
 logger = logging.getLogger(__name__)
 
 
-DNS_ADDON_RELATION_KEY = 'microk8s.addons.dns.state'
-INGRESS_ADDON_RELATION_KEY = 'microk8s.addons.ingress.state'
+DEFAULT_ADDONS = ['dns', 'ingress']
+
+
+def addon_relation_key(addon):
+    return 'microk8s.addons.{}.state'.format(addon)
 
 
 class EventError(Exception):
@@ -74,10 +77,6 @@ class MicroK8sClusterEvent(RelationEvent):
         self._departing_unit_name = mine['departing_unit_name']
 
 
-class MicroK8sClusterCreatedEvent(MicroK8sClusterEvent):
-    """Emitted once when the cluster is created."""
-
-
 class MicroK8sClusterNewNodeEvent(MicroK8sClusterEvent):
     """charm runs add-node in response to this event, passes join URL back somehow"""
 
@@ -104,9 +103,8 @@ class MicroK8sClusterThisNodeRemovedEvent(MicroK8sClusterEvent):
 
 class MicroK8sClusterEvents(ObjectEvents):
     add_unit = EventSource(MicroK8sClusterNewNodeEvent)
-    cluster_created = EventSource(MicroK8sClusterCreatedEvent)
-    node_added = EventSource(MicroK8sClusterNodeAddedEvent)
     ingress_addon_enabled = EventSource(MicroK8sClusterIngressAddonEnabledEvent)
+    node_added = EventSource(MicroK8sClusterNodeAddedEvent)
     other_node_removed = EventSource(MicroK8sClusterOtherNodeRemovedEvent)
     this_node_removed = EventSource(MicroK8sClusterThisNodeRemovedEvent)
 
@@ -120,7 +118,7 @@ class MicroK8sCluster(Object):
         self.relation_name = relation_name
         self._state.set_default(previous_ingress_addon_state=False, joined=False)
 
-        self.framework.observe(charm.on[relation_name].relation_created, self._on_relation_created)
+        self.framework.observe(charm.on[relation_name].relation_created, self._update_default_addon_state)
         self.framework.observe(charm.on[relation_name].relation_changed, self._on_relation_changed)
         self.framework.observe(charm.on[relation_name].relation_departed, self._on_relation_departed)
 
@@ -133,24 +131,36 @@ class MicroK8sCluster(Object):
             departing_unit_name=get_departing_unit_name(),
         )
 
-    def _on_relation_created(self, event):
-        # TODO(pjdc): Turns out -created is fired once on every unit.  Maybe this will work?
-        if self.model.unit.is_leader() and len(event.relation.units) == 1:
-            self.on.cluster_created.emit(**self._event_args(event))
+    def _update_default_addon_state(self, event):
+        """Ensure the enabled addons are correctly recorded in the peer relation."""
+        if not self.model.unit.is_leader():
+            return
+        reldata = event.relation.data[event.app]
+        for addon in DEFAULT_ADDONS:
+            relkey = addon_relation_key(addon)
+            if relkey not in reldata:
+                reldata[relkey] = 'enabled'
+                if addon == 'ingress':
+                    self.on.ingress_addon_enabled.emit(**self._event_args(event))
 
     def _on_relation_changed(self, event):
+        our_hostname = socket.gethostname()
+        event.relation.data[self.model.unit]['hostname'] = our_hostname
+
+        status = event.relation.data[event.app].get(addon_relation_key('ingress'))
+        if status == 'enabled' and not self._state.previous_ingress_addon_state:
+            self.on.ingress_addon_enabled.emit(**self._event_args(event))
+            self._state.previous_ingress_addon_state = True
+
         if not event.unit:
             return
         if event.unit not in event.relation.data:
             logger.error('Received event for {} that has no relation data!  Please file a bug.'.format(event.unit.name))
             return
 
-        # Identify ourselves to other units.
-        our_hostname = socket.gethostname()
-        event.relation.data[self.model.unit]['hostname'] = our_hostname
-
         if self.model.unit.is_leader():
             # We're the leader, so we have to self-identify.
+            our_hostname = socket.gethostname()
             event.relation.data[event.app][hostname_key(self.model.unit)] = our_hostname
             peer_hostname = event.relation.data[event.unit].get('hostname')
             if peer_hostname:
@@ -177,11 +187,6 @@ class MicroK8sCluster(Object):
             logger.debug('We have a join URL, emitting event.')
             self.on.node_added.emit(**self._event_args(event))
             self._state.joined = True
-
-        status = event.relation.data[event.app].get(INGRESS_ADDON_RELATION_KEY)
-        if status == 'enabled' and not self._state.previous_ingress_addon_state:
-            self.on.ingress_addon_enabled.emit(**self._event_args(event))
-            self._state.previous_ingress_addon_state = True
 
     def _on_relation_departed(self, event):
         """Clean up the remnants of a removed unit."""
@@ -219,13 +224,6 @@ class MicroK8sCharm(CharmBase):
         logger.debug('Generated join URL: {}'.format(url))
         event.join_url = url
         self.unit.status = ActiveStatus()
-
-    def _on_cluster_created(self, event):
-        # FIXME(pjdc): These addons are enabled on install, and so
-        # they will be enabled on any node that joins the cluster.
-        event.relation.data[event.app][DNS_ADDON_RELATION_KEY] = 'enabled'
-        event.relation.data[event.app][INGRESS_ADDON_RELATION_KEY] = 'enabled'
-        self._on_ingress_addon_enabled(self, event)
 
     def _on_node_added(self, event):
         self.unit.status = MaintenanceStatus('joining the microk8s cluster')
@@ -279,9 +277,16 @@ class MicroK8sCharm(CharmBase):
     def _on_install(self, _):
         self.unit.status = MaintenanceStatus('installing microk8s')
         subprocess.check_call(['/usr/bin/snap', 'install', '--classic', 'microk8s'])
-        self.unit.status = MaintenanceStatus('enabling microk8s addons')
-        subprocess.check_call(['/snap/bin/microk8s', 'enable', 'dns', 'ingress'])
-        self.unit.status = ActiveStatus()
+
+        if DEFAULT_ADDONS:
+            # FIXME(pjdc): This is a waste of time if we're not the
+            # seed node, but I'm not sure it's possible to know during
+            # the install hook if that's true.  Maybe `goal-state`?
+            self.unit.status = MaintenanceStatus('enabling microk8s addons')
+            cmd = ['/snap/bin/microk8s', 'enable']
+            cmd.extend(DEFAULT_ADDONS)
+            subprocess.check_call(cmd)
+            self.unit.status = ActiveStatus()
 
 
 if __name__ == "__main__":
