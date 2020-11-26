@@ -119,6 +119,7 @@ class MicroK8sCluster(Object):
 
         self.framework.observe(charm.on[relation_name].relation_created, self._set_default_addon_state)
         self.framework.observe(charm.on[relation_name].relation_changed, self._on_relation_changed)
+        self.framework.observe(charm.on[relation_name].relation_changed, self._publish_hostnames)
         self.framework.observe(charm.on[relation_name].relation_departed, self._on_relation_departed)
 
         self.framework.observe(self.on.add_unit, self._on_add_unit)
@@ -162,10 +163,31 @@ class MicroK8sCluster(Object):
                 if addon == 'ingress':
                     self.on.ingress_addon_enabled.emit(**self._event_args(event))
 
-    def _on_relation_changed(self, event):
+    def _publish_hostnames(self, event):
+        """Publish, collect and re-publish hostnames.
+
+        Each unit publishes its hostname.  The leader collects and
+        re-publishes the hostnames in the relation's application data.
+
+        The leader must do this because only the leader can write to
+        the relation's application data.
+        """
+
         our_hostname = socket.gethostname()
         event.relation.data[self.model.unit]['hostname'] = our_hostname
 
+        if not self.model.unit.is_leader():
+            return
+
+        reldata = event.relation.data[event.app]
+        reldata[hostname_key(self.model.unit)] = our_hostname
+
+        # Publish peer's hostname.
+        peer_hostname = reldata.get('hostname')
+        if peer_hostname:
+            reldata[hostname_key(event.unit)] = peer_hostname
+
+    def _on_relation_changed(self, event):
         status = event.relation.data[event.app].get(addon_relation_key('ingress'))
         if status == 'enabled' and not self._state.previous_ingress_addon_state:
             self.on.ingress_addon_enabled.emit(**self._event_args(event))
@@ -178,13 +200,6 @@ class MicroK8sCluster(Object):
             return
 
         if self.model.unit.is_leader():
-            # We're the leader, so we have to self-identify.
-            our_hostname = socket.gethostname()
-            event.relation.data[event.app][hostname_key(self.model.unit)] = our_hostname
-            peer_hostname = event.relation.data[event.unit].get('hostname')
-            if peer_hostname:
-                event.relation.data[event.app][hostname_key(event.unit)] = peer_hostname
-
             keys = [key for key in event.relation.data[event.app].keys() if key.endswith('.join_url')]
             if not keys:
                 logger.debug('We are the seed node.')
