@@ -106,7 +106,7 @@ class MicroK8sCluster(Object):
 
     def __init__(self, charm, relation_name):
         super().__init__(charm, relation_name)
-        self.relation_name = relation_name
+
         self._state.set_default(
             previous_ingress_addon_state=False,
             joined=False,
