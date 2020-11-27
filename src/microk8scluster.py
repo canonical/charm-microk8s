@@ -122,6 +122,7 @@ class MicroK8sCluster(Object):
 
         self.framework.observe(charm.on[relation_name].relation_created, self._set_default_addon_state)
         self.framework.observe(charm.on[relation_name].relation_changed, self._on_relation_changed)
+        self.framework.observe(charm.on[relation_name].relation_changed, self._maybe_ingress_enabled)
         self.framework.observe(charm.on[relation_name].relation_departed, self._on_relation_departed)
 
         self.framework.observe(charm.on[relation_name].relation_created, self._declare_hostname)
@@ -176,7 +177,6 @@ class MicroK8sCluster(Object):
         if 'hostname' not in mydata:
             mydata['hostname'] = socket.gethostname()
 
-
     def _remember_hostname(self, event):
         """Remember peer hostname."""
         if not event.unit:
@@ -193,12 +193,13 @@ class MicroK8sCluster(Object):
         if departing_unit and departing_unit in self._state.peer_hostnames:
             del(self._state.peer_hostnames[departing_unit])
 
-    def _on_relation_changed(self, event):
+    def _maybe_ingress_enabled(self, event):
         status = event.relation.data[event.app].get(addon_relation_key('ingress'))
         if status == 'enabled' and not self._state.previous_ingress_addon_state:
             self.on.ingress_addon_enabled.emit(**self._event_args(event))
             self._state.previous_ingress_addon_state = True
 
+    def _on_relation_changed(self, event):
         if not event.unit:
             return
         if event.unit not in event.relation.data:
