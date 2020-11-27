@@ -9,6 +9,7 @@ from ops.model import ActiveStatus, MaintenanceStatus
 from portmanager import PortManager
 
 from utils import (
+    addon_relation_key,
     get_departing_unit_name,
     get_microk8s_node,
     join_url_from_add_node_output,
@@ -19,10 +20,6 @@ logger = logging.getLogger(__name__)
 
 
 DEFAULT_ADDONS = ['dns', 'ingress']
-
-
-def addon_relation_key(addon):
-    return 'microk8s.addons.{}.state'.format(addon)
 
 
 class EventError(Exception):
