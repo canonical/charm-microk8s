@@ -11,7 +11,6 @@ from portmanager import PortManager
 from utils import (
     get_departing_unit_name,
     get_microk8s_node,
-    hostname_key,
     join_url_from_add_node_output,
     join_url_key,
 )
@@ -111,7 +110,11 @@ class MicroK8sCluster(Object):
     def __init__(self, charm, relation_name):
         super().__init__(charm, relation_name)
         self.relation_name = relation_name
-        self._state.set_default(previous_ingress_addon_state=False, joined=False)
+        self._state.set_default(
+            peer_hostnames={},
+            previous_ingress_addon_state=False,
+            joined=False,
+        )
 
         self.ports = PortManager(charm, relation_name)
 
@@ -119,8 +122,12 @@ class MicroK8sCluster(Object):
 
         self.framework.observe(charm.on[relation_name].relation_created, self._set_default_addon_state)
         self.framework.observe(charm.on[relation_name].relation_changed, self._on_relation_changed)
-        self.framework.observe(charm.on[relation_name].relation_changed, self._publish_hostnames)
         self.framework.observe(charm.on[relation_name].relation_departed, self._on_relation_departed)
+
+        self.framework.observe(charm.on[relation_name].relation_created, self._declare_hostname)
+        self.framework.observe(charm.on[relation_name].relation_joined, self._remember_hostname)
+        self.framework.observe(charm.on[relation_name].relation_changed, self._remember_hostname)
+        self.framework.observe(charm.on[relation_name].relation_departed, self._forget_hostname)
 
         self.framework.observe(self.on.add_unit, self._on_add_unit)
         self.framework.observe(self.on.ingress_addon_enabled, self._on_ingress_addon_enabled)
@@ -163,29 +170,28 @@ class MicroK8sCluster(Object):
                 if addon == 'ingress':
                     self.on.ingress_addon_enabled.emit(**self._event_args(event))
 
-    def _publish_hostnames(self, event):
-        """Publish, collect and re-publish hostnames.
+    def _declare_hostname(self, event):
+        """Declare our hostname."""
+        mydata = event.relation.data[self.model.unit]
+        if 'hostname' not in mydata:
+            mydata['hostname'] = socket.gethostname()
 
-        Each unit publishes its hostname.  The leader collects and
-        re-publishes the hostnames in the relation's application data.
 
-        The leader must do this because only the leader can write to
-        the relation's application data.
-        """
-
-        our_hostname = socket.gethostname()
-        event.relation.data[self.model.unit]['hostname'] = our_hostname
-
-        if not self.model.unit.is_leader():
+    def _remember_hostname(self, event):
+        """Remember peer hostname."""
+        if not event.unit:
             return
 
-        reldata = event.relation.data[event.app]
-        reldata[hostname_key(self.model.unit)] = our_hostname
-
-        # Publish peer's hostname.
-        peer_hostname = reldata.get('hostname')
+        peerdata = event.relation.data[event.unit]
+        peer_hostname = peerdata.get('hostname')
         if peer_hostname:
-            reldata[hostname_key(event.unit)] = peer_hostname
+            self._state.peer_hostnames[event.unit.name] = peer_hostname
+
+    def _forget_hostname(self, event):
+        """Forget departing peer's hostname."""
+        departing_unit = get_departing_unit_name()
+        if departing_unit and departing_unit in self._state.peer_hostnames:
+            del(self._state.peer_hostnames[departing_unit])
 
     def _on_relation_changed(self, event):
         status = event.relation.data[event.app].get(addon_relation_key('ingress'))
@@ -267,7 +273,7 @@ class MicroK8sCluster(Object):
             logger.info('{} is still around.  Waiting for it to go away.'.format(event.departing_unit_name))
             event.defer()
             return
-        hostname = event.relation.data[event.app].get(hostname_key(event.unit))
+        hostname = self._state.peer_hostnames.get(event.departing_unit_name)
         if not hostname:
             logger.error('Cannot remove node: hostname for {} not found.'.format(event.departing_unit_name))
             return
