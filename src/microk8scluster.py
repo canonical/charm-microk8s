@@ -1,11 +1,11 @@
 import logging
-import socket
 import subprocess
 
 from ops.charm import RelationEvent
 from ops.framework import EventSource, Object, ObjectEvents, StoredState
 from ops.model import ActiveStatus, MaintenanceStatus
 
+from hostnamemanager import HostnameManager
 from portmanager import PortManager
 
 from utils import (
@@ -108,11 +108,11 @@ class MicroK8sCluster(Object):
         super().__init__(charm, relation_name)
         self.relation_name = relation_name
         self._state.set_default(
-            peer_hostnames={},
             previous_ingress_addon_state=False,
             joined=False,
         )
 
+        self.hostnames = HostnameManager(charm, relation_name)
         self.ports = PortManager(charm, relation_name)
 
         self.framework.observe(charm.on.install, self._on_install)
@@ -121,11 +121,6 @@ class MicroK8sCluster(Object):
         self.framework.observe(charm.on[relation_name].relation_changed, self._on_relation_changed)
         self.framework.observe(charm.on[relation_name].relation_changed, self._maybe_ingress_enabled)
         self.framework.observe(charm.on[relation_name].relation_departed, self._on_relation_departed)
-
-        self.framework.observe(charm.on[relation_name].relation_created, self._declare_hostname)
-        self.framework.observe(charm.on[relation_name].relation_joined, self._remember_hostname)
-        self.framework.observe(charm.on[relation_name].relation_changed, self._remember_hostname)
-        self.framework.observe(charm.on[relation_name].relation_departed, self._forget_hostname)
 
         self.framework.observe(self.on.add_unit, self._on_add_unit)
         self.framework.observe(self.on.ingress_addon_enabled, self._on_ingress_addon_enabled)
@@ -167,28 +162,6 @@ class MicroK8sCluster(Object):
                 reldata[relkey] = 'enabled'
                 if addon == 'ingress':
                     self.on.ingress_addon_enabled.emit(**self._event_args(event))
-
-    def _declare_hostname(self, event):
-        """Declare our hostname."""
-        mydata = event.relation.data[self.model.unit]
-        if 'hostname' not in mydata:
-            mydata['hostname'] = socket.gethostname()
-
-    def _remember_hostname(self, event):
-        """Remember peer hostname."""
-        if not event.unit:
-            return
-
-        peerdata = event.relation.data[event.unit]
-        peer_hostname = peerdata.get('hostname')
-        if peer_hostname:
-            self._state.peer_hostnames[event.unit.name] = peer_hostname
-
-    def _forget_hostname(self, event):
-        """Forget departing peer's hostname."""
-        departing_unit = get_departing_unit_name()
-        if departing_unit and departing_unit in self._state.peer_hostnames:
-            del(self._state.peer_hostnames[departing_unit])
 
     def _maybe_ingress_enabled(self, event):
         status = event.relation.data[event.app].get(addon_relation_key('ingress'))
@@ -271,7 +244,7 @@ class MicroK8sCluster(Object):
             logger.info('{} is still around.  Waiting for it to go away.'.format(event.departing_unit_name))
             event.defer()
             return
-        hostname = self._state.peer_hostnames.get(event.departing_unit_name)
+        hostname = self.hostnames.peers.get(event.departing_unit_name)
         if not hostname:
             logger.error('Cannot remove node: hostname for {} not found.'.format(event.departing_unit_name))
             return
