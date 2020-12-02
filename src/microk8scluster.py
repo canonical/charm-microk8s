@@ -186,17 +186,11 @@ class MicroK8sCluster(Object):
             self._state.previous_ingress_addon_state = True
 
     def _on_relation_changed(self, event):
-        if not event.unit:
-            return
-        if event.unit not in event.relation.data:
-            logger.error('Received event for {} that has no relation data!  Please file a bug.'.format(event.unit.name))
-            return
-
-        if event.relation.data[event.unit].get('join_complete'):
+        if event.unit and event.relation.data[event.unit].get('join_complete'):
             logger.debug('Join complete on {}.'.format(event.unit.name))
             self.on.join_complete.emit(**self._event_args(event))
 
-        if self.model.unit.is_leader():
+        if event.unit and self.model.unit.is_leader():
             keys = [key for key in event.relation.data[event.app].keys() if key.endswith('.join_url')]
             if not keys:
                 logger.debug('We are the seed node.')
