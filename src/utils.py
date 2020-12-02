@@ -54,6 +54,13 @@ def get_microk8s_node(node_name):
     )
 
 
+def get_microk8s_nodes_json():
+    return subprocess.check_output(
+        ['/snap/bin/microk8s', 'kubectl', 'get', 'nodes', '-o', 'json'],
+        encoding='utf-8',
+    )
+
+
 def join_url_key(unit):
     return unit.name + '.join_url'
 

@@ -5,6 +5,7 @@ from ops.charm import RelationEvent
 from ops.framework import EventSource, Object, ObjectEvents, StoredState
 from ops.model import ActiveStatus, MaintenanceStatus
 
+from etchosts import refresh_etc_hosts
 from hostnamemanager import HostnameManager
 from portmanager import PortManager
 
@@ -12,6 +13,7 @@ from utils import (
     addon_relation_key,
     get_departing_unit_name,
     get_microk8s_node,
+    get_microk8s_nodes_json,
     join_url_from_add_node_output,
     join_url_key,
 )
@@ -39,6 +41,14 @@ class MicroK8sClusterEvent(RelationEvent):
     def departing_unit_name(self):
         """The unit that is departing this relation."""
         return self._departing_unit_name
+
+    @property
+    def join_complete(self):
+        return self.relation.data[self.unit].get('join_complete')
+
+    @join_complete.setter
+    def join_complete(self, complete):
+        self.relation.data[self._local_unit]['join_complete'] = complete
 
     @property
     def join_url(self):
@@ -76,6 +86,10 @@ class MicroK8sClusterIngressAddonEnabledEvent(MicroK8sClusterEvent):
     """The ingress addon has been enabled."""
 
 
+class MicroK8sClusterJoinCompleteEvent(MicroK8sClusterEvent):
+    """A unit has successfully executed `microk8s join`."""
+
+
 class MicroK8sClusterNodeAddedEvent(MicroK8sClusterEvent):
     """charm runs join in response to this event using supplied join URL"""
 
@@ -95,6 +109,7 @@ class MicroK8sClusterThisNodeRemovedEvent(MicroK8sClusterEvent):
 class MicroK8sClusterEvents(ObjectEvents):
     add_unit = EventSource(MicroK8sClusterNewNodeEvent)
     ingress_addon_enabled = EventSource(MicroK8sClusterIngressAddonEnabledEvent)
+    join_complete = EventSource(MicroK8sClusterJoinCompleteEvent)
     node_added = EventSource(MicroK8sClusterNodeAddedEvent)
     other_node_removed = EventSource(MicroK8sClusterOtherNodeRemovedEvent)
     this_node_removed = EventSource(MicroK8sClusterThisNodeRemovedEvent)
@@ -124,6 +139,7 @@ class MicroK8sCluster(Object):
 
         self.framework.observe(self.on.add_unit, self._on_add_unit)
         self.framework.observe(self.on.ingress_addon_enabled, self._on_ingress_addon_enabled)
+        self.framework.observe(self.on.join_complete, self._update_etc_hosts)
         self.framework.observe(self.on.node_added, self._on_node_added)
         self.framework.observe(self.on.other_node_removed, self._on_other_node_removed)
         self.framework.observe(self.on.this_node_removed, self._on_this_node_removed)
@@ -176,6 +192,10 @@ class MicroK8sCluster(Object):
             logger.error('Received event for {} that has no relation data!  Please file a bug.'.format(event.unit.name))
             return
 
+        if event.relation.data[event.unit].get('join_complete'):
+            logger.debug('Join complete on {}.'.format(event.unit.name))
+            self.on.join_complete.emit(**self._event_args(event))
+
         if self.model.unit.is_leader():
             keys = [key for key in event.relation.data[event.app].keys() if key.endswith('.join_url')]
             if not keys:
@@ -197,7 +217,6 @@ class MicroK8sCluster(Object):
                 return
             logger.debug('We have a join URL, emitting event.')
             self.on.node_added.emit(**self._event_args(event))
-            self._state.joined = True
 
     def _on_relation_departed(self, event):
         """Clean up the remnants of a removed unit."""
@@ -233,7 +252,10 @@ class MicroK8sCluster(Object):
         url = event.join_url
         logger.debug('Using join URL: {}'.format(url))
         subprocess.check_call(['/snap/bin/microk8s', 'join', url])
+        self._state.joined = True
+        event.join_complete = 'true'
         self.model.unit.status = ActiveStatus()
+        self.on.join_complete.emit(**self._event_args(event))
 
     def _on_other_node_removed(self, event):
         departing_unit = self.framework.model.get_unit(event.departing_unit_name)
@@ -270,4 +292,15 @@ class MicroK8sCluster(Object):
     def _on_this_node_removed(self, event):
         self.model.unit.status = MaintenanceStatus('leaving the microk8s cluster')
         subprocess.check_call(['/snap/bin/microk8s', 'leave'])
+        self.model.unit.status = ActiveStatus()
+
+    def _update_etc_hosts(self, event):
+        if not self.model.config.get('manage_etc_hosts'):
+            return
+        if not self._state.joined:
+            event.defer()
+
+        self.model.unit.status = MaintenanceStatus('updating /etc/hosts')
+        nodes_json = get_microk8s_nodes_json()
+        refresh_etc_hosts(nodes_json)
         self.model.unit.status = ActiveStatus()

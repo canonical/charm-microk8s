@@ -1,0 +1,6 @@
+options:
+  manage_etc_hosts:
+    description: >
+      When set, add node IPs to /etc/hosts.  Use this if the substrate does not provide DNS.
+    type: boolean
+    default: false
