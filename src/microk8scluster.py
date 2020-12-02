@@ -281,6 +281,7 @@ class MicroK8sCluster(Object):
         logger.info('Removing {} (hostname {}) from the cluster.'.format(
             event.departing_unit_name, hostname))
         subprocess.check_call(['/snap/bin/microk8s', 'remove-node', hostname])
+        self.hostnames.forget(event.departing_unit_name)
         self.model.unit.status = ActiveStatus()
 
     def _on_this_node_removed(self, event):

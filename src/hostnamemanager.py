@@ -8,28 +8,32 @@ from utils import (
 
 
 class HostnameManager(Object):
-    """Declare our hostname to peers, and remember theirs in turn."""
+    """Announce our hostname to peers, and remember theirs in turn."""
     _state = StoredState()
 
     def __init__(self, charm, relation_name):
         super().__init__(charm, relation_name)
 
         self._state.set_default(
+            forgotten={},
             peer_hostnames={},
         )
 
-        self.framework.observe(charm.on[relation_name].relation_created, self._declare_hostname)
+        self.framework.observe(charm.on[relation_name].relation_created, self._announce_hostname)
         self.framework.observe(charm.on[relation_name].relation_joined, self._remember_hostname)
         self.framework.observe(charm.on[relation_name].relation_changed, self._remember_hostname)
         self.framework.observe(charm.on[relation_name].relation_departed, self._forget_hostname)
 
+    def forget(self, unit_name):
+        self._state.forgotten[unit_name] = unit_name
+
     @property
     def peers(self):
-        """Return a dict mapping peers' unit names to their hostnames."""
-        return dict(self._state.peer_hostnames)
+        """Return a dict mapping peers' unit names to their hostnames, except forgotten units."""
+        return {hk: hv for hk, hv in self._state.peer_hostnames.items() if hk not in self._state.forgotten}
 
-    def _declare_hostname(self, event):
-        """Declare our hostname."""
+    def _announce_hostname(self, event):
+        """Announce our hostname."""
         mydata = event.relation.data[self.model.unit]
         if 'hostname' not in mydata:
             mydata['hostname'] = gethostname()
@@ -47,5 +51,5 @@ class HostnameManager(Object):
     def _forget_hostname(self, event):
         """Forget departing peer's hostname."""
         departing_unit = get_departing_unit_name()
-        if departing_unit and departing_unit in self._state.peer_hostnames:
-            del(self._state.peer_hostnames[departing_unit])
+        if departing_unit:
+            self.forget(departing_unit)
