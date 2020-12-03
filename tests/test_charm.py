@@ -2,34 +2,26 @@
 # See LICENSE file for licensing details.
 
 import unittest
-from unittest.mock import Mock
+from unittest.mock import patch
 
+from ops.model import ActiveStatus
 from ops.testing import Harness
-from charm import Microk8SCharm
+from charm import MicroK8sCharm
+from microk8scluster import DEFAULT_ADDONS
 
 
 class TestCharm(unittest.TestCase):
-    def test_config_changed(self):
-        harness = Harness(Microk8SCharm)
+    @patch("subprocess.check_call")
+    def test_begin_with_initial_hooks(self, _check_call):
+        harness = Harness(MicroK8sCharm)
         self.addCleanup(harness.cleanup)
-        harness.begin()
-        self.assertEqual(list(harness.charm._stored.things), [])
-        harness.update_config({"thing": "foo"})
-        self.assertEqual(list(harness.charm._stored.things), ["foo"])
 
-    def test_action(self):
-        harness = Harness(Microk8SCharm)
-        harness.begin()
-        # the harness doesn't (yet!) help much with actions themselves
-        action_event = Mock(params={"fail": ""})
-        harness.charm._on_fortune_action(action_event)
-
-        self.assertTrue(action_event.set_results.called)
-
-    def test_action_fail(self):
-        harness = Harness(Microk8SCharm)
-        harness.begin()
-        action_event = Mock(params={"fail": "fail this"})
-        harness.charm._on_fortune_action(action_event)
-
-        self.assertEqual(action_event.fail.call_args, [("fail this",)])
+        # Assert we have DEFAULT_ADDONS so we know they should be enabled.
+        self.assertEqual(DEFAULT_ADDONS, ["dns", "ingress"])
+        harness.begin_with_initial_hooks()
+        expected_subprocess_calls = [
+            ['/usr/bin/snap', 'install', '--classic', 'microk8s'],
+            ['/snap/bin/microk8s', 'enable', 'dns', 'ingress'],
+        ]
+        self.assertEqual(_check_call.call_args_list, [unittest.mock.call(x) for x in expected_subprocess_calls])
+        self.assertEqual(harness.charm.unit.status, ActiveStatus())

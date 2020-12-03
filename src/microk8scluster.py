@@ -165,7 +165,7 @@ class MicroK8sCluster(Object):
             cmd = ['/snap/bin/microk8s', 'enable']
             cmd.extend(DEFAULT_ADDONS)
             subprocess.check_call(cmd)
-            self.model.unit.status = ActiveStatus()
+        self.model.unit.status = ActiveStatus()
 
     def _set_default_addon_state(self, event):
         """Ensure the enabled addons are correctly recorded in the peer relation."""
