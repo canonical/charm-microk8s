@@ -27,6 +27,6 @@ Create and activate a virtualenv, and install the development requirements.
 
 ## Testing
 
-Just run `run_tests`:
+Create an activate the virtualenv per above, and then run `run_tests`:
 
     ./run_tests
