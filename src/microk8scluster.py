@@ -7,7 +7,6 @@ from ops.model import ActiveStatus, MaintenanceStatus
 
 from etchosts import refresh_etc_hosts
 from hostnamemanager import HostnameManager
-from portmanager import PortManager
 
 from utils import (
     addon_relation_key,
@@ -16,6 +15,7 @@ from utils import (
     get_microk8s_nodes_json,
     join_url_from_add_node_output,
     join_url_key,
+    open_port,
 )
 
 logger = logging.getLogger(__name__)
@@ -125,7 +125,6 @@ class MicroK8sCluster(Object):
         )
 
         self.hostnames = HostnameManager(charm, relation_name)
-        self.ports = PortManager(charm, relation_name)
 
         self.framework.observe(charm.on.install, self._on_install)
 
@@ -237,11 +236,10 @@ class MicroK8sCluster(Object):
         self.model.unit.status = ActiveStatus()
 
     def _on_ingress_addon_enabled(self, event):
-        if self.model.unit.is_leader():
-            self.model.unit.status = MaintenanceStatus('opening ingress ports')
-            self.ports.open('80/tcp')
-            self.ports.open('443/tcp')
-            self.model.unit.status = ActiveStatus()
+        self.model.unit.status = MaintenanceStatus('opening ingress ports')
+        open_port('80/tcp')
+        open_port('443/tcp')
+        self.model.unit.status = ActiveStatus()
 
     def _on_node_added(self, event):
         self.model.unit.status = MaintenanceStatus('joining the microk8s cluster')
