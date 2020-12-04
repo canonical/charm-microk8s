@@ -86,6 +86,6 @@ def refresh_etc_hosts(nodes_json):
         raise
 
 
-if __name__ == '__main__':
+if __name__ == '__main__':  # pragma: no cover
     nodes = sys.stdin.read()
     refresh_etc_hosts(nodes)

@@ -15,5 +15,5 @@ class MicroK8sCharm(CharmBase):
         self.cluster = MicroK8sCluster(self, 'cluster')
 
 
-if __name__ == "__main__":
+if __name__ == "__main__":  # pragma: no cover
     main(MicroK8sCharm, use_juju_for_storage=True)
