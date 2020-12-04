@@ -21,9 +21,6 @@ from utils import (
 logger = logging.getLogger(__name__)
 
 
-DEFAULT_ADDONS = ['dns', 'ingress']
-
-
 class EventError(Exception):
     pass
 
@@ -156,15 +153,19 @@ class MicroK8sCluster(Object):
     def _on_install(self, _):
         self.model.unit.status = MaintenanceStatus('installing microk8s')
         subprocess.check_call(['/usr/bin/snap', 'install', '--classic', 'microk8s'])
+        self.model.unit.status = ActiveStatus()
 
-        if DEFAULT_ADDONS:
-            # FIXME(pjdc): This is a waste of time if we're not the
-            # seed node, but I'm not sure it's possible to know during
-            # the install hook if that's true.  Maybe `goal-state`?
-            self.model.unit.status = MaintenanceStatus('enabling microk8s addons')
-            cmd = ['/snap/bin/microk8s', 'enable']
-            cmd.extend(DEFAULT_ADDONS)
-            subprocess.check_call(cmd)
+        addons = self.model.config.get('addons', '').split()
+        if not addons:
+            return
+
+        # FIXME(pjdc): This is a waste of time if we're not the
+        # seed node, but I'm not sure it's possible to know during
+        # the install hook if that's true.  Maybe `goal-state`?
+        self.model.unit.status = MaintenanceStatus('enabling microk8s addons')
+        cmd = ['/snap/bin/microk8s', 'enable']
+        cmd.extend(addons)
+        subprocess.check_call(cmd)
         self.model.unit.status = ActiveStatus()
 
     def _set_default_addon_state(self, event):
@@ -172,7 +173,8 @@ class MicroK8sCluster(Object):
         if not self.model.unit.is_leader():
             return
         reldata = event.relation.data[event.app]
-        for addon in DEFAULT_ADDONS:
+        addons = self.model.config.get('addons', '').split()
+        for addon in addons:
             relkey = addon_relation_key(addon)
             if relkey not in reldata:
                 reldata[relkey] = 'enabled'

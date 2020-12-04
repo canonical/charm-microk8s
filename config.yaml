@@ -1,4 +1,8 @@
 options:
+  addons:
+    description: The addons to enable.
+    type: string
+    default: dns ingress
   manage_etc_hosts:
     description: >
       When set, add node IPs to /etc/hosts.  Use this if the substrate does not provide DNS.
