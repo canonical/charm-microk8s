@@ -9,7 +9,7 @@ from etchosts import refresh_etc_hosts
 from hostnamemanager import HostnameManager
 
 from utils import (
-    addon_relation_key,
+    close_port,
     get_departing_unit_name,
     get_microk8s_node,
     get_microk8s_nodes_json,
@@ -79,10 +79,6 @@ class MicroK8sClusterNewNodeEvent(MicroK8sClusterEvent):
     """charm runs add-node in response to this event, passes join URL back somehow"""
 
 
-class MicroK8sClusterIngressAddonEnabledEvent(MicroK8sClusterEvent):
-    """The ingress addon has been enabled."""
-
-
 class MicroK8sClusterJoinCompleteEvent(MicroK8sClusterEvent):
     """A unit has successfully executed `microk8s join`."""
 
@@ -105,7 +101,6 @@ class MicroK8sClusterThisNodeRemovedEvent(MicroK8sClusterEvent):
 
 class MicroK8sClusterEvents(ObjectEvents):
     add_unit = EventSource(MicroK8sClusterNewNodeEvent)
-    ingress_addon_enabled = EventSource(MicroK8sClusterIngressAddonEnabledEvent)
     join_complete = EventSource(MicroK8sClusterJoinCompleteEvent)
     node_added = EventSource(MicroK8sClusterNodeAddedEvent)
     other_node_removed = EventSource(MicroK8sClusterOtherNodeRemovedEvent)
@@ -120,21 +115,20 @@ class MicroK8sCluster(Object):
         super().__init__(charm, relation_name)
 
         self._state.set_default(
-            previous_ingress_addon_state=False,
+            enabled_addons=[],
             joined=False,
         )
 
         self.hostnames = HostnameManager(charm, relation_name)
 
         self.framework.observe(charm.on.install, self._on_install)
+        self.framework.observe(charm.on.config_changed, self._manage_addons)
+        self.framework.observe(charm.on.config_changed, self._ingress_ports)
 
-        self.framework.observe(charm.on[relation_name].relation_created, self._set_default_addon_state)
         self.framework.observe(charm.on[relation_name].relation_changed, self._on_relation_changed)
-        self.framework.observe(charm.on[relation_name].relation_changed, self._maybe_ingress_enabled)
         self.framework.observe(charm.on[relation_name].relation_departed, self._on_relation_departed)
 
         self.framework.observe(self.on.add_unit, self._on_add_unit)
-        self.framework.observe(self.on.ingress_addon_enabled, self._on_ingress_addon_enabled)
         self.framework.observe(self.on.join_complete, self._update_etc_hosts)
         self.framework.observe(self.on.node_added, self._on_node_added)
         self.framework.observe(self.on.other_node_removed, self._on_other_node_removed)
@@ -154,37 +148,44 @@ class MicroK8sCluster(Object):
         subprocess.check_call(['/usr/bin/snap', 'install', '--classic', 'microk8s'])
         self.model.unit.status = ActiveStatus()
 
-        addons = self.model.config.get('addons', '').split()
-        if not addons:
+    def _manage_addons(self, _):
+        if not self.model.unit.is_leader():
+            # FIXME(pjdc): Ideally we would record addon state in the
+            # peer relation and every unit would defer this event until
+            # the requested addons are enabled, or they become leader.
             return
+
+        addons = self.model.config.get('addons', '').split()
+        to_enable = [addon for addon in addons if addon not in self._state.enabled_addons]
+        to_disable = [addon for addon in self._state.enabled_addons if addon not in addons]
 
         # FIXME(pjdc): This is a waste of time if we're not the
         # seed node, but I'm not sure it's possible to know during
         # the install hook if that's true.  Maybe `goal-state`?
-        self.model.unit.status = MaintenanceStatus('enabling microk8s addons')
-        cmd = ['/snap/bin/microk8s', 'enable']
-        cmd.extend(addons)
-        subprocess.check_call(cmd)
-        self.model.unit.status = ActiveStatus()
+        if to_enable:
+            self.model.unit.status = MaintenanceStatus('enabling microk8s addons: {}'.format(', '.join(to_enable)))
+            cmd = ['/snap/bin/microk8s', 'enable']
+            cmd.extend(addons)
+            subprocess.check_call(cmd)
+            self.model.unit.status = ActiveStatus()
 
-    def _set_default_addon_state(self, event):
-        """Ensure the enabled addons are correctly recorded in the peer relation."""
-        if not self.model.unit.is_leader():
-            return
-        reldata = event.relation.data[event.app]
+        if to_disable:
+            self.model.unit.status = MaintenanceStatus('disabling microk8s addons: {}'.format(', '.join(to_disable)))
+            cmd = ['/snap/bin/microk8s', 'disable']
+            cmd.extend(to_disable)
+            subprocess.check_call(cmd)
+            self.model.unit.status = ActiveStatus()
+
+        self._state.enabled_addons = addons
+
+    def _ingress_ports(self, _):
         addons = self.model.config.get('addons', '').split()
-        for addon in addons:
-            relkey = addon_relation_key(addon)
-            if relkey not in reldata:
-                reldata[relkey] = 'enabled'
-                if addon == 'ingress':
-                    self.on.ingress_addon_enabled.emit(**self._event_args(event))
-
-    def _maybe_ingress_enabled(self, event):
-        status = event.relation.data[event.app].get(addon_relation_key('ingress'))
-        if status == 'enabled' and not self._state.previous_ingress_addon_state:
-            self.on.ingress_addon_enabled.emit(**self._event_args(event))
-            self._state.previous_ingress_addon_state = True
+        if 'ingress' in addons:
+            open_port('80/tcp')
+            open_port('443/tcp')
+        else:
+            close_port('80/tcp')
+            close_port('443/tcp')
 
     def _on_relation_changed(self, event):
         if event.unit and event.relation.data[event.unit].get('join_complete'):
@@ -233,12 +234,6 @@ class MicroK8sCluster(Object):
         url = join_url_from_add_node_output(output)
         logger.debug('Generated join URL: {}'.format(url))
         event.join_url = url
-        self.model.unit.status = ActiveStatus()
-
-    def _on_ingress_addon_enabled(self, event):
-        self.model.unit.status = MaintenanceStatus('opening ingress ports')
-        open_port('80/tcp')
-        open_port('443/tcp')
         self.model.unit.status = ActiveStatus()
 
     def _on_node_added(self, event):

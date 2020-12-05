@@ -71,7 +71,3 @@ def close_port(port):
 
 def open_port(port):
     subprocess.check_call(['open-port', port])
-
-
-def addon_relation_key(addon):
-    return 'microk8s.addons.{}.state'.format(addon)
