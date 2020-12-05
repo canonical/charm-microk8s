@@ -15,8 +15,7 @@ class TestEtcHosts(unittest.TestCase):
                 'addresses': [
                     {'type': 'Hostname', 'address': 'example.hostname'},
                     {'type': 'InternalIP', 'address': '10.1.2.3'},
-                ]}
-            }
+                ]}}
         ]}
         expected_entries = {'10.1.2.3': ['example.hostname']}
         self.assertEqual(node_address_entries(nodes), expected_entries)
