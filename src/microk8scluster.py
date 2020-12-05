@@ -15,6 +15,7 @@ from utils import (
     get_microk8s_nodes_json,
     join_url_from_add_node_output,
     join_url_key,
+    microk8s_ready,
     open_port,
 )
 
@@ -308,7 +309,13 @@ class MicroK8sCluster(Object):
         if not self.model.config.get('manage_etc_hosts'):
             return
         if not self._state.joined:
+            logger.info('Waiting for join before updating /etc/hosts')
             event.defer()
+            return
+        if not microk8s_ready():
+            logger.info('Waiting for microk8s to be ready before updating /etc/hosts')
+            event.defer()
+            return
 
         self.model.unit.status = MaintenanceStatus('updating /etc/hosts')
         nodes_json = get_microk8s_nodes_json()
