@@ -21,6 +21,9 @@ from utils import (
 logger = logging.getLogger(__name__)
 
 
+CONTAINERD_ENV_SNAP_PATH = '/var/snap/microk8s/current/args/containerd-env'
+
+
 class EventError(Exception):
     pass
 
@@ -124,6 +127,7 @@ class MicroK8sCluster(Object):
         self.framework.observe(charm.on.install, self._on_install)
         self.framework.observe(charm.on.config_changed, self._manage_addons)
         self.framework.observe(charm.on.config_changed, self._ingress_ports)
+        self.framework.observe(charm.on.config_changed, self._containerd_env)
 
         self.framework.observe(charm.on[relation_name].relation_changed, self._on_relation_changed)
         self.framework.observe(charm.on[relation_name].relation_departed, self._on_relation_departed)
@@ -186,6 +190,22 @@ class MicroK8sCluster(Object):
         else:
             close_port('80/tcp')
             close_port('443/tcp')
+
+    def _containerd_env(self, event):
+        try:
+            with open(CONTAINERD_ENV_SNAP_PATH) as env:
+                existing = env.read()
+        except Exception:
+            # We could be racing install, or who knows what else, so just try again later.
+            event.defer()
+            return
+        configured = self.model.config['containerd_env']
+        if existing == configured:
+            return
+        # This file is only read on startup, so just truncate and append.
+        with open(CONTAINERD_ENV_SNAP_PATH, 'w') as env:
+            env.write(configured)
+            subprocess.check_call(['systemctl', 'restart', 'snap.microk8s.daemon-containerd.service'])
 
     def _on_relation_changed(self, event):
         if event.unit and event.relation.data[event.unit].get('join_complete'):
