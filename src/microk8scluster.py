@@ -324,6 +324,10 @@ class MicroK8sCluster(Object):
             return
 
         self.model.unit.status = MaintenanceStatus('updating /etc/hosts')
+        expected_hosts = self.hostnames.peers.values()
         nodes_json = get_microk8s_nodes_json()
-        refresh_etc_hosts(nodes_json)
+        missing = refresh_etc_hosts(nodes_json, expected_hosts)
+        if missing:
+            logger.error('Not all hosts not found in k8s, deferring event.  Missing: {}'.format(', '.join(missing)))
+            event.defer()
         self.model.unit.status = ActiveStatus()

@@ -70,20 +70,38 @@ def sync_rename_sync(src, dst):
     os.close(dirfd)
 
 
-def refresh_etc_hosts(nodes_json):
+def read_etc_hosts():
+    return open('/etc/hosts').read()
+
+
+def write_temporary_file(filename, contents, encoding='utf-8'):
+    """Write contents to a new file alongside filename, ready to be renamed into place."""
+    directory = os.path.dirname(filename)
+    prefix = '.{}-'.format(os.path.basename(filename))
+    with NamedTemporaryFile(prefix=prefix, dir=directory, delete=False) as ntf:
+        ntf.write('\n'.join(contents).encode(encoding) + b'\n')
+        return ntf.name
+
+
+def refresh_etc_hosts(nodes_json, expected_hosts):
+    """Update /etc/hosts based on the output of `kubectl get nodes -o json`.
+
+    Return a set naming the missing hosts, if any."""
     nodes = json.loads(nodes_json)
     entries = node_address_entries(nodes)
-    hosts = open('/etc/hosts').read()
+    hosts = read_etc_hosts()
     newhosts = update_hosts_with(hosts, entries)
-    with NamedTemporaryFile(prefix='.hosts-', dir='/etc', delete=False) as tmphosts:
-        tmphosts.write('\n'.join(newhosts).encode('utf-8') + b'\n')
-        src = tmphosts.name
+    src = write_temporary_file('/etc/hosts', newhosts)
     os.chmod(src, 0o644)
     try:
         sync_rename_sync(src, '/etc/hosts')
     except Exception:
         os.unlink(src)
         raise
+    entry_hostnames = set()
+    for ev in entries.values():
+        entry_hostnames.update(ev)
+    return set(expected_hosts).difference(entry_hostnames)
 
 
 if __name__ == '__main__':  # pragma: no cover
