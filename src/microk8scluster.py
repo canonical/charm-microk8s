@@ -3,7 +3,7 @@ import subprocess
 
 from ops.charm import RelationEvent
 from ops.framework import EventSource, Object, ObjectEvents, StoredState
-from ops.model import ActiveStatus, MaintenanceStatus
+from ops.model import ActiveStatus, BlockedStatus, MaintenanceStatus
 
 from etchosts import refresh_etc_hosts
 from hostnamemanager import HostnameManager
@@ -251,7 +251,7 @@ class MicroK8sCluster(Object):
 
     def _on_add_unit(self, event):
         self.model.unit.status = MaintenanceStatus('adding {} to the microk8s cluster'.format(event.unit.name))
-        output = subprocess.check_output(['/snap/bin/microk8s', 'add-node']).decode('utf-8')
+        output = subprocess.check_output(['/snap/bin/microk8s', 'add-node', '--token-ttl', '-1']).decode('utf-8')
         url = join_url_from_add_node_output(output)
         logger.debug('Generated join URL: {}'.format(url))
         event.join_url = url
@@ -261,7 +261,13 @@ class MicroK8sCluster(Object):
         self.model.unit.status = MaintenanceStatus('joining the microk8s cluster')
         url = event.join_url
         logger.debug('Using join URL: {}'.format(url))
-        subprocess.check_call(['/snap/bin/microk8s', 'join', url])
+        try:
+            subprocess.check_call(['/snap/bin/microk8s', 'join', url])
+        except subprocess.CalledProcessError:
+            logger.error('Failed to join cluster; deferring to try again later.')
+            self.model.unit.status = BlockedStatus('join failed, will try again')
+            event.defer()
+            return
         self._state.joined = True
         event.join_complete = 'true'
         self.model.unit.status = ActiveStatus()
