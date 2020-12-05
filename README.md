@@ -21,9 +21,9 @@ to the resources required by the applications you plan to deploy.
 
 Create and activate a virtualenv, and install the development requirements.
 
-    virtualenv -p python3 venv
-    source venv/bin/activate
-    pip install -r requirements-dev.txt
+    sh -c 'virtualenv -p python3 venv &&
+        . venv/bin/activate &&
+        pip install -r requirements-dev.txt'
 
 ## Testing
 
