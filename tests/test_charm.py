@@ -20,6 +20,7 @@ class TestCharm(unittest.TestCase):
         harness.begin_with_initial_hooks()
         expected_subprocess_calls = [
             ['/usr/bin/snap', 'install', '--classic', 'microk8s'],
+            ['open-port', '16443/tcp'],
             ['/snap/bin/microk8s', 'enable', 'dns', 'ingress'],
             ['open-port', '80/tcp'],
             ['open-port', '443/tcp'],
@@ -39,6 +40,7 @@ class TestCharm(unittest.TestCase):
         harness.begin_with_initial_hooks()
         expected_subprocess_calls = [
             ['/usr/bin/snap', 'install', '--classic', 'microk8s'],
+            ['open-port', '16443/tcp'],
             ['open-port', '80/tcp'],
             ['open-port', '443/tcp'],
         ]

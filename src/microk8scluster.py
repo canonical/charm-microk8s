@@ -151,6 +151,7 @@ class MicroK8sCluster(Object):
     def _on_install(self, _):
         self.model.unit.status = MaintenanceStatus('installing microk8s')
         subprocess.check_call(['/usr/bin/snap', 'install', '--classic', 'microk8s'])
+        open_port('16443/tcp')
         self.model.unit.status = ActiveStatus()
 
     def _manage_addons(self, _):
