@@ -2,7 +2,6 @@
 
 import os
 import json
-import sys
 
 from tempfile import NamedTemporaryFile
 
@@ -102,8 +101,3 @@ def refresh_etc_hosts(nodes_json, expected_hosts):
     for ev in entries.values():
         entry_hostnames.update(ev)
     return set(expected_hosts).difference(entry_hostnames)
-
-
-if __name__ == '__main__':  # pragma: no cover
-    nodes = sys.stdin.read()
-    refresh_etc_hosts(nodes)
