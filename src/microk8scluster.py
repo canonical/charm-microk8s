@@ -152,6 +152,7 @@ class MicroK8sCluster(Object):
     def _on_install(self, _):
         self.model.unit.status = MaintenanceStatus('installing microk8s')
         subprocess.check_call(['/usr/bin/snap', 'install', '--classic', 'microk8s'])
+        subprocess.check_call(['/usr/sbin/addgroup', 'ubuntu', 'microk8s'])
         # Required for autocert, useful for the admin.
         subprocess.check_call(['/usr/bin/snap', 'alias', 'microk8s.kubectl', 'kubectl'])
         open_port('16443/tcp')
