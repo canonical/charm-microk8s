@@ -10,8 +10,7 @@ to the resources required by the applications you plan to deploy.
 
 ## Usage
 
-    charmcraft build
-    juju deploy --constraints 'cpus=2 mem=4G' ./microk8s.charm
+    juju deploy --constraints 'cpus=2 mem=4G' cs:~pjdc/microk8s
 
 ### Scale Out Usage
 
