@@ -126,9 +126,10 @@ class MicroK8sCluster(Object):
         self.hostnames = HostnameManager(charm, relation_name)
 
         self.framework.observe(charm.on.install, self._on_install)
-        self.framework.observe(charm.on.config_changed, self._manage_addons)
-        self.framework.observe(charm.on.config_changed, self._ingress_ports)
         self.framework.observe(charm.on.config_changed, self._containerd_env)
+        self.framework.observe(charm.on.config_changed, self._ingress_ports)
+        self.framework.observe(charm.on.config_changed, self._manage_addons)
+        self.framework.observe(charm.on.config_changed, self._update_etc_hosts)
 
         self.framework.observe(charm.on[relation_name].relation_changed, self._on_relation_changed)
         self.framework.observe(charm.on[relation_name].relation_departed, self._on_relation_departed)

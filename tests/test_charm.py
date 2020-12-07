@@ -22,9 +22,9 @@ class TestCharm(unittest.TestCase):
             ['/usr/bin/snap', 'install', '--classic', 'microk8s'],
             ['/usr/bin/snap', 'alias', 'microk8s.kubectl', 'kubectl'],
             ['open-port', '16443/tcp'],
-            ['/snap/bin/microk8s', 'enable', 'dns', 'ingress'],
             ['open-port', '80/tcp'],
             ['open-port', '443/tcp'],
+            ['/snap/bin/microk8s', 'enable', 'dns', 'ingress'],
         ]
         self.assertEqual(len(expected_subprocess_calls), len(_check_call.call_args_list))
         for actual, expected in zip(_check_call.call_args_list, [call(c) for c in expected_subprocess_calls]):
