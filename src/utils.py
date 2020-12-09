@@ -76,8 +76,13 @@ def open_port(port):
 def microk8s_ready():
     """Check if microk8s is ready.
 
-    Since `microk8s status` always exits 0, we do this by parsing its output.
-
+    Since `microk8s status` usually exits 0, we do this by parsing its output.
     """
-    output = subprocess.check_output(['/snap/bin/microk8s', 'status']).decode('utf-8')
-    return output.startswith('microk8s is running')
+    result = subprocess.run(
+        ['/snap/bin/microk8s', 'status'],
+        capture_output=True,
+        encoding='utf-8',
+    )
+    if result.returncode > 0:
+        return False
+    return result.stdout.startswith('microk8s is running')
