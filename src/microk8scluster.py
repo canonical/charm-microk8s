@@ -1,3 +1,4 @@
+import json
 import logging
 import subprocess
 
@@ -127,6 +128,7 @@ class MicroK8sCluster(Object):
 
         self.framework.observe(charm.on.install, self._on_install)
         self.framework.observe(charm.on.config_changed, self._containerd_env)
+        self.framework.observe(charm.on.config_changed, self._coredns_config)
         self.framework.observe(charm.on.config_changed, self._ingress_ports)
         self.framework.observe(charm.on.config_changed, self._manage_addons)
         self.framework.observe(charm.on.config_changed, self._update_etc_hosts)
@@ -212,6 +214,40 @@ class MicroK8sCluster(Object):
         with open(CONTAINERD_ENV_SNAP_PATH, 'w') as env:
             env.write(configured)
             subprocess.check_call(['systemctl', 'restart', 'snap.microk8s.daemon-containerd.service'])
+
+    def _coredns_config(self, event):
+        result = subprocess.run(
+            ['/snap/bin/kubectl', 'get', 'configmap', '-n', 'kube-system', 'coredns', '-o', 'json'],
+            capture_output=True,
+        )
+        if result.returncode > 0:
+            logger.error('Failed to get coredns configmap!  kubectl said: {}'.format(result.stderr))
+            event.defer()
+            return
+
+        configmap = result.stdout
+        existing = json.loads(configmap).get('data', {}).get('Corefile')
+        configured = self.model.config['coredns_config']
+        if existing == configured:
+            logger.info('Nothing to do: contents of coredns_config setting are the same as coredns configmap.')
+            return
+
+        if not self.model.unit.is_leader():
+            logger.info('There is an update of the coredns configmap pending, but we are not the leader.  Deferring.')
+            event.defer()
+            return
+
+        patch = json.dumps({'data': {'Corefile': configured}})
+        result = subprocess.run(
+            ['/snap/bin/kubectl', 'patch', 'configmap', '-n', 'kube-system', 'coredns', '--patch', patch],
+            capture_output=True,
+        )
+        if result.returncode > 0:
+            logger.error('Failed to patch coredns configmap!  kubectl said: {}'.format(result.stderr))
+            self.model.status = BlockedStatus('kubectl patch failed updating coredns configmap')
+            return
+
+        logger.info('Updated coredns configmap to match coredns_config.')
 
     def _on_relation_changed(self, event):
         if event.unit and event.relation.data[event.unit].get('join_complete'):
