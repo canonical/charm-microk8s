@@ -10,9 +10,15 @@ from charm import MicroK8sCharm
 
 
 class TestCharm(unittest.TestCase):
+    @patch("kubectl.patch")
+    @patch("kubectl.get")
     @patch("subprocess.check_call")
-    def test_begin_with_initial_hooks_on_leader(self, _check_call):
+    def test_begin_with_initial_hooks_on_leader(self, _check_call, _get, _patch):
         """The leader installs microk8s, enables addons, and opens ports."""
+        _get.return_value.returncode = 0
+        _get.return_value.stdout = b'{}'
+        _patch.return_value.returncode = 0
+
         harness = Harness(MicroK8sCharm)
         self.addCleanup(harness.cleanup)
 
@@ -32,9 +38,15 @@ class TestCharm(unittest.TestCase):
             self.assertEqual(actual, expected)
         self.assertEqual(harness.charm.unit.status, ActiveStatus())
 
+    @patch("kubectl.patch")
+    @patch("kubectl.get")
     @patch("subprocess.check_call")
-    def test_begin_with_initial_hooks_on_follower(self, _check_call):
+    def test_begin_with_initial_hooks_on_follower(self, _check_call, _get, _patch):
         """A follower installs microk8s and opens ports.  (A follower does not enable addons.)"""
+        _get.return_value.returncode = 0
+        _get.return_value.stdout = b'{}'
+        _patch.return_value.returncode = 0
+
         harness = Harness(MicroK8sCharm)
         self.addCleanup(harness.cleanup)
 

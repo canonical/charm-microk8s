@@ -6,6 +6,8 @@ from ops.charm import RelationEvent
 from ops.framework import EventSource, Object, ObjectEvents, StoredState
 from ops.model import ActiveStatus, BlockedStatus, MaintenanceStatus
 
+import kubectl
+
 from etchosts import refresh_etc_hosts
 from hostnamemanager import HostnameManager
 
@@ -216,10 +218,7 @@ class MicroK8sCluster(Object):
             subprocess.check_call(['systemctl', 'restart', 'snap.microk8s.daemon-containerd.service'])
 
     def _coredns_config(self, event):
-        result = subprocess.run(
-            ['/snap/bin/kubectl', 'get', 'configmap', '-n', 'kube-system', 'coredns', '-o', 'json'],
-            capture_output=True,
-        )
+        result = kubectl.get('configmap', 'coredns', namespace='kube-system')
         if result.returncode > 0:
             logger.error('Failed to get coredns configmap!  kubectl said: {}'.format(result.stderr))
             event.defer()
@@ -238,10 +237,7 @@ class MicroK8sCluster(Object):
             return
 
         patch = json.dumps({'data': {'Corefile': configured}})
-        result = subprocess.run(
-            ['/snap/bin/kubectl', 'patch', 'configmap', '-n', 'kube-system', 'coredns', '--patch', patch],
-            capture_output=True,
-        )
+        result = kubectl.patch('configmap', 'coredns', patch, namespace='kube-system')
         if result.returncode > 0:
             logger.error('Failed to patch coredns configmap!  kubectl said: {}'.format(result.stderr))
             self.model.status = BlockedStatus('kubectl patch failed updating coredns configmap')
