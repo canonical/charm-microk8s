@@ -25,6 +25,7 @@ class TestCharm(unittest.TestCase):
         harness.set_leader(True)
         harness.begin_with_initial_hooks()
         expected_subprocess_calls = [
+            ['/usr/bin/apt-get', 'install', '--yes', 'nfs-common'],
             ['/usr/bin/snap', 'install', '--classic', 'microk8s'],
             ['/usr/sbin/addgroup', 'ubuntu', 'microk8s'],
             ['/usr/bin/snap', 'alias', 'microk8s.kubectl', 'kubectl'],
@@ -53,6 +54,7 @@ class TestCharm(unittest.TestCase):
         harness.set_leader(False)
         harness.begin_with_initial_hooks()
         expected_subprocess_calls = [
+            ['/usr/bin/apt-get', 'install', '--yes', 'nfs-common'],
             ['/usr/bin/snap', 'install', '--classic', 'microk8s'],
             ['/usr/sbin/addgroup', 'ubuntu', 'microk8s'],
             ['/usr/bin/snap', 'alias', 'microk8s.kubectl', 'kubectl'],
