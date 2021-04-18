@@ -154,6 +154,9 @@ class MicroK8sCluster(Object):
         )
 
     def _on_install(self, _):
+        self.model.unit.status = MaintenanceStatus('installing OS packages')
+        # OS packages needed by storage providers
+        subprocess.check_call(['/usr/bin/apt-get', 'install', '--yes', 'nfs-common'])
         self.model.unit.status = MaintenanceStatus('installing microk8s')
         subprocess.check_call(['/usr/bin/snap', 'install', '--classic', 'microk8s'])
         subprocess.check_call(['/usr/sbin/addgroup', 'ubuntu', 'microk8s'])
