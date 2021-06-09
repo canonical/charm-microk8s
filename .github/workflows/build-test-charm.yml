@@ -1,4 +1,4 @@
-name: Build MicroK8s snap on PR and push to master
+name: Build MicroK8s charm on PR and push to master
 
 on:
   push:
@@ -36,5 +36,5 @@ jobs:
         run: |
           set -x
           sudo snap install juju --classic
-          juju bootstrap localhost
-          juju deploy ./microk8s.charm
+          sg lxd -c 'juju bootstrap localhost'
+          sg lxd -c 'juju deploy ./microk8s.charm'
