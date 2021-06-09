@@ -227,7 +227,7 @@ class MicroK8sCluster(Object):
             subprocess.check_call(['systemctl', 'restart', 'snap.microk8s.daemon-containerd.service'])
 
     def _refresh_channel(self, _):
-        channel = self.model.config.get('channel', 'auto').split()
+        channel = self.model.config['channel']
         if channel == 'auto':
             return
         infostr = subprocess.check_output('snap info microk8s'.split())
