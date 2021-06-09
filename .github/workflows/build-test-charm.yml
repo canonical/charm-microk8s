@@ -38,3 +38,11 @@ jobs:
           sudo snap install juju --classic
           sg lxd -c 'juju bootstrap localhost'
           sg lxd -c 'juju deploy ./microk8s.charm'
+          sg lxd -c 'juju status'
+          out="$(sg lxd -c 'juju ssh microk8s/0 microk8s.kubectl get all -A')"
+          while ! cat $out | grep "Running" | grep "calico"
+          do
+            echo "Waiting"
+            echo "$out"
+            sleep 10
+          done
