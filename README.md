@@ -10,7 +10,7 @@ to the resources required by the applications you plan to deploy.
 
 ## Usage
 
-    juju deploy --constraints 'cpus=2 mem=4G' cs:~pjdc/microk8s
+    juju deploy --constraints 'cores=2 mem=4G' cs:~pjdc/microk8s
 
 ### Scale Out Usage
 

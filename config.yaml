@@ -1,4 +1,9 @@
 options:
+  channel:
+    type: string
+    default: "auto"
+    description: |
+      Snap channel to install Kubernetes from. Use 'auto' to use the channel the snap defaults to.
   addons:
     description: The addons to enable.
     type: string
