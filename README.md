@@ -16,16 +16,6 @@ to the resources required by the applications you plan to deploy.
 
     juju add-unit -n 2 microk8s
 
-## Developing
-
-Create and activate a virtualenv, and install the development requirements.
-
-    sh -c 'virtualenv -p python3 venv &&
-        . venv/bin/activate &&
-        pip install -r requirements-dev.txt'
-
 ## Testing
 
-Create an activate the virtualenv per above, and then run `run_tests`:
-
-    ./run_tests
+Run `tox`
