@@ -26,6 +26,8 @@ jobs:
         run: sudo snap install charmcraft
       - name: Build charm
         run: |
+          set -x
+          cp hacks/lxd-profile.yaml .
           charmcraft build
       - name: Uploading snap
         uses: actions/upload-artifact@v1
