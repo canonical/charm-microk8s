@@ -231,7 +231,7 @@ class MicroK8sCluster(Object):
         if channel == 'auto':
             return
         infostr = subprocess.check_output('snap info microk8s'.split())
-        info = yaml.load(infostr)
+        info = yaml.safe_load(infostr)
         current = info['tracking']
         if current != channel:
             self.model.unit.status = MaintenanceStatus('refreshing to {}'.format(channel))
