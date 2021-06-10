@@ -1,0 +1,24 @@
+name: Lint Code
+
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+    branches:
+      - master
+
+jobs:
+  build:
+    name: Check Formatting
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v2.3.4
+      - name: Install dependencies
+        run: |
+          sudo apt-get install tox
+      - name: Check Python formatting
+        run: |
+          tox -e lint
