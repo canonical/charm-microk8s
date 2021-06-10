@@ -1,4 +1,5 @@
 import json
+import yaml
 import logging
 import subprocess
 
@@ -134,6 +135,7 @@ class MicroK8sCluster(Object):
         self.framework.observe(charm.on.config_changed, self._ingress_ports)
         self.framework.observe(charm.on.config_changed, self._manage_addons)
         self.framework.observe(charm.on.config_changed, self._update_etc_hosts)
+        self.framework.observe(charm.on.config_changed, self._refresh_channel)
 
         self.framework.observe(charm.on[relation_name].relation_changed, self._on_relation_changed)
         self.framework.observe(charm.on[relation_name].relation_departed, self._on_relation_departed)
@@ -158,7 +160,11 @@ class MicroK8sCluster(Object):
         # OS packages needed by storage providers
         subprocess.check_call(['/usr/bin/apt-get', 'install', '--yes', 'nfs-common'])
         self.model.unit.status = MaintenanceStatus('installing microk8s')
-        subprocess.check_call(['/usr/bin/snap', 'install', '--classic', 'microk8s'])
+        channel = self.model.config.get('channel', 'auto')
+        cmd = '/usr/bin/snap install --classic microk8s'.split()
+        if channel != 'auto':
+            cmd.append('--channel={}'.format(channel))
+        subprocess.check_call(cmd)
         subprocess.check_call(['/usr/sbin/addgroup', 'ubuntu', 'microk8s'])
         # Required for autocert, useful for the admin.
         subprocess.check_call(['/usr/bin/snap', 'alias', 'microk8s.kubectl', 'kubectl'])
@@ -219,6 +225,18 @@ class MicroK8sCluster(Object):
         with open(CONTAINERD_ENV_SNAP_PATH, 'w') as env:
             env.write(configured)
             subprocess.check_call(['systemctl', 'restart', 'snap.microk8s.daemon-containerd.service'])
+
+    def _refresh_channel(self, _):
+        channel = self.model.config['channel']
+        if channel == 'auto':
+            return
+        infostr = subprocess.check_output('snap info microk8s'.split())
+        info = yaml.safe_load(infostr)
+        current = info['tracking']
+        if current != channel:
+            self.model.unit.status = MaintenanceStatus('refreshing to {}'.format(channel))
+            subprocess.check_call('snap refresh microk8s --channel={}'.format(channel).split())
+            self.model.unit.status = ActiveStatus()
 
     def _coredns_config(self, event):
         result = kubectl.get('configmap', 'coredns', namespace='kube-system')
