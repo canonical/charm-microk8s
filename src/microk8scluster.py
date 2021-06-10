@@ -238,7 +238,6 @@ class MicroK8sCluster(Object):
             subprocess.check_call('snap refresh microk8s --channel={}'.format(channel).split())
             self.model.unit.status = ActiveStatus()
 
-
     def _coredns_config(self, event):
         result = kubectl.get('configmap', 'coredns', namespace='kube-system')
         if result.returncode > 0:
