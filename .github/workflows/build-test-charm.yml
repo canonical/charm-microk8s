@@ -30,7 +30,7 @@ jobs:
           cp hacks/lxd-profile.yaml .
           charmcraft build
       - name: Uploading snap
-        uses: actions/upload-artifact@v2.2.3
+        uses: actions/upload-artifact@v2.2.4
         with:
           name: microk8s.charm
           path: microk8s.charm
