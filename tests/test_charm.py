@@ -10,6 +10,10 @@ from charm import MicroK8sCharm
 
 
 class TestCharm(unittest.TestCase):
+    def setUp(self):
+        self.harness = Harness(MicroK8sCharm)
+        self.addCleanup(self.harness.cleanup)
+
     @patch("kubectl.patch")
     @patch("kubectl.get")
     @patch("subprocess.check_call")
@@ -19,11 +23,8 @@ class TestCharm(unittest.TestCase):
         _get.return_value.stdout = b'{}'
         _patch.return_value.returncode = 0
 
-        harness = Harness(MicroK8sCharm)
-        self.addCleanup(harness.cleanup)
-
-        harness.set_leader(True)
-        harness.begin_with_initial_hooks()
+        self.harness.set_leader(True)
+        self.harness.begin_with_initial_hooks()
         expected_subprocess_calls = [
             ['/usr/bin/apt-get', 'install', '--yes', 'nfs-common'],
             ['/usr/bin/snap', 'install', '--classic', 'microk8s'],
@@ -37,7 +38,7 @@ class TestCharm(unittest.TestCase):
         self.assertEqual(len(expected_subprocess_calls), len(_check_call.call_args_list))
         for actual, expected in zip(_check_call.call_args_list, [call(c) for c in expected_subprocess_calls]):
             self.assertEqual(actual, expected)
-        self.assertEqual(harness.charm.unit.status, ActiveStatus())
+        self.assertEqual(self.harness.charm.unit.status, ActiveStatus())
 
     @patch("kubectl.patch")
     @patch("kubectl.get")
@@ -48,11 +49,8 @@ class TestCharm(unittest.TestCase):
         _get.return_value.stdout = b'{}'
         _patch.return_value.returncode = 0
 
-        harness = Harness(MicroK8sCharm)
-        self.addCleanup(harness.cleanup)
-
-        harness.set_leader(False)
-        harness.begin_with_initial_hooks()
+        self.harness.set_leader(False)
+        self.harness.begin_with_initial_hooks()
         expected_subprocess_calls = [
             ['/usr/bin/apt-get', 'install', '--yes', 'nfs-common'],
             ['/usr/bin/snap', 'install', '--classic', 'microk8s'],
@@ -65,4 +63,31 @@ class TestCharm(unittest.TestCase):
         self.assertEqual(len(expected_subprocess_calls), len(_check_call.call_args_list))
         for actual, expected in zip(_check_call.call_args_list, [call(c) for c in expected_subprocess_calls]):
             self.assertEqual(actual, expected)
-        self.assertEqual(harness.charm.unit.status, ActiveStatus())
+        self.assertEqual(self.harness.charm.unit.status, ActiveStatus())
+
+    @patch("subprocess.check_call")
+    def test_action_start(self, _check_call):
+        self.harness.begin()
+        self.harness.charm.cluster._microk8s_start(None)
+        self.assertEqual(len(_check_call.call_args_list), 1)
+        self.assertEqual(_check_call.call_args_list, [
+            call(['/snap/bin/microk8s', 'start'])
+        ])
+
+    @patch("subprocess.check_call")
+    def test_action_stop(self, _check_call):
+        self.harness.begin()
+        self.harness.charm.cluster._microk8s_stop(None)
+        self.assertEqual(len(_check_call.call_args_list), 1)
+        self.assertEqual(_check_call.call_args_list, [
+            call(['/snap/bin/microk8s', 'stop'])
+        ])
+
+    @patch("subprocess.check_call")
+    def test_action_status(self, _check_call):
+        self.harness.begin()
+        self.harness.charm.cluster._microk8s_status(None)
+        self.assertEqual(len(_check_call.call_args_list), 1)
+        self.assertEqual(_check_call.call_args_list, [
+            call(['/snap/bin/microk8s', 'status'])
+        ])
