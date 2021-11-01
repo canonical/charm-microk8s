@@ -137,6 +137,10 @@ class MicroK8sCluster(Object):
         self.framework.observe(charm.on.config_changed, self._update_etc_hosts)
         self.framework.observe(charm.on.config_changed, self._refresh_channel)
 
+        self.framework.observe(charm.on.start_action, self._microk8s_start)
+        self.framework.observe(charm.on.stop_action, self._microk8s_stop)
+        self.framework.observe(charm.on.status_action, self._microk8s_status)
+
         self.framework.observe(charm.on[relation_name].relation_changed, self._on_relation_changed)
         self.framework.observe(charm.on[relation_name].relation_departed, self._on_relation_departed)
 
@@ -389,3 +393,12 @@ class MicroK8sCluster(Object):
             logger.error('Not all hosts not found in k8s, deferring event.  Missing: {}'.format(', '.join(missing)))
             event.defer()
         self.model.unit.status = ActiveStatus()
+
+    def _microk8s_start(self, event):
+        subprocess.check_call(['/snap/bin/microk8s', 'start'])
+
+    def _microk8s_stop(self, event):
+        subprocess.check_call(['/snap/bin/microk8s', 'stop'])
+
+    def _microk8s_status(self, event):
+        subprocess.check_call(['/snap/bin/microk8s', 'status'])
