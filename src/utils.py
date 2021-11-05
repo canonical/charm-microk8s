@@ -1,6 +1,11 @@
 import json
+import logging
 import os
 import subprocess
+from time import sleep
+
+
+logger = logging.getLogger(__name__)
 
 
 def get_departing_unit_name():
@@ -86,3 +91,23 @@ def microk8s_ready():
     if result.returncode > 0:
         return False
     return result.stdout.startswith('microk8s is running')
+
+
+def retry_until_zero_rc(cmd, max_tries, timeout_seconds):
+    """Run cmd, and retry while it has a non-zero return code."""
+    for i in range(max_tries):
+        try:
+            subprocess.check_call(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            break
+        except subprocess.CalledProcessError as e:
+            if i == max_tries - 1:
+                raise e
+
+            logger.exception(
+                'Command %s failed with return code %d\nStdout: %s\nStderr: %s\n',
+                cmd,
+                e.returncode,
+                e.stdout,
+                e.stderr,
+            )
+            sleep(timeout_seconds)
