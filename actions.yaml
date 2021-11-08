@@ -1,0 +1,8 @@
+status:
+  description: Retrieve MicroK8s status
+
+start:
+  description: Start MicroK8s services
+
+stop:
+  description: Stop MicroK8s services
