@@ -28,7 +28,7 @@ jobs:
         run: |
           set -x
           cp hacks/lxd-profile.yaml .
-          charmcraft build
+          sg lxd -c 'charmcraft build'
       - name: Uploading snap
         uses: actions/upload-artifact@v2.2.4
         with:
