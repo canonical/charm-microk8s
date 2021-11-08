@@ -1,0 +1,57 @@
+name: Integration tests
+
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+    branches:
+      - master
+
+jobs:
+  test:
+    name: Integration tests
+    runs-on: ubuntu-20.04
+    strategy:
+      fail-fast: false
+    steps:
+      - name: Checking out repo
+        uses: actions/checkout@v2.3.4
+      - name: Configure pytest-operator
+        uses: charmed-kubernetes/actions-operator@main
+        with:
+          provider: lxd
+      - name: Add user to lxd group
+        run: sudo usermod -a -G lxd $USER
+      - name: Build charm
+        run: |
+          cp hacks/lxd-profile.yaml .
+          sg lxd -c 'charmcraft build -v'
+          mv microk8s*.charm microk8s.charm
+      - name: Upload charm
+        uses: actions/upload-artifact@v2.2.4
+        with:
+          name: microk8s.charm
+          path: ./microk8s.charm
+      - name: Install tox
+        run: |
+          sudo apt-get install tox
+      - name: Run integration tests
+        run: |
+          juju add-model testing
+          export MK8S_CLUSTER_SIZE=1
+          export MK8S_CHARM=./microk8s.charm
+          export MK8S_KEEP_MODEL=1
+          sg lxd -c 'tox -e integration -- --model testing'
+      - name: Retrieve artifacts
+        if: always()
+        run: |
+          mkdir artifacts
+          juju debug-log -m testing --replay > artifacts/juju.log
+          juju status -m testing --format yaml > artifacts/juju.yaml
+      - name: Upload artifacts
+        if: always()
+        uses: actions/upload-artifact@v2
+        with:
+          name: logs
+          path: artifacts/

@@ -71,4 +71,5 @@ async def test_deploy_cluster(ops_test: OpsTest, snap_channel):
     await ops_test.model.wait_for_idle(apps=[app.name], timeout=60 * 60)
 
     # Remove application after test
-    await ops_test.model.applications[app.name].remove()
+    if not ops_test.keep_model:
+        await ops_test.model.applications[app.name].remove()
