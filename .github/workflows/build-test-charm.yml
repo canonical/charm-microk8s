@@ -23,7 +23,7 @@ jobs:
           sg lxd -c 'lxc version'
           sg lxd -c 'lxc network set lxdbr0 ipv6.address none'
       - name: Install charmcraft
-        run: sudo snap install charmcraft
+        run: sudo snap install charmcraft --classic
       - name: Build charm
         run: |
           set -x
