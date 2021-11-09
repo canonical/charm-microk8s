@@ -2,5 +2,6 @@
 coverage
 flake8
 pytest
-juju-wait
-sh
+pytest-operator < 0.9
+pytest-xdist
+juju
