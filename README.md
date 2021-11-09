@@ -11,7 +11,7 @@ to the resources required by the applications you plan to deploy.
 ## Usage
 
 ```bash
-juju deploy --constraints 'cores=2 mem=4G' cs:~pjdc/microk8s
+juju deploy --constraints 'cores=2 mem=4G' microk8s
 ```
 
 ### Scale Out Usage
