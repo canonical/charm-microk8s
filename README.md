@@ -1,17 +1,33 @@
 # microk8s
 
-## Description
+## The smallest, fastest Kubernetes
 
-This is a charm for deploying microk8s clusters.  It can handle
-scaling up and scaling down.
+Single-package fully conformant lightweight Kubernetes that works on [42 flavours of Linux](https://snapcraft.io/microk8s). Perfect for:
 
-I'd recommend at least 4G of memory and 2 vCPUs per node, in addition
-to the resources required by the applications you plan to deploy.
+- Developer workstations
+- IoT
+- Edge
+- CI/CD
 
 ## Usage
 
+This charm deploys and manages a MicroK8s cluster. It can handle scaling up and down.
+
+**Minimum Requirements**: 1 vCPU and 1GB RAM.
+**Recommended Requirements**: 2 vCPUs and 4GB RAM, 20GB disk.
+
+Make sure to account for extra requirements depending on the workload you are planning to deploy.
+
 ```bash
 juju deploy --constraints 'cores=2 mem=4G' microk8s
+```
+
+### Addons
+
+Enable addons with:
+
+```bash
+juju config microk8s addons='storage dns ingress'
 ```
 
 ### Scale Out Usage
@@ -33,20 +49,18 @@ tox
 The integration tests require a bootstrapped Juju controller.
 
 ```bash
-# preserve the created juju model after tests finish for additional introspection
-export MK8S_KEEP_MODEL=1
-# specify charmhub name or local path. Set to `build` to build charm from source
-export MK8S_CHARM=<path-to-microk8s.charm>
-# install microk8s snap from a specific channel, e.g. 1.21
-export MK8S_SNAP_CHANNEL=''
-# install microk8s charm from a specific channel (ignored if not pulling from CharmHub)
-export MK8S_CHARM_CHANNEL=''
-# size of cluster to create during the tests
-export MK8S_CLUSTER_SIZE=3
-# machine constraints for the MicroK8s cluster (passed directly to Juju)
-export MK8S_CONSTRAINTS='mem=4G root-disk=20G allocate-public-ip=true'
-# optionally, configure an HTTP proxy for the integration tests
-export MK8S_PROXY=''
+./integration_tests.sh
+```
 
-tox -e integration
+## Build from source
+
+```bash
+charmcraft pack
+```
+
+### LXD
+
+```bash
+cp hacks/lxd-profile.yaml .
+charmcraft pack
 ```
