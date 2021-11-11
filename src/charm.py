@@ -12,7 +12,7 @@ class MicroK8sCharm(CharmBase):
     def __init__(self, *args):
         super().__init__(*args)
 
-        self.cluster = MicroK8sCluster(self, 'cluster')
+        self.cluster = MicroK8sCluster(self, "cluster")
 
 
 if __name__ == "__main__":  # pragma: no cover

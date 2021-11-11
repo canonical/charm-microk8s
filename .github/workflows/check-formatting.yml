@@ -21,4 +21,4 @@ jobs:
           sudo apt-get install tox
       - name: Check Python formatting
         run: |
-          tox -e lint
+          tox
