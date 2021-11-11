@@ -5,3 +5,4 @@ pytest
 pytest-operator < 0.9
 pytest-xdist
 juju
+black

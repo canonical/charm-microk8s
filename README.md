@@ -25,7 +25,7 @@ juju add-unit -n 2 microk8s
 ### Unit tests
 
 ```bash
-tox -e lint
+tox
 ```
 
 ### Integration tests
