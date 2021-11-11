@@ -9,9 +9,7 @@ LOG = logging.getLogger(__name__)
 
 
 @pytest.mark.abort_on_fail
-@pytest.mark.parametrize(
-    "snap_channel", os.getenv("MK8S_SNAP_CHANNELS", "").split() or [""]
-)
+@pytest.mark.parametrize("snap_channel", os.getenv("MK8S_SNAP_CHANNELS", "").split() or [""])
 async def test_deploy_cluster(ops_test: OpsTest, snap_channel):
     units = int(os.getenv("MK8S_CLUSTER_SIZE", 3))
     charm = os.getenv("MK8S_CHARM", "microk8s")

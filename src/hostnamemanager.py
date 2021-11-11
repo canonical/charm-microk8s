@@ -9,6 +9,7 @@ from utils import (
 
 class HostnameManager(Object):
     """Announce our hostname to peers, and remember theirs in turn."""
+
     _state = StoredState()
 
     def __init__(self, charm, relation_name):
@@ -35,8 +36,8 @@ class HostnameManager(Object):
     def _announce_hostname(self, event):
         """Announce our hostname."""
         mydata = event.relation.data[self.model.unit]
-        if 'hostname' not in mydata:
-            mydata['hostname'] = gethostname()
+        if "hostname" not in mydata:
+            mydata["hostname"] = gethostname()
 
     def _remember_hostname(self, event):
         """Remember peer hostname."""
@@ -44,7 +45,7 @@ class HostnameManager(Object):
             return
 
         peerdata = event.relation.data[event.unit]
-        peer_hostname = peerdata.get('hostname')
+        peer_hostname = peerdata.get("hostname")
         if peer_hostname:
             self._state.peer_hostnames[event.unit.name] = peer_hostname
 
