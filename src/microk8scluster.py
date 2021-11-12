@@ -345,7 +345,7 @@ class MicroK8sCluster(Object):
             logger.info("{} is still around. Waiting for it to go away.".format(event.departing_unit_name))
             event.defer()
             return
-        hostname = self.hostnames.peers.get(event.departing_unit_name)
+        hostname = self.hostnames.all_peers.get(event.departing_unit_name)
         if not hostname:
             logger.error("Cannot remove node: hostname for {} not found.".format(event.departing_unit_name))
             return

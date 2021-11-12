@@ -29,9 +29,14 @@ class HostnameManager(Object):
         self._state.forgotten[unit_name] = unit_name
 
     @property
+    def all_peers(self):
+        """Return a dict mapping peers' unit names to their hostnames."""
+        return dict(self._state.peer_hostnames)
+
+    @property
     def peers(self):
         """Return a dict mapping peers' unit names to their hostnames, except forgotten units."""
-        return {hk: hv for hk, hv in self._state.peer_hostnames.items() if hk not in self._state.forgotten}
+        return {k: v for k, v in self._state.peer_hostnames.items() if k not in self._state.forgotten}
 
     def _announce_hostname(self, event):
         """Announce our hostname."""
