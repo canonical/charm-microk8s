@@ -6,7 +6,7 @@ import subprocess
 import unittest
 from unittest.mock import call, patch
 
-from ops.model import ActiveStatus
+from ops.model import ActiveStatus, BlockedStatus
 from ops.testing import Harness
 from charm import MicroK8sCharm
 
@@ -87,3 +87,23 @@ class TestCharm(unittest.TestCase):
         self.harness.charm.cluster._microk8s_status(None)
         self.assertEqual(len(_check_call.call_args_list), 1)
         self.assertEqual(_check_call.call_args_list, [call(["/snap/bin/microk8s", "status"])])
+
+    @patch("kubectl.patch")
+    @patch("kubectl.get")
+    @patch("subprocess.check_call")
+    @patch("subprocess.check_output")
+    def test_refresh_channel_prevent_downgrades(self, _check_output, _check_call, _get, _patch):
+        _get.return_value.returncode = 0
+        _get.return_value.stdout = b"{}"
+        _patch.return_value.returncode = 0
+        self.harness.begin()
+
+        _check_output.return_value = b"tracking: '1.21'"
+
+        self.harness.update_config({"channel": "1.20"})
+        self.assertNotIn(call(["snap", "refresh", "microk8s", "--channel=1.20"]), _check_call.call_args_list)
+        self.assertEqual(self.harness.charm.model.unit.status, BlockedStatus("preventing downgrade from 1.21 to 1.20"))
+
+        self.harness.update_config({"channel": "1.22"})
+        self.assertIn(call(["snap", "refresh", "microk8s", "--channel=1.22"]), _check_call.call_args_list)
+        self.assertEqual(self.harness.charm.model.unit.status, ActiveStatus())
