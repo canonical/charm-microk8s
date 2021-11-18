@@ -13,6 +13,7 @@ from etchosts import refresh_etc_hosts
 from hostnamemanager import HostnameManager
 
 from utils import (
+    check_kubernetes_version_is_older,
     close_port,
     get_departing_unit_name,
     get_microk8s_node,
@@ -238,10 +239,16 @@ class MicroK8sCluster(Object):
         infostr = subprocess.check_output("snap info microk8s".split())
         info = yaml.safe_load(infostr)
         current = info["tracking"]
-        if current != channel:
-            self.model.unit.status = MaintenanceStatus("refreshing to {}".format(channel))
-            subprocess.check_call("snap refresh microk8s --channel={}".format(channel).split())
-            self.model.unit.status = ActiveStatus()
+        if current == channel:
+            return
+
+        if check_kubernetes_version_is_older(current, channel):
+            self.model.unit.status = BlockedStatus("preventing downgrade from {} to {}".format(current, channel))
+            return
+
+        self.model.unit.status = MaintenanceStatus("refreshing to {}".format(channel))
+        subprocess.check_call("snap refresh microk8s --channel={}".format(channel).split())
+        self.model.unit.status = ActiveStatus()
 
     def _coredns_config(self, event):
         result = kubectl.get("configmap", "coredns", namespace="kube-system")

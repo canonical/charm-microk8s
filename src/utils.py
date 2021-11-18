@@ -112,3 +112,19 @@ def retry_until_zero_rc(cmd, max_tries, timeout_seconds):
                 e.stderr,
             )
             sleep(timeout_seconds)
+
+
+def get_kubernetes_version_from_channel(channel: str) -> list:
+    """Retrieve the Kubernetes version implied by a snap channel."""
+    track = channel.split("/")[0]
+    return list(map(int, track.split(".")))
+
+
+def check_kubernetes_version_is_older(current: str, new: str):
+    """Check if the Kubernetes version implied by channel new is older than the current."""
+    try:
+        current_version = get_kubernetes_version_from_channel(current)
+        new_version = get_kubernetes_version_from_channel(new)
+        return current_version > new_version
+    except (TypeError, ValueError):
+        return False
