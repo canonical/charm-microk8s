@@ -1,6 +1,4 @@
 #!/usr/bin/env python3
-# Copyright 2020 Paul Collins
-# See LICENSE file for licensing details.
 
 from ops.charm import CharmBase
 from ops.main import main

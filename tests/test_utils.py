@@ -1,6 +1,3 @@
-# Copyright 2020 Paul Collins
-# See LICENSE file for licensing details.
-
 import unittest
 from utils import join_url_from_add_node_output
 

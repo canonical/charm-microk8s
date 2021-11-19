@@ -1,6 +1,3 @@
-# Copyright 2020 Paul Collins
-# See LICENSE file for licensing details.
-
 import json
 import unittest
 
