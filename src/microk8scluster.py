@@ -1,3 +1,4 @@
+from datetime import datetime
 import json
 import yaml
 import logging
@@ -29,6 +30,7 @@ logger = logging.getLogger(__name__)
 
 
 CONTAINERD_ENV_SNAP_PATH = "/var/snap/microk8s/current/args/containerd-env"
+CSR_CONF_TEMPLATE_SNAP_PATH = "/var/snap/microk8s/current/certs/csr.conf.template"
 
 
 class EventError(Exception):
@@ -138,6 +140,7 @@ class MicroK8sCluster(Object):
         self.framework.observe(charm.on.config_changed, self._manage_addons)
         self.framework.observe(charm.on.config_changed, self._update_etc_hosts)
         self.framework.observe(charm.on.config_changed, self._refresh_channel)
+        self.framework.observe(charm.on.config_changed, self._update_csr_conf)
 
         self.framework.observe(charm.on.start_action, self._microk8s_start)
         self.framework.observe(charm.on.stop_action, self._microk8s_stop)
@@ -401,6 +404,34 @@ class MicroK8sCluster(Object):
             logger.error("Not all hosts not found in k8s, deferring event. Missing: {}".format(", ".join(missing)))
             event.defer()
         self.model.unit.status = ActiveStatus()
+
+    def _update_csr_conf(self, event):
+        try:
+            with open(CSR_CONF_TEMPLATE_SNAP_PATH, "r") as fin:
+                existing = fin.read()
+        except Exception:
+            # We could be racing install, or who knows what else, so just try again later.
+            event.defer()
+            return
+
+        private_address = subprocess.check_output(["unit-get", "private-address"]).decode().strip()
+        public_address = subprocess.check_output(["unit-get", "public-address"]).decode().strip()
+
+        csr_conf = self.model.config["csr_conf_template"]
+        if not csr_conf:
+            return
+
+        csr_conf = csr_conf.replace("%UNIT_PRIVATE_ADDRESS%", private_address)
+        csr_conf = csr_conf.replace("%UNIT_PUBLIC_ADDRESS%", public_address)
+        if csr_conf == existing:
+            return
+
+        logger.info("Updating csr.conf.template")
+        with open(CSR_CONF_TEMPLATE_SNAP_PATH, "w") as fout:
+            fout.write(csr_conf)
+
+        # re-run the configure script to update certificates
+        subprocess.check_call(["/usr/bin/snap", "set", "microk8s", "charm-update-certs={}".format(datetime.now())])
 
     def _microk8s_start(self, event):
         subprocess.check_call(["/snap/bin/microk8s", "start"])
