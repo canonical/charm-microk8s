@@ -1,6 +1,3 @@
-# Copyright 2020 Paul Collins
-# See LICENSE file for licensing details.
-
 import unittest
 from utils import check_kubernetes_version_is_older, join_url_from_add_node_output, get_kubernetes_version_from_channel
 

@@ -1,10 +1,17 @@
-# Copyright 2020 Paul Collins
-# See LICENSE file for licensing details.
 name: microk8s
-series: [focal]
-summary: summary
-description: description
-min-juju-version: 2.8.0
+summary: MicroK8s is a small, fast, single-package Kubernetes for developers, IoT and edge.
+description: |
+  MicroK8s is a small, fast, secure, single node Kubernetes that installs on just about any Linux box. Use it for offline development, prototyping, testing, or use it on a VM as a small, cheap, reliable K8s for CI/CD. It's also a great K8s for appliances - develop your IoT apps for k8s and deploy them to MicroK8s on your boxes.
+maintainers:
+  - Angelos Kolaitis <angelos.kolaitis@canonical.com>
+  - Kostantinos Tsakalozos <kos.tsakalozos@canonical.com>
+  - Joe Borg <joseph.borg@canonical.com>
+series:
+  - focal
+tags:
+  - kubernetes
+  - microk8s
+min-juju-version: 2.9.0
 peers:
   cluster:
     interface: microk8s-cluster
