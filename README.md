@@ -1,4 +1,4 @@
-# microk8s
+# MicroK8s
 
 ## The smallest, fastest Kubernetes
 
@@ -14,12 +14,21 @@ Single-package fully conformant lightweight Kubernetes that works on [42 flavour
 This charm deploys and manages a MicroK8s cluster. It can handle scaling up and down.
 
 **Minimum Requirements**: 1 vCPU and 1GB RAM.
+
 **Recommended Requirements**: 2 vCPUs and 4GB RAM, 20GB disk.
 
 Make sure to account for extra requirements depending on the workload you are planning to deploy.
 
 ```bash
 juju deploy --constraints 'cores=2 mem=4G' microk8s
+```
+
+Then, retrieve the kubeconfig file with:
+
+```bash
+mkdir -p ~/.kube
+juju run-action --unit microk8s/leader kubeconfig
+juju scp microk8s/leader:config ~/.kube/config
 ```
 
 ### Addons
