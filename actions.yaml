@@ -6,3 +6,6 @@ start:
 
 stop:
   description: Stop MicroK8s services
+
+kubeconfig:
+  description: Build kubeconfig file to access the MicroK8s cluster

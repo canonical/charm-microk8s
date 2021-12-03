@@ -145,6 +145,7 @@ class MicroK8sCluster(Object):
         self.framework.observe(charm.on.start_action, self._microk8s_start)
         self.framework.observe(charm.on.stop_action, self._microk8s_stop)
         self.framework.observe(charm.on.status_action, self._microk8s_status)
+        self.framework.observe(charm.on.kubeconfig_action, self._microk8s_kubeconfig)
 
         self.framework.observe(charm.on[relation_name].relation_changed, self._on_relation_changed)
         self.framework.observe(charm.on[relation_name].relation_departed, self._on_relation_departed)
@@ -441,3 +442,17 @@ class MicroK8sCluster(Object):
 
     def _microk8s_status(self, event):
         subprocess.check_call(["/snap/bin/microk8s", "status"])
+
+    def _microk8s_kubeconfig(self, event):
+        kubeconfig = yaml.safe_load(subprocess.check_output(["/snap/bin/microk8s", "config"]))
+
+        public_address = subprocess.check_output(["unit-get", "public-address"]).decode().strip()
+        kubeconfig["clusters"][0]["cluster"]["server"] = "https://{}:16443".format(public_address)
+
+        config_path = "/home/ubuntu/config"
+        with open(config_path, "w") as fout:
+            yaml.dump(kubeconfig, fout)
+
+        subprocess.check_call(["chown", "-R", "ubuntu:ubuntu", config_path])
+        logger.info("Wrote kubeconfig to %s", config_path)
+        event.set_results({"kubeconfig": config_path})

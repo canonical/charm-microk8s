@@ -1,7 +1,7 @@
 import subprocess
 
 import unittest
-from unittest.mock import call, mock_open, patch, ANY
+from unittest.mock import call, mock_open, patch, ANY, MagicMock
 
 
 from ops.model import ActiveStatus, BlockedStatus
@@ -133,3 +133,25 @@ class TestCharm(unittest.TestCase):
         self.harness.update_config({"channel": "1.22"})
         self.assertIn(call(["snap", "refresh", "microk8s", "--channel=1.22"]), _check_call.call_args_list)
         self.assertEqual(self.harness.charm.model.unit.status, ActiveStatus())
+
+    @patch("subprocess.check_output")
+    @patch("subprocess.check_call")
+    @patch("yaml.dump")
+    @patch("builtins.open", new_callable=mock_open, read_data="")
+    def test_action_kubeconfig(self, _open, _yaml_dump, _check_call, _check_output):
+        self.harness.begin()
+        _check_output.side_effect = [b"clusters: [{cluster: {server: https://some-address:16443}}]", b"public-address"]
+
+        event = MagicMock()
+        self.harness.charm.cluster._microk8s_kubeconfig(event)
+        self.assertEqual(
+            _check_output.call_args_list,
+            [call(["/snap/bin/microk8s", "config"]), call(["unit-get", "public-address"])],
+        )
+        self.assertEqual(_check_call.call_args_list, [call(["chown", "-R", "ubuntu:ubuntu", "/home/ubuntu/config"])])
+
+        _yaml_dump.assert_called_once_with(
+            {"clusters": [{"cluster": {"server": "https://public-address:16443"}}]}, _open()
+        )
+
+        event.set_results.assert_called_once_with({"kubeconfig": "/home/ubuntu/config"})
