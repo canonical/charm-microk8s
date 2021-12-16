@@ -234,7 +234,7 @@ class MicroK8sCluster(Object):
         # This file is only read on startup, so just truncate and append.
         with open(CONTAINERD_ENV_SNAP_PATH, "w") as env:
             env.write(configured)
-            subprocess.check_call(["systemctl", "restart", "snap.microk8s.daemon-containerd.service"])
+        subprocess.check_call(["systemctl", "restart", "snap.microk8s.daemon-containerd.service"])
 
     def _refresh_channel(self, _):
         channel = self.model.config["channel"]
