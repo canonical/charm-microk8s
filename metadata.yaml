@@ -8,6 +8,7 @@ maintainers:
   - Joe Borg <joseph.borg@canonical.com>
 series:
   - focal
+  - jammy
 tags:
   - kubernetes
   - microk8s
