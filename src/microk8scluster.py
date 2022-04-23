@@ -336,7 +336,11 @@ class MicroK8sCluster(Object):
         url = event.join_url
         logger.debug("Using join URL: {}".format(url))
         try:
-            subprocess.check_call(["/snap/bin/microk8s", "join", url])
+            join_cmd = ["/snap/bin/microk8s", "join", url]
+            if self.model.config.get("skip_verify"):
+                join_cmd += ["--skip-verify"]
+
+            subprocess.check_call(join_cmd)
         except subprocess.CalledProcessError:
             logger.error("Failed to join cluster; deferring to try again later.")
             self.model.unit.status = BlockedStatus("join failed, will try again")
