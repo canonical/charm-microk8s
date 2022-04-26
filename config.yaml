@@ -57,6 +57,13 @@ options:
     type: boolean
     default: false
 
+  skip_verify:
+    description: >
+      When set, MicroK8s nodes will use the --skip-verify flag when joining the cluster.
+      This is not recommended for production systems.
+    type: boolean
+    default: False
+
   csr_conf_template:
     description: >
       Configuration for the csr.conf.template. Can be used to add IP and DNS SANs.
