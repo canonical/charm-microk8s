@@ -1,7 +1,5 @@
 #!/bin/bash -ex
 
-# preserve the created juju model after tests finish for additional introspection
-export MK8S_KEEP_MODEL=1
 # specify charmhub name or local path. Set to `build` to build charm from source
 export MK8S_CHARM=microk8s
 # test for multiple snap versions, e.g. '1.21 1.22 1.23' (space separated list)

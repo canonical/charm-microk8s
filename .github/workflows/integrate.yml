@@ -41,7 +41,6 @@ jobs:
           juju add-model testing
           export MK8S_CLUSTER_SIZE=1
           export MK8S_CHARM=./microk8s.charm
-          export MK8S_KEEP_MODEL=1
           sg lxd -c 'tox -e integration -- --model testing'
       - name: Retrieve artifacts
         if: always()
