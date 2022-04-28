@@ -37,9 +37,9 @@ async def test_deploy_cluster(ops_test: OpsTest, snap_channel: str, series: str)
         await ops_test.model.set_config({"no-proxy": no_proxy})
 
     charm_config = {}
-    application_name = None
+    application_name = "microk8s-{}".format(series)
     if snap_channel:
-        application_name = re.sub("[^a-z0-9]", "", "microk8s{}".format(snap_channel))
+        application_name += "-v" + re.sub("[^a-z0-9]", "", snap_channel)
         charm_config["channel"] = snap_channel
     if proxy:
         charm_config["containerd_env"] = "\n".join(
