@@ -31,6 +31,12 @@ juju run-action --unit microk8s/leader kubeconfig
 juju scp microk8s/leader:config ~/.kube/config
 ```
 
+In some clouds (e.g. OpenStack), you will need to expose the application before you can access it from the external network:
+
+```bash
+juju expose microk8s
+```
+
 ### Addons
 
 Enable addons with:
