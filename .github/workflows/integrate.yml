@@ -21,12 +21,13 @@ jobs:
         uses: charmed-kubernetes/actions-operator@main
         with:
           provider: lxd
+          lxd-channel: 4.0/stable
       - name: Add user to lxd group
         run: sudo usermod -a -G lxd $USER
       - name: Build charm
         run: |
           cp hacks/lxd-profile.yaml .
-          sg lxd -c 'charmcraft build -v'
+          charmcraft pack -v --destructive-mode
           mv microk8s*.charm microk8s.charm
       - name: Upload charm
         uses: actions/upload-artifact@v3.0.0
@@ -35,13 +36,13 @@ jobs:
           path: ./microk8s.charm
       - name: Install tox
         run: |
-          sudo apt-get install tox
+          pip3 install tox
       - name: Run integration tests
         run: |
           juju add-model testing
           export MK8S_CLUSTER_SIZE=1
           export MK8S_CHARM=./microk8s.charm
-          export MK8S_KEEP_MODEL=1
+          export MK8S_SERIES=focal
           sg lxd -c 'tox -e integration -- --model testing'
       - name: Retrieve artifacts
         if: always()

@@ -2,7 +2,7 @@
 coverage
 flake8
 pytest
-pytest-operator < 0.9
+pytest-operator
 pytest-xdist
 juju
 black
