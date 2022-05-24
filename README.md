@@ -27,7 +27,7 @@ Then, retrieve the kubeconfig file with:
 
 ```bash
 mkdir -p ~/.kube
-juju run-action --unit microk8s/leader kubeconfig
+juju run-action microk8s/leader kubeconfig
 juju scp microk8s/leader:config ~/.kube/config
 ```
 
