@@ -3,6 +3,7 @@ import json
 import yaml
 import logging
 import subprocess
+import os
 
 from ops.charm import RelationEvent
 from ops.framework import EventSource, Object, ObjectEvents, StoredState
@@ -167,8 +168,17 @@ class MicroK8sCluster(Object):
 
     def _on_install(self, _):
         self.model.unit.status = MaintenanceStatus("installing OS packages")
+
         # OS packages needed by storage providers
-        subprocess.check_call(["/usr/bin/apt-get", "install", "--yes", "nfs-common"])
+        packages = ["nfs-common"]
+        # Install extra kernel modules, needed for Raspberry Pi, as well as mayastor
+        try:
+            kernel_version = os.uname().release
+            packages.append("linux-modules-extra-{}".format(kernel_version))
+        except OSError:
+            logger.exception("Failed to retrieve kernel version, will not install extra modules")
+
+        subprocess.check_call(["/usr/bin/apt-get", "install", "--yes", *packages])
         self.model.unit.status = MaintenanceStatus("installing microk8s")
         channel = self.model.config.get("channel", "auto")
         cmd = "/usr/bin/snap install --classic microk8s".split()
