@@ -18,12 +18,15 @@ class TestCharm(unittest.TestCase):
     @patch("kubectl.get")
     @patch("subprocess.check_call")
     @patch("subprocess.check_output")
+    @patch("os.uname")
     @patch("builtins.open", new_callable=mock_open, read_data="")
-    def test_begin_with_initial_hooks_on_leader(self, _open, _check_output, _check_call, _get, _patch):
+    def test_begin_with_initial_hooks_on_leader(self, _open, _uname, _check_output, _check_call, _get, _patch):
         """The leader installs microk8s, enables addons, and opens ports."""
         _get.return_value.returncode = 0
         _get.return_value.stdout = b"{}"
         _patch.return_value.returncode = 0
+
+        _uname.return_value.release = "5.13"
 
         _check_output.side_effect = [b"1.1.1.1", b"2.2.2.2"]
         self.harness.update_config({"containerd_env": ""})
@@ -34,7 +37,7 @@ class TestCharm(unittest.TestCase):
         self.assertEqual(
             _check_call.call_args_list,
             [
-                call(["/usr/bin/apt-get", "install", "--yes", "nfs-common"]),
+                call(["/usr/bin/apt-get", "install", "--yes", "nfs-common", "linux-modules-extra-5.13"]),
                 call(["/usr/bin/snap", "install", "--classic", "microk8s"]),
                 call(["/usr/sbin/addgroup", "ubuntu", "microk8s"]),
                 call(["/usr/bin/snap", "alias", "microk8s.kubectl", "kubectl"]),
@@ -59,12 +62,15 @@ class TestCharm(unittest.TestCase):
     @patch("kubectl.get")
     @patch("subprocess.check_call")
     @patch("subprocess.check_output")
+    @patch("os.uname")
     @patch("builtins.open", new_callable=mock_open, read_data="")
-    def test_begin_with_initial_hooks_on_follower(self, _open, _check_output, _check_call, _get, _patch):
+    def test_begin_with_initial_hooks_on_follower(self, _open, _uname, _check_output, _check_call, _get, _patch):
         """A follower installs microk8s and opens ports.  (A follower does not enable addons.)"""
         _get.return_value.returncode = 0
         _get.return_value.stdout = b"{}"
         _patch.return_value.returncode = 0
+
+        _uname.return_value.release = "5.13"
 
         _check_output.side_effect = [b"1.1.1.1", b"2.2.2.2"]
         self.harness.update_config({"containerd_env": ""})
@@ -75,7 +81,7 @@ class TestCharm(unittest.TestCase):
         self.assertEqual(
             _check_call.call_args_list,
             [
-                call(["/usr/bin/apt-get", "install", "--yes", "nfs-common"]),
+                call(["/usr/bin/apt-get", "install", "--yes", "nfs-common", "linux-modules-extra-5.13"]),
                 call(["/usr/bin/snap", "install", "--classic", "microk8s"]),
                 call(["/usr/sbin/addgroup", "ubuntu", "microk8s"]),
                 call(["/usr/bin/snap", "alias", "microk8s.kubectl", "kubectl"]),
