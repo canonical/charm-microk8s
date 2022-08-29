@@ -26,7 +26,6 @@ jobs:
         run: sudo usermod -a -G lxd $USER
       - name: Build charm
         run: |
-          cp hacks/lxd-profile.yaml .
           charmcraft pack -v --destructive-mode
           mv microk8s*.charm microk8s.charm
       - name: Upload charm
