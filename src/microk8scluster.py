@@ -335,7 +335,7 @@ class MicroK8sCluster(Object):
 
     def _on_add_unit(self, event):
         self.model.unit.status = MaintenanceStatus("adding {} to the microk8s cluster".format(event.unit.name))
-        output = subprocess.check_output(["/snap/bin/microk8s", "add-node", "--token-ttl", "-1"]).decode("utf-8")
+        output = subprocess.check_output(["/snap/bin/microk8s", "add-node", "--token-ttl", "36000"]).decode("utf-8")
         url = join_url_from_add_node_output(output)
         logger.debug("Generated join URL: {}".format(url))
         event.join_url = url
