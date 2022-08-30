@@ -20,7 +20,13 @@ This charm deploys and manages a MicroK8s cluster. It can handle scaling up and 
 Make sure to account for extra requirements depending on the workload you are planning to deploy.
 
 ```bash
-juju deploy --constraints 'cores=2 mem=4G' microk8s
+juju deploy microk8s --constraints 'cores=2 mem=4G'
+```
+
+Alternatively, to specify the MicroK8s version to install, you can use:
+
+```bash
+juju deploy microk8s --constraints 'cores=2 mem=4G' --config channel=1.25
 ```
 
 Then, retrieve the kubeconfig file with:
@@ -70,12 +76,5 @@ The integration tests require a bootstrapped Juju controller.
 ## Build from source
 
 ```bash
-charmcraft pack
-```
-
-### LXD
-
-```bash
-cp hacks/lxd-profile.yaml .
 charmcraft pack
 ```
