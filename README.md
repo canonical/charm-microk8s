@@ -57,6 +57,24 @@ juju config microk8s addons='storage dns ingress'
 juju add-unit -n 2 microk8s
 ```
 
+### Proxy configuration
+
+In constrained environments, or environments where a proxy should be used for accessing image registries (e.g. DockerHub), you can configure HTTP proxy settings for containerd like so:
+
+```bash
+echo '
+# This file is managed by Juju. Manual changes may be lost at any time.
+# Configure limits for locked memory and maximum number of open files
+ulimit -n 65536 || true
+ulimit -l 16384 || true
+# Configure a proxy for containerd
+HTTP_PROXY=http://squid.internal:3128
+HTTPS_PROXY=http://squid.internal:3128
+NO_PROXY=10.0.0.0/8,127.0.0.1,192.168.0.0/16
+' > containerd_env
+juju config microk8s containerd_env=@containerd_env
+```
+
 ## Testing
 
 ### Unit tests
