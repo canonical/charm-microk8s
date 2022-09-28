@@ -21,7 +21,7 @@ jobs:
         uses: charmed-kubernetes/actions-operator@main
         with:
           provider: lxd
-          lxd-channel: 4.0/stable
+          lxd-channel: 5.0/stable
       - name: Add user to lxd group
         run: sudo usermod -a -G lxd $USER
       - name: Build charm
