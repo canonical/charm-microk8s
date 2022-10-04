@@ -1,4 +1,5 @@
 from datetime import datetime
+import ipaddress
 import json
 import yaml
 import logging
@@ -461,6 +462,11 @@ class MicroK8sCluster(Object):
         kubeconfig = yaml.safe_load(subprocess.check_output(["/snap/bin/microk8s", "config"]))
 
         public_address = subprocess.check_output(["unit-get", "public-address"]).decode().strip()
+        try:
+            if ipaddress.ip_address(public_address).version == 6:
+                public_address = "[{}]".format(public_address)
+        except ValueError:
+            pass
         kubeconfig["clusters"][0]["cluster"]["server"] = "https://{}:16443".format(public_address)
 
         config_path = "/home/ubuntu/config"

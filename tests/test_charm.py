@@ -146,7 +146,27 @@ class TestCharm(unittest.TestCase):
     @patch("builtins.open", new_callable=mock_open, read_data="")
     def test_action_kubeconfig(self, _open, _yaml_dump, _check_call, _check_output):
         self.harness.begin()
-        _check_output.side_effect = [b"clusters: [{cluster: {server: https://some-address:16443}}]", b"public-address"]
+        _check_output.side_effect = [b"clusters: [{cluster: {server: https://some-address:16443}}]", b"192.0.2.1"]
+
+        event = MagicMock()
+        self.harness.charm.cluster._microk8s_kubeconfig(event)
+        self.assertEqual(
+            _check_output.call_args_list,
+            [call(["/snap/bin/microk8s", "config"]), call(["unit-get", "public-address"])],
+        )
+        self.assertEqual(_check_call.call_args_list, [call(["chown", "-R", "ubuntu:ubuntu", "/home/ubuntu/config"])])
+
+        _yaml_dump.assert_called_once_with({"clusters": [{"cluster": {"server": "https://192.0.2.1:16443"}}]}, _open())
+
+        event.set_results.assert_called_once_with({"kubeconfig": "/home/ubuntu/config"})
+
+    @patch("subprocess.check_output")
+    @patch("subprocess.check_call")
+    @patch("yaml.dump")
+    @patch("builtins.open", new_callable=mock_open, read_data="")
+    def test_action_kubeconfig_ipv6(self, _open, _yaml_dump, _check_call, _check_output):
+        self.harness.begin()
+        _check_output.side_effect = [b"clusters: [{cluster: {server: https://some-address:16443}}]", b"2001:db8::1"]
 
         event = MagicMock()
         self.harness.charm.cluster._microk8s_kubeconfig(event)
@@ -157,7 +177,7 @@ class TestCharm(unittest.TestCase):
         self.assertEqual(_check_call.call_args_list, [call(["chown", "-R", "ubuntu:ubuntu", "/home/ubuntu/config"])])
 
         _yaml_dump.assert_called_once_with(
-            {"clusters": [{"cluster": {"server": "https://public-address:16443"}}]}, _open()
+            {"clusters": [{"cluster": {"server": "https://[2001:db8::1]:16443"}}]}, _open()
         )
 
         event.set_results.assert_called_once_with({"kubeconfig": "/home/ubuntu/config"})
