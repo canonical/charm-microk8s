@@ -29,7 +29,7 @@ jobs:
           charmcraft pack -v --destructive-mode
           mv microk8s*.charm microk8s.charm
       - name: Upload charm
-        uses: actions/upload-artifact@v3.1.0
+        uses: actions/upload-artifact@v3.1.1
         with:
           name: microk8s.charm
           path: ./microk8s.charm
@@ -51,7 +51,7 @@ jobs:
           juju status -m testing --format yaml > artifacts/juju.yaml
       - name: Upload artifacts
         if: always()
-        uses: actions/upload-artifact@v3.1.0
+        uses: actions/upload-artifact@v3.1.1
         with:
           name: logs
           path: artifacts/
