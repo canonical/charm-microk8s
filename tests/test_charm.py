@@ -38,7 +38,7 @@ class TestCharm(unittest.TestCase):
             _check_call.call_args_list,
             [
                 call(["/usr/bin/apt-get", "install", "--yes", "nfs-common", "linux-modules-extra-5.13"]),
-                call(["/usr/bin/snap", "install", "--classic", "microk8s"]),
+                call(["/usr/bin/snap", "install", "microk8s", "--classic"]),
                 call(["/usr/sbin/addgroup", "ubuntu", "microk8s"]),
                 call(["/usr/bin/snap", "alias", "microk8s.kubectl", "kubectl"]),
                 call(["open-port", "16443/tcp"]),
@@ -53,6 +53,56 @@ class TestCharm(unittest.TestCase):
         self.assertEqual(
             _check_output.call_args_list,
             [
+                call(["unit-get", "private-address"]),
+                call(["unit-get", "public-address"]),
+            ],
+        )
+
+    @patch("kubectl.patch")
+    @patch("kubectl.get")
+    @patch("subprocess.check_call")
+    @patch("subprocess.check_output")
+    @patch("os.uname")
+    @patch("builtins.open", new_callable=mock_open, read_data="")
+    def test_begin_with_initial_hooks_on_leader_strict(self, _open, _uname, _check_output, _check_call, _get, _patch):
+        """The leader installs microk8s, enables addons, and opens ports with strict snap config."""
+        _get.return_value.returncode = 0
+        _get.return_value.stdout = b"{}"
+        _patch.return_value.returncode = 0
+
+        _uname.return_value.release = "5.13"
+
+        _check_output.side_effect = [b"name: microstack", b"1.1.1.1", b"2.2.2.2"]
+        self.harness.update_config(
+            {
+                "containerd_env": "",
+                "channel": "1.26-strict",
+            }
+        )
+        self.maxDiff = None
+        self.harness.set_leader(True)
+        self.harness.begin_with_initial_hooks()
+        self.assertEqual(self.harness.charm.unit.status, ActiveStatus())
+        self.assertEqual(
+            _check_call.call_args_list,
+            [
+                call(["/usr/bin/apt-get", "install", "--yes", "nfs-common", "linux-modules-extra-5.13"]),
+                call(["/usr/bin/snap", "install", "microk8s", "--channel=1.26-strict"]),
+                call(["/usr/sbin/addgroup", "ubuntu", "snap_microk8s"]),
+                call(["/usr/bin/snap", "alias", "microk8s.kubectl", "kubectl"]),
+                call(["open-port", "16443/tcp"]),
+                call(["open-port", "80/tcp"]),
+                call(["open-port", "443/tcp"]),
+                call(
+                    ["/snap/bin/microk8s", "enable", "dns", "ingress"], stdout=subprocess.PIPE, stderr=subprocess.PIPE
+                ),
+                call(["/usr/bin/snap", "set", "microk8s", ANY]),
+            ],
+        )
+        self.assertEqual(
+            _check_output.call_args_list,
+            [
+                call(["snap", "info", "microk8s"]),
                 call(["unit-get", "private-address"]),
                 call(["unit-get", "public-address"]),
             ],
@@ -82,7 +132,7 @@ class TestCharm(unittest.TestCase):
             _check_call.call_args_list,
             [
                 call(["/usr/bin/apt-get", "install", "--yes", "nfs-common", "linux-modules-extra-5.13"]),
-                call(["/usr/bin/snap", "install", "--classic", "microk8s"]),
+                call(["/usr/bin/snap", "install", "microk8s", "--classic"]),
                 call(["/usr/sbin/addgroup", "ubuntu", "microk8s"]),
                 call(["/usr/bin/snap", "alias", "microk8s.kubectl", "kubectl"]),
                 call(["open-port", "16443/tcp"]),
