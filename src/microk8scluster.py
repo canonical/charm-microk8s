@@ -182,11 +182,16 @@ class MicroK8sCluster(Object):
         subprocess.check_call(["/usr/bin/apt-get", "install", "--yes", *packages])
         self.model.unit.status = MaintenanceStatus("installing microk8s")
         channel = self.model.config.get("channel", "auto")
-        cmd = "/usr/bin/snap install --classic microk8s".split()
+        cmd = "/usr/bin/snap install microk8s".split()
+        if "strict" not in channel:
+            cmd.append("--classic")
         if channel != "auto":
             cmd.append("--channel={}".format(channel))
         subprocess.check_call(cmd)
-        subprocess.check_call(["/usr/sbin/addgroup", "ubuntu", "microk8s"])
+        group = "microk8s"
+        if "strict" in channel:
+            group = "snap_microk8s"
+        subprocess.check_call(["/usr/sbin/addgroup", "ubuntu", group])
         # Required for autocert, useful for the admin.
         subprocess.check_call(["/usr/bin/snap", "alias", "microk8s.kubectl", "kubectl"])
         open_port("16443/tcp")
@@ -253,8 +258,8 @@ class MicroK8sCluster(Object):
             return
         infostr = subprocess.check_output("snap info microk8s".split())
         info = yaml.safe_load(infostr)
-        current = info["tracking"]
-        if current == channel:
+        current = info.get("tracking")
+        if not current or current == channel:
             return
 
         if check_kubernetes_version_is_older(current, channel):

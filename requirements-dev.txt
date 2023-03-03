@@ -4,5 +4,5 @@ flake8
 pytest
 pytest-operator
 pytest-xdist
-juju
+juju<3.0
 black
