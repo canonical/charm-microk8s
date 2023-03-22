@@ -211,17 +211,17 @@ class MicroK8sCluster(Object):
         # FIXME(pjdc): This is a waste of time if we're not the
         # seed node, but I'm not sure it's possible to know during
         # the install hook if that's true. Maybe `goal-state`?
-        if to_enable:
-            self.model.unit.status = MaintenanceStatus("enabling microk8s addons: {}".format(", ".join(to_enable)))
-            cmd = ["/snap/bin/microk8s", "enable"]
-            cmd.extend(addons)
-            retry_until_zero_rc(cmd, max_tries=10, timeout_seconds=5)
-            self.model.unit.status = ActiveStatus()
-
         if to_disable:
             self.model.unit.status = MaintenanceStatus("disabling microk8s addons: {}".format(", ".join(to_disable)))
             cmd = ["/snap/bin/microk8s", "disable"]
             cmd.extend(to_disable)
+            retry_until_zero_rc(cmd, max_tries=10, timeout_seconds=5)
+            self.model.unit.status = ActiveStatus()
+
+        if to_enable:
+            self.model.unit.status = MaintenanceStatus("enabling microk8s addons: {}".format(", ".join(to_enable)))
+            cmd = ["/snap/bin/microk8s", "enable"]
+            cmd.extend(addons)
             retry_until_zero_rc(cmd, max_tries=10, timeout_seconds=5)
             self.model.unit.status = ActiveStatus()
 
