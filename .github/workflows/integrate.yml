@@ -16,7 +16,7 @@ jobs:
       fail-fast: false
     steps:
       - name: Checking out repo
-        uses: actions/checkout@v3.3.0
+        uses: actions/checkout@v3.5.0
       - name: Configure pytest-operator
         uses: charmed-kubernetes/actions-operator@main
         with:
