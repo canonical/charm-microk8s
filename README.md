@@ -1,5 +1,7 @@
 # MicroK8s
 
+### **WARNING**: This charm should not be used to deploy production-grade MicroK8s clusters, as it lacks critical features such as LMA integration, backup, restore, upgrades, etc. Use at your own risk. Refer to https://microk8s.io/docs for more details on how to deploy MicroK8s.
+
 ## The smallest, fastest Kubernetes
 
 Single-package fully conformant lightweight Kubernetes that works on [42 flavours of Linux](https://snapcraft.io/microk8s). Perfect for:
@@ -32,8 +34,14 @@ juju deploy microk8s --constraints 'cores=2 mem=4G' --config channel=1.25
 Then, retrieve the kubeconfig file with:
 
 ```bash
+# For Juju 3.1 or newer
 mkdir -p ~/.kube
-juju run-action microk8s/leader kubeconfig
+juju run microk8s/leader kubeconfig
+juju ssh microk8s/leader cat config | tee ~/.kube/config
+
+# For older Juju versions
+mkdir -p ~/.kube
+juju run microk8s/leader kubeconfig
 juju scp microk8s/leader:config ~/.kube/config
 ```
 
