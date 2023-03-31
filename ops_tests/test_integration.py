@@ -61,7 +61,6 @@ async def test_deploy_cluster(ops_test: OpsTest, snap_channel: str, series: str)
         channel=charm_channel,
         constraints=constraints,
         series=series,
-        force=True,
     )
 
     LOG.info("Wait for cluster")
