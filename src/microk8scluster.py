@@ -271,6 +271,9 @@ class MicroK8sCluster(Object):
         self.model.unit.status = ActiveStatus()
 
     def _coredns_config(self, event):
+        if not self.model.config.get("coredns_config"):
+            return
+
         result = kubectl.get("configmap", "coredns", namespace="kube-system")
         if result.returncode > 0:
             logger.error("Failed to get coredns configmap!  kubectl said: {}".format(result.stderr))
