@@ -27,29 +27,6 @@ options:
   coredns_config:
     description: The CoreDNS configuration.  If you're running on a restricted network, you may wish to change the forwaders.
     type: string
-    default: |
-      # This file is managed by Juju. Manual changes may be lost at any time.
-
-      .:53 {
-          errors
-          health {
-            lameduck 5s
-          }
-          ready
-          log . {
-            class error
-          }
-          kubernetes cluster.local in-addr.arpa ip6.arpa {
-            pods insecure
-            fallthrough in-addr.arpa ip6.arpa
-          }
-          prometheus :9153
-          forward . 8.8.8.8 8.8.4.4
-          cache 30
-          loop
-          reload
-          loadbalance
-      }
 
   manage_etc_hosts:
     description: >
