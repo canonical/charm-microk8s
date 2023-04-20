@@ -24,25 +24,16 @@ def _strip_url(url):
     return url.rstrip("/").split(sep="://", maxsplit=1)[-1]
 
 
-def _registries_list(registries, default=None):
+def _registries_list(registries):
     """
     Parse registry config and ensure it returns a list
 
     :param str registries: representation of registries
-    :param default: if provided, return rather than raising exceptions
     :return: List of registry dicts
     """
-    try:
-        registry_list = json.loads(registries)
-    except json.JSONDecodeError:
-        if default is None:
-            raise
-
+    registry_list = json.loads(registries)
     if not isinstance(registry_list, list):
-        if default is None:
-            raise TypeError(f'registries must be a list (not "{type(registry_list)}")')
-        registry_list = default
-
+        raise TypeError(f'registries must be a list (not "{type(registry_list)}")')
     return registry_list
 
 
@@ -50,7 +41,7 @@ class InvalidRegistriesError(Exception):
     """Error for Invalid Registry decoding."""
 
 
-def update_tls_config(current: List["Registry"], previous: List["Registry"]) -> List["Registry"]:
+def update_tls_config(current: List["Registry"], previous: List["Registry"], certs_path=CERTS_PATH) -> List["Registry"]:
     """
     Read registries config and remove old/write new tls files from/to disk.
 
@@ -61,7 +52,7 @@ def update_tls_config(current: List["Registry"], previous: List["Registry"]) -> 
     # Remove tls files of old registries; so not to leave uneeded, stale files.
     for registry in previous:
         for filename in filenames.values():
-            Path(CERTS_PATH, registry.host, filename).unlink(missing_ok=True)
+            Path(certs_path, registry.host, filename).unlink(missing_ok=True)
 
     # Write tls files of new registries.
     for registry in current:
@@ -73,7 +64,8 @@ def update_tls_config(current: List["Registry"], previous: List["Registry"]) -> 
                 except (binascii.Error, TypeError):
                     log.exception(f"{registry.url}:{attr} didn't look like base64 data... skipping")
                     continue
-                tls_file = Path(CERTS_PATH, registry.host, filename)
+                tls_file = Path(certs_path, registry.host, filename)
+                tls_file.parent.mkdir(parents=True, exist_ok=True)
                 with open(tls_file, "wb") as f:
                     f.write(file_contents)
                 setattr(registry, attr, f"${{SNAP_DATA}}/{tls_file.name}")
@@ -117,9 +109,8 @@ class Registry:
         except TypeError as err:
             raise InvalidRegistriesError("custom_registries is not a list") from err
 
-        required_fields = ["url"]
+        key_fields = ["url"]
         str_fields = [
-            "url",
             "host",
             "username",
             "password",
@@ -135,22 +126,27 @@ class Registry:
         for idx, reg in enumerate(registries):
             if not isinstance(reg, dict):
                 raise InvalidRegistriesError(f"registry #{idx} is not in object form")
-            for f in required_fields:
-                if f not in reg:
-                    raise InvalidRegistriesError(f"registry #{idx} missing required field {f}")
+            f = "url"
+            if f not in reg:
+                raise InvalidRegistriesError(f"registry #{idx} missing required field {f}")
+            value = reg.get(f)
+            if not isinstance(value, str):
+                raise InvalidRegistriesError(f"registry #{idx} field {f}={value} is not a string")
             registry = cls(reg["url"])
             for f in str_fields:
                 value = reg.get(f)
                 if value and not isinstance(value, str):
                     raise InvalidRegistriesError(f"registry #{idx} field {f}={value} is not a string")
-                setattr(registry, f, value)
+                if value is not None:
+                    setattr(registry, f, value)
             for f in truthy_fields:
                 value = reg.get(f)
                 if f in reg and not isinstance(value, bool):
                     raise InvalidRegistriesError(f"registry #{idx} field {f}='{value}' is not a boolean")
-                setattr(registry, f, value)
+                if value is not None:
+                    setattr(registry, f, value)
             for f in reg:
-                if f not in str_fields + truthy_fields:
+                if f not in key_fields + str_fields + truthy_fields:
                     raise InvalidRegistriesError(f"registry #{idx} field {f} may not be specified")
 
             if registry.host in host_set:
