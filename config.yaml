@@ -24,6 +24,51 @@ options:
       # HTTPS_PROXY=http://squid.internal:3128
       # NO_PROXY=10.0.0.0/8,127.0.0.0/16,192.168.0.0/16
 
+  custom_registries:
+    type: string
+    default: "[]"
+    description: |+
+      Registry endpoints and credentials. Setting this config allows containerd
+      to pull images from registries where auth is required.
+
+      The value for this config must be a JSON array of credential objects, like this:
+        e.g.: [{"host": "my.registry:port", "username": "user", "password": "pass"}]
+
+      Credential Object Parameters:
+      url: REQUIRED str
+        the URL to the registry, include the port if not it isn't implied from the schema.
+          e.g: "url": "https://my.registry:8443"
+          e.g: "url": "http://my.registry"
+
+      host: OPTIONAL str - defaults to auto-generated from the url
+        could be registry host address or a name
+          e.g.: myregistry.io:9000, 10.10.10.10:5432
+          e.g.: myregistry.io, myregistry
+        Note: It will be derived from `url` if not provided.
+          e.g.: "url": "http://10.10.10.10:8000" --> "host": "10.10.10.10:8000"
+
+      username: OPTIONAL str - default ''
+      password: OPTIONAL str - default ''
+        Used by containerd for basic authentication to the registry.
+
+      ca_file: OPTIONAL str - default ''
+      cert_file: OPTIONAL str - default ''
+      key_file: OPTIONAL str - default ''
+        For ssl/tls communication these should be a base64 encoded file
+        e.g.:  "ca_file": "'"$(base64 -w 0 < my.custom.registry.pem)"'"
+
+      insecure_skip_verify: OPTIONAL bool - default false
+        For situatations where the registry has self-signed or expired certs and a quick work-around is necessary.
+        e.g.: "insecure_skip_verify": true
+
+      example config)
+      juju config containerd custom_registries='[{
+          "url": "https://registry.example.com",
+          "ca_file": "'"$(base64 -w 0 < ~/my.custom.ca.pem)"'",
+          "cert_file": "'"$(base64 -w 0 < ~/my.custom.cert.pem)"'",
+          "key_file": "'"$(base64 -w 0 < ~/my.custom.key.pem)"'",
+      }]'
+
   coredns_config:
     description: The CoreDNS configuration.  If you're running on a restricted network, you may wish to change the forwaders.
     type: string

@@ -14,6 +14,7 @@ import kubectl
 
 from etchosts import refresh_etc_hosts
 from hostnamemanager import HostnameManager
+from containerd_config import ContainerdConfig, InvalidRegistriesError, Registry, update_tls_config
 
 from utils import (
     check_kubernetes_version_is_older,
@@ -128,15 +129,13 @@ class MicroK8sCluster(Object):
     def __init__(self, charm, relation_name):
         super().__init__(charm, relation_name)
 
-        self._state.set_default(
-            enabled_addons=[],
-            joined=False,
-        )
+        self._state.set_default(enabled_addons=[], joined=False, registries="[]")
 
         self.hostnames = HostnameManager(charm, relation_name)
 
         self.framework.observe(charm.on.install, self._on_install)
         self.framework.observe(charm.on.config_changed, self._containerd_env)
+        self.framework.observe(charm.on.config_changed, self._custom_registries)
         self.framework.observe(charm.on.config_changed, self._coredns_config)
         self.framework.observe(charm.on.config_changed, self._ingress_ports)
         self.framework.observe(charm.on.config_changed, self._manage_addons)
@@ -251,6 +250,30 @@ class MicroK8sCluster(Object):
         with open(CONTAINERD_ENV_SNAP_PATH, "w") as env:
             env.write(configured)
         subprocess.check_call(["systemctl", "restart", "snap.microk8s.daemon-containerd.service"])
+
+    def _custom_registries(self, event):
+        configured = self.model.config["custom_registries"]
+        if configured == self._state.registries:
+            return
+
+        if not ContainerdConfig.template_path.exists():
+            # We could be racing install, or who knows what else, so just try again later.
+            event.defer()
+            return
+
+        old_registries = Registry.parse(self._state.registries)
+
+        try:
+            registries = Registry.parse(configured)
+        except InvalidRegistriesError as err:
+            logger.exception("Invalid custom_registries")
+            self.model.unit.status = BlockedStatus(f"Invalid custom_registries: {err}")
+            return
+
+        registries = update_tls_config(registries, old_registries)
+        ContainerdConfig(registries).apply()
+        subprocess.check_call(["systemctl", "restart", "snap.microk8s.daemon-containerd.service"])
+        self._state.registries = configured
 
     def _refresh_channel(self, _):
         channel = self.model.config["channel"]
