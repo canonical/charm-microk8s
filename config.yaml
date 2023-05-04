@@ -133,3 +133,9 @@ options:
       keyUsage=keyEncipherment,dataEncipherment,digitalSignature
       extendedKeyUsage=serverAuth,clientAuth
       subjectAltName=@alt_names
+
+  disable_cert_reissue:
+    description: >
+      Disable certificate reissue.
+    type: boolean
+    default: False
