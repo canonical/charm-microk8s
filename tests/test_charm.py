@@ -18,9 +18,10 @@ class TestCharm(unittest.TestCase):
     @patch("kubectl.get")
     @patch("subprocess.check_call")
     @patch("subprocess.check_output")
+    @patch("os.remove")
     @patch("os.uname")
     @patch("builtins.open", new_callable=mock_open, read_data="")
-    def test_begin_with_initial_hooks_on_leader(self, _open, _uname, _check_output, _check_call, _get, _patch):
+    def test_begin_with_initial_hooks_on_leader(self, _open, _uname, _remove, _check_output, _check_call, _get, _patch):
         """The leader installs microk8s, enables addons, and opens ports."""
         _get.return_value.returncode = 0
         _get.return_value.stdout = b"{}"
@@ -63,9 +64,12 @@ class TestCharm(unittest.TestCase):
     @patch("kubectl.get")
     @patch("subprocess.check_call")
     @patch("subprocess.check_output")
+    @patch("os.remove")
     @patch("os.uname")
     @patch("builtins.open", new_callable=mock_open, read_data="")
-    def test_begin_with_initial_hooks_on_leader_strict(self, _open, _uname, _check_output, _check_call, _get, _patch):
+    def test_begin_with_initial_hooks_on_leader_strict(
+        self, _open, _uname, _remove, _check_output, _check_call, _get, _patch
+    ):
         """The leader installs microk8s, enables addons, and opens ports with strict snap config."""
         _get.return_value.returncode = 0
         _get.return_value.stdout = b"{}"
@@ -114,9 +118,12 @@ class TestCharm(unittest.TestCase):
     @patch("kubectl.get")
     @patch("subprocess.check_call")
     @patch("subprocess.check_output")
+    @patch("os.remove")
     @patch("os.uname")
     @patch("builtins.open", new_callable=mock_open, read_data="")
-    def test_begin_with_initial_hooks_on_follower(self, _open, _uname, _check_output, _check_call, _get, _patch):
+    def test_begin_with_initial_hooks_on_follower(
+        self, _open, _uname, _remove, _check_output, _check_call, _get, _patch
+    ):
         """A follower installs microk8s and opens ports.  (A follower does not enable addons.)"""
         _get.return_value.returncode = 0
         _get.return_value.stdout = b"{}"
@@ -145,10 +152,7 @@ class TestCharm(unittest.TestCase):
         )
         self.assertEqual(
             _check_output.call_args_list,
-            [
-                call(["unit-get", "private-address"]),
-                call(["unit-get", "public-address"]),
-            ],
+            [call(["unit-get", "private-address"]), call(["unit-get", "public-address"])],
         )
 
     @patch("subprocess.check_call")
@@ -176,7 +180,8 @@ class TestCharm(unittest.TestCase):
     @patch("kubectl.get")
     @patch("subprocess.check_call")
     @patch("subprocess.check_output")
-    def test_refresh_channel_prevent_downgrades(self, _check_output, _check_call, _get, _patch):
+    @patch("os.remove")
+    def test_refresh_channel_prevent_downgrades(self, _remove, _check_output, _check_call, _get, _patch):
         _get.return_value.returncode = 0
         _get.return_value.stdout = b"{}"
         _patch.return_value.returncode = 0

@@ -34,6 +34,7 @@ logger = logging.getLogger(__name__)
 
 CONTAINERD_ENV_SNAP_PATH = "/var/snap/microk8s/current/args/containerd-env"
 CSR_CONF_TEMPLATE_SNAP_PATH = "/var/snap/microk8s/current/certs/csr.conf.template"
+NO_CERT_REISSUE_LOCKFILE = "/var/snap/microk8s/current/var/lock/no-cert-reissue"
 
 
 class EventError(Exception):
@@ -142,6 +143,7 @@ class MicroK8sCluster(Object):
         self.framework.observe(charm.on.config_changed, self._update_etc_hosts)
         self.framework.observe(charm.on.config_changed, self._refresh_channel)
         self.framework.observe(charm.on.config_changed, self._update_csr_conf)
+        self.framework.observe(charm.on.config_changed, self._manage_cert_reissue_lock)
 
         self.framework.observe(charm.on.start_action, self._microk8s_start)
         self.framework.observe(charm.on.stop_action, self._microk8s_stop)
@@ -485,6 +487,16 @@ class MicroK8sCluster(Object):
 
         # re-run the configure script to update certificates
         subprocess.check_call(["/usr/bin/snap", "set", "microk8s", "charm-update-certs={}".format(datetime.now())])
+
+    def _manage_cert_reissue_lock(self, event):
+        """Manage lock file to enable/disable cert reissue."""
+        disable_cert_reissue = self.model.config["disable_cert_reissue"]
+        if disable_cert_reissue:
+            with open(NO_CERT_REISSUE_LOCKFILE, "w") as lock_file:
+                lock_file.write()
+        else:
+            if os.path.exists(NO_CERT_REISSUE_LOCKFILE):
+                os.remove(NO_CERT_REISSUE_LOCKFILE)
 
     def _microk8s_start(self, event):
         subprocess.check_call(["/snap/bin/microk8s", "start"])
