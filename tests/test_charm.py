@@ -37,7 +37,8 @@ class TestCharm(unittest.TestCase):
         self.assertEqual(
             _check_call.call_args_list,
             [
-                call(["/usr/bin/apt-get", "install", "--yes", "nfs-common", "linux-modules-extra-5.13"]),
+                call(["/usr/bin/apt-get", "install", "--yes", "nfs-common"]),
+                call(["/usr/bin/apt-get", "install", "--yes", "linux-modules-extra-5.13"]),
                 call(["/usr/bin/snap", "install", "microk8s", "--classic"]),
                 call(["/usr/sbin/addgroup", "ubuntu", "microk8s"]),
                 call(["/usr/bin/snap", "alias", "microk8s.kubectl", "kubectl"]),
@@ -86,7 +87,8 @@ class TestCharm(unittest.TestCase):
         self.assertEqual(
             _check_call.call_args_list,
             [
-                call(["/usr/bin/apt-get", "install", "--yes", "nfs-common", "linux-modules-extra-5.13"]),
+                call(["/usr/bin/apt-get", "install", "--yes", "nfs-common"]),
+                call(["/usr/bin/apt-get", "install", "--yes", "linux-modules-extra-5.13"]),
                 call(["/usr/bin/snap", "install", "microk8s", "--channel=1.26-strict"]),
                 call(["/usr/sbin/addgroup", "ubuntu", "snap_microk8s"]),
                 call(["/usr/bin/snap", "alias", "microk8s.kubectl", "kubectl"]),
@@ -120,7 +122,7 @@ class TestCharm(unittest.TestCase):
         _get.return_value.stdout = b"{}"
         _patch.return_value.returncode = 0
 
-        _uname.return_value.release = "5.13"
+        _uname.return_value.release = "5.13-kvm"
 
         _check_output.side_effect = [b"1.1.1.1", b"2.2.2.2"]
         self.harness.update_config({"containerd_env": ""})
@@ -131,7 +133,7 @@ class TestCharm(unittest.TestCase):
         self.assertEqual(
             _check_call.call_args_list,
             [
-                call(["/usr/bin/apt-get", "install", "--yes", "nfs-common", "linux-modules-extra-5.13"]),
+                call(["/usr/bin/apt-get", "install", "--yes", "nfs-common"]),
                 call(["/usr/bin/snap", "install", "microk8s", "--classic"]),
                 call(["/usr/sbin/addgroup", "ubuntu", "microk8s"]),
                 call(["/usr/bin/snap", "alias", "microk8s.kubectl", "kubectl"]),

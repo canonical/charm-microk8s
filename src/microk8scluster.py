@@ -174,11 +174,17 @@ class MicroK8sCluster(Object):
         # Install extra kernel modules, needed for Raspberry Pi, as well as mayastor
         try:
             kernel_version = os.uname().release
-            packages.append("linux-modules-extra-{}".format(kernel_version))
+            if not kernel_version.endswith("-kvm"):
+                packages.append("linux-modules-extra-{}".format(kernel_version))
         except OSError:
             logger.exception("Failed to retrieve kernel version, will not install extra modules")
 
-        subprocess.check_call(["/usr/bin/apt-get", "install", "--yes", *packages])
+        for package in packages:
+            try:
+                subprocess.check_call(["/usr/bin/apt-get", "install", "--yes", package])
+            except subprocess.CalledProcessError:
+                logger.exception("failed to install package %s, charm may misbehave", package)
+
         self.model.unit.status = MaintenanceStatus("installing microk8s")
         channel = self.model.config.get("channel", "auto")
         cmd = "/usr/bin/snap install microk8s".split()
