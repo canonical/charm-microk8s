@@ -1,103 +1,136 @@
 #!/usr/bin/env python3
-# Copyright 2023 Angelos Kolaitis
-# See LICENSE file for licensing details.
-#
-# Learn more at: https://juju.is/docs/sdk
-
-"""Charm the service.
-
-Refer to the following post for a quick-start guide that will help you
-develop a new k8s charm using the Operator Framework:
-
-https://discourse.charmhub.io/t/4208
-"""
 
 import logging
+import os
+import socket
+import subprocess
+from typing import Union
 
-import ops
+from ops import main, CharmBase
+from ops.model import ActiveStatus, BlockedStatus, MaintenanceStatus, WaitingStatus
+from ops.framework import StoredState
+from ops.charm import (
+    RelationChangedEvent,
+    ConfigChangedEvent,
+    InstallEvent,
+    RelationJoinedEvent,
+    RelationDepartedEvent,
+    RemoveEvent,
+)
 
-# Log messages can be retrieved using juju debug-log
-logger = logging.getLogger(__name__)
+import util
 
-VALID_LOG_LEVELS = ["info", "debug", "warning", "error", "critical"]
+LOG = logging.getLogger(__name__)
 
 
-class TestCharmCharm(ops.CharmBase):
-    """Charm the service."""
+class MicroK8sCharm(CharmBase):
+    _state = StoredState()
 
     def __init__(self, *args):
         super().__init__(*args)
-        self.framework.observe(self.on.httpbin_pebble_ready, self._on_httpbin_pebble_ready)
+
+        if self.config["role"] not in ["", "worker", "control-plane"]:
+            self.unit.status = BlockedStatus("role must be one of '', 'worker', 'control-plane'")
+            return
+
+        self._state.set_default(
+            role=self.config["role"],
+            installed=False,
+            joined=False,
+            leaving=False,
+            join_url="",
+        )
+
+        self.framework.observe(self.on.remove, self._on_remove)
+        self.framework.observe(self.on.config_changed, self._on_install)
         self.framework.observe(self.on.config_changed, self._on_config_changed)
+        self.framework.observe(self.on["cluster"].relation_joined, self._announce_hostname)
+        self.framework.observe(self.on["cluster"].relation_changed, self._announce_hostname)
+        self.framework.observe(self.on["microk8s"].relation_joined, self._announce_hostname)
+        self.framework.observe(self.on["microk8s"].relation_changed, self._on_relation_changed)
+        self.framework.observe(self.on["microk8s"].relation_departed, self._on_relation_departed)
 
-    def _on_httpbin_pebble_ready(self, event: ops.PebbleReadyEvent):
-        """Define and start a workload using the Pebble API.
+    def _on_remove(self, _: RemoveEvent):
+        subprocess.run(["snap", "remove", "microk8s", "--purge"])
 
-        Change this example to suit your needs. You'll need to specify the right entrypoint and
-        environment configuration for your specific workload.
+    def _announce_hostname(self, event: Union[RelationJoinedEvent, RelationChangedEvent]):
+        event.relation.data[self.unit]["hostname"] = socket.gethostname()
 
-        Learn more about interacting with Pebble at at https://juju.is/docs/sdk/pebble.
-        """
-        # Get a reference the container attribute on the PebbleReadyEvent
-        container = event.workload
-        # Add initial Pebble config layer using the Pebble API
-        container.add_layer("httpbin", self._pebble_layer, combine=True)
-        # Make Pebble reevaluate its plan, ensuring any services are started if enabled.
-        container.replan()
-        # Learn more about statuses in the SDK docs:
-        # https://juju.is/docs/sdk/constructs#heading--statuses
-        self.unit.status = ops.ActiveStatus()
+    def _on_install(self, _: InstallEvent):
+        if self._state.installed:
+            return
 
-    def _on_config_changed(self, event: ops.ConfigChangedEvent):
-        """Handle changed configuration.
+        self.unit.status = MaintenanceStatus("installing required packages")
+        packages = ["nfs-common", "open-iscsi"]
 
-        Change this example to suit your needs. If you don't need to handle config, you can remove
-        this method.
+        try:
+            packages.append(f"linux-modules-extra-{os.uname().release}")
+        except OSError:
+            LOG.exception("could not retrieve kernel version, will not install extra modules")
 
-        Learn more about config at https://juju.is/docs/sdk/config
-        """
-        # Fetch the new config value
-        log_level = self.model.config["log-level"].lower()
+        for package in packages:
+            try:
+                subprocess.check_call(["apt-get", "install", "--yes", package])
+            except subprocess.CalledProcessError:
+                LOG.exception("failed to install package %s, charm may misbehave", package)
 
-        # Do some validation of the configuration option
-        if log_level in VALID_LOG_LEVELS:
-            # The config is good, so update the configuration of the workload
-            container = self.unit.get_container("httpbin")
-            # Verify that we can connect to the Pebble API in the workload container
-            if container.can_connect():
-                # Push an updated layer with the new config
-                container.add_layer("httpbin", self._pebble_layer, combine=True)
-                container.replan()
+        self.unit.status = MaintenanceStatus("installing MicroK8s")
+        install_microk8s = ["snap", "install", "microk8s", "--classic"]
+        if self.config["channel"]:
+            install_microk8s.extend(["--channel", self.config["channel"]])
 
-                logger.debug("Log level for gunicorn changed to '%s'", log_level)
-                self.unit.status = ops.ActiveStatus()
-            else:
-                # We were unable to connect to the Pebble API, so we defer this event
-                event.defer()
-                self.unit.status = ops.WaitingStatus("waiting for Pebble API")
-        else:
-            # In this case, the config option is bad, so block the charm and notify the operator.
-            self.unit.status = ops.BlockedStatus("invalid log level: '{log_level}'")
+        subprocess.check_call(install_microk8s)
 
-    @property
-    def _pebble_layer(self):
-        """Return a dictionary representing a Pebble layer."""
-        return {
-            "summary": "httpbin layer",
-            "description": "pebble config layer for httpbin",
-            "services": {
-                "httpbin": {
-                    "override": "replace",
-                    "summary": "httpbin",
-                    "command": "gunicorn -b 0.0.0.0:80 httpbin:app -k gevent",
-                    "startup": "enabled",
-                    "environment": {
-                        "GUNICORN_CMD_ARGS": f"--log-level {self.model.config['log-level']}"
-                    },
-                }
-            },
-        }
+        # ports for api server
+        self.unit.open_port("tcp", 16443)
+        self.unit.open_port("tcp", 80)
+        self.unit.open_port("tcp", 443)
+
+        self._state.installed = True
+        self._state.joined = False
+
+    def _on_config_changed(self, _: ConfigChangedEvent):
+        if self.config["role"] != self._state.role:
+            msg = f"role cannot change from '{self._state.role}' after deployment"
+            self.unit.status = BlockedStatus(msg)
+            return
+
+        if not self._state.installed:
+            self._on_install(None)
+
+        if self._state.joined and self._state.leaving:
+            LOG.info("leaving cluster")
+            self.unit.status = MaintenanceStatus("leaving cluster")
+            subprocess.check_call(["microk8s", "leave"])
+
+            self._state.joined = False
+            self._state.leaving = False
+            self._state.join_url = ""
+
+        if not self._state.joined:
+            if not self._state.join_url:
+                self.unit.status = WaitingStatus("waiting for control plane relation")
+                return
+
+            LOG.info("joining cluster")
+            self.unit.status = MaintenanceStatus("joining cluster")
+            subprocess.check_call(["microk8s", "join", self._state.join_url, "--worker"])
+            self._state.joined = True
+
+        self.unit.status = util.node_to_unit_status(socket.gethostname())
+
+    def _on_relation_changed(self, event: RelationChangedEvent):
+        join_url = event.relation.data[event.app].get("join_url")
+        if not join_url:
+            return
+
+        self._state.join_url = join_url
+        self._on_config_changed(None)
+
+    def _on_relation_departed(self, _: RelationDepartedEvent):
+        self._state.leaving = True
+        self._on_config_changed(None)
 
 
 if __name__ == "__main__":  # pragma: nocover
-    ops.main(TestCharmCharm)
+    main(MicroK8sCharm, use_juju_for_storage=True)

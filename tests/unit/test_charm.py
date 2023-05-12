@@ -3,66 +3,75 @@
 #
 # Learn more about testing at: https://juju.is/docs/sdk/testing
 
-import unittest
+from unittest import mock
 
 import ops
 import ops.testing
-from charm import TestCharmCharm
+from ops.model import WaitingStatus, BlockedStatus
+import pytest
+
+from charm import MicroK8sCharm
 
 
-class TestCharm(unittest.TestCase):
-    def setUp(self):
-        self.harness = ops.testing.Harness(TestCharmCharm)
-        self.addCleanup(self.harness.cleanup)
-        self.harness.begin()
+@pytest.fixture
+def harness():
+    harness = ops.testing.Harness(MicroK8sCharm)
+    yield harness
+    harness.cleanup()
 
-    def test_httpbin_pebble_ready(self):
-        # Expected plan after Pebble ready with default config
-        expected_plan = {
-            "services": {
-                "httpbin": {
-                    "override": "replace",
-                    "summary": "httpbin",
-                    "command": "gunicorn -b 0.0.0.0:80 httpbin:app -k gevent",
-                    "startup": "enabled",
-                    "environment": {"GUNICORN_CMD_ARGS": "--log-level info"},
-                }
-            },
-        }
-        # Simulate the container coming up and emission of pebble-ready event
-        self.harness.container_pebble_ready("httpbin")
-        # Get the plan now we've run PebbleReady
-        updated_plan = self.harness.get_container_pebble_plan("httpbin").to_dict()
-        # Check we've got the plan we expected
-        self.assertEqual(expected_plan, updated_plan)
-        # Check the service was started
-        service = self.harness.model.unit.get_container("httpbin").get_service("httpbin")
-        self.assertTrue(service.is_running())
-        # Ensure we set an ActiveStatus with no message
-        self.assertEqual(self.harness.model.unit.status, ops.ActiveStatus())
 
-    def test_config_changed_valid_can_connect(self):
-        # Ensure the simulated Pebble API is reachable
-        self.harness.set_can_connect("httpbin", True)
-        # Trigger a config-changed event with an updated value
-        self.harness.update_config({"log-level": "debug"})
-        # Get the plan now we've run PebbleReady
-        updated_plan = self.harness.get_container_pebble_plan("httpbin").to_dict()
-        updated_env = updated_plan["services"]["httpbin"]["environment"]
-        # Check the config change was effective
-        self.assertEqual(updated_env, {"GUNICORN_CMD_ARGS": "--log-level debug"})
-        self.assertEqual(self.harness.model.unit.status, ops.ActiveStatus())
+@mock.patch("subprocess.check_call")
+@pytest.mark.parametrize("role", ["worker", "control-plane", ""])
+@pytest.mark.parametrize(
+    "channel, command",
+    [
+        ("", ["snap", "install", "microk8s", "--classic"]),
+        ("1.27/stable", ["snap", "install", "microk8s", "--classic", "--channel", "1.27/stable"]),
+        ("1.27-strict", ["snap", "install", "microk8s", "--classic", "--channel", "1.27-strict"]),
+    ],
+)
+def test_install_channel(_check_call, role, channel, command, harness: ops.testing.Harness):
+    harness.update_config({"role": role, "channel": channel})
+    harness.begin_with_initial_hooks()
 
-    def test_config_changed_valid_cannot_connect(self):
-        # Trigger a config-changed event with an updated value
-        self.harness.update_config({"log-level": "debug"})
-        # Check the charm is in WaitingStatus
-        self.assertIsInstance(self.harness.model.unit.status, ops.WaitingStatus)
+    _check_call.assert_any_call(command)
 
-    def test_config_changed_invalid(self):
-        # Ensure the simulated Pebble API is reachable
-        self.harness.set_can_connect("httpbin", True)
-        # Trigger a config-changed event with an updated value
-        self.harness.update_config({"log-level": "foobar"})
-        # Check the charm is in BlockedStatus
-        self.assertIsInstance(self.harness.model.unit.status, ops.BlockedStatus)
+
+@mock.patch("subprocess.check_call")
+@pytest.mark.parametrize(
+    "role, expect_status",
+    [
+        ("", WaitingStatus),
+        ("worker", WaitingStatus),
+        ("control-plane", WaitingStatus),
+        ("something else", BlockedStatus),
+    ],
+)
+def test_verify_charm_role(_check_call, role, expect_status, harness: ops.testing.Harness):
+    harness.update_config({"role": role})
+    harness.begin_with_initial_hooks()
+
+    assert isinstance(harness.charm.unit.status, expect_status)
+
+
+@mock.patch("subprocess.check_call")
+def test_block_on_role_change(_check_call, harness: ops.testing.Harness):
+    harness.update_config({"role": "worker"})
+    harness.begin_with_initial_hooks()
+
+    assert isinstance(harness.charm.model.unit.status, ops.model.WaitingStatus)
+
+    harness.update_config({"role": "something else"})
+    assert isinstance(harness.charm.model.unit.status, ops.model.BlockedStatus)
+
+    harness.update_config({"role": "worker"})
+    assert isinstance(harness.charm.model.unit.status, ops.model.WaitingStatus)
+
+
+@mock.patch("subprocess.check_call")
+@mock.patch("subprocess.run")
+def test_remove(_run, _check_call, harness: ops.testing.Harness):
+    harness.begin_with_initial_hooks()
+    harness.charm._on_remove(None)
+
+    _run.assert_called_once_with(["snap", "remove", "microk8s", "--purge"])

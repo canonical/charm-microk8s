@@ -4,11 +4,11 @@
 # See https://juju.is/docs/config for guidance.
 
 options:
-  # An example config option to customise the log level of the workload
-  log-level:
-    description: |
-      Configures the log level of gunicorn. 
-
-      Acceptable values are: "info", "debug", "warning", "error" and "critical"
-    default: "info"
+  role:
+    description: Role for this microk8s deployment
+    default: ""
+    type: string
+  channel:
+    description: MicroK8s channel to install
+    default: ""
     type: string
