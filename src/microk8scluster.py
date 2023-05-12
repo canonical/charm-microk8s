@@ -493,7 +493,7 @@ class MicroK8sCluster(Object):
         disable_cert_reissue = self.model.config["disable_cert_reissue"]
         if disable_cert_reissue:
             with open(NO_CERT_REISSUE_LOCKFILE, "w") as lock_file:
-                lock_file.write()
+                lock_file.write("")
         else:
             if os.path.exists(NO_CERT_REISSUE_LOCKFILE):
                 os.remove(NO_CERT_REISSUE_LOCKFILE)
