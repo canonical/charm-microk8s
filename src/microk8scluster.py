@@ -5,6 +5,7 @@ import yaml
 import logging
 import subprocess
 import os
+from pathlib import Path
 
 from ops.charm import RelationEvent
 from ops.framework import EventSource, Object, ObjectEvents, StoredState
@@ -492,11 +493,9 @@ class MicroK8sCluster(Object):
         """Manage lock file to enable/disable cert reissue."""
         disable_cert_reissue = self.model.config["disable_cert_reissue"]
         if disable_cert_reissue:
-            with open(NO_CERT_REISSUE_LOCKFILE, "w") as lock_file:
-                lock_file.write()
+            Path(NO_CERT_REISSUE_LOCKFILE).touch()
         else:
-            if os.path.exists(NO_CERT_REISSUE_LOCKFILE):
-                os.remove(NO_CERT_REISSUE_LOCKFILE)
+            Path(NO_CERT_REISSUE_LOCKFILE).unlink(missing_ok=True)
 
     def _microk8s_start(self, event):
         subprocess.check_call(["/snap/bin/microk8s", "start"])
