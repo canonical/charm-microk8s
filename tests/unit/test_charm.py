@@ -1,8 +1,6 @@
-# Copyright 2023 Angelos Kolaitis
-# See LICENSE file for licensing details.
 #
-# Learn more about testing at: https://juju.is/docs/sdk/testing
-
+# Copyright 2023 Canonical, Ltd.
+#
 from unittest import mock
 
 import ops

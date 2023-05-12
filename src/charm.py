@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+#
+# Copyright 2023 Canonical, Ltd.
+#
 
 import logging
 import os

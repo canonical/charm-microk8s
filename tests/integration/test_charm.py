@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
-# Copyright 2023 Angelos Kolaitis
-# See LICENSE file for licensing details.
+#
+# Copyright 2023 Canonical, Ltd.
+#
 
 import asyncio
 import logging
