@@ -6,17 +6,17 @@ import socket
 import subprocess
 from typing import Union
 
-from ops import main, CharmBase
-from ops.model import ActiveStatus, BlockedStatus, MaintenanceStatus, WaitingStatus
-from ops.framework import StoredState
+from ops import CharmBase, main
 from ops.charm import (
-    RelationChangedEvent,
     ConfigChangedEvent,
     InstallEvent,
-    RelationJoinedEvent,
+    RelationChangedEvent,
     RelationDepartedEvent,
+    RelationJoinedEvent,
     RemoveEvent,
 )
+from ops.framework import StoredState
+from ops.model import BlockedStatus, MaintenanceStatus, WaitingStatus
 
 import util
 

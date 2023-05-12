@@ -7,8 +7,8 @@ from unittest import mock
 
 import ops
 import ops.testing
-from ops.model import WaitingStatus, BlockedStatus
 import pytest
+from ops.model import BlockedStatus, WaitingStatus
 
 from charm import MicroK8sCharm
 

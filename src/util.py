@@ -2,15 +2,13 @@ import json
 import logging
 import subprocess
 
-from ops.model import ActiveStatus, WaitingStatus, UnknownStatus
+from ops.model import ActiveStatus, UnknownStatus, WaitingStatus
 
 LOG = logging.getLogger(__name__)
 
 
 def node_to_unit_status(hostname: str):
-    """
-    retrieve Kubernetes node status and convert to Juju unit status
-    """
+    """Retrieve Kubernetes node status and convert to Juju unit status."""
     try:
         ready_condition = _unsafe_kubernetes_get_node_ready_condition(hostname)
         if ready_condition["status"] == "False":
@@ -25,10 +23,7 @@ def node_to_unit_status(hostname: str):
 
 
 def _unsafe_kubernetes_get_node_ready_condition(hostname: str):
-    """
-    return a JSON object describing the Kubernetes node status of type Ready
-    """
-
+    """Return a JSON object describing the Kubernetes node status of type Ready."""
     # worker nodes cannot use 'microk8s kubectl', invoke kubectl directly with the kubelet config
     output = subprocess.check_call(
         [

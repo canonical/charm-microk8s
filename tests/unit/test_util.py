@@ -1,8 +1,7 @@
 from unittest import mock
 
 import pytest
-
-from ops.model import ActiveStatus, WaitingStatus, UnknownStatus
+from ops.model import ActiveStatus, UnknownStatus, WaitingStatus
 
 import util
 
@@ -11,7 +10,7 @@ STATUS_MESSAGES = {
 {
     "lastHeartbeatTime": "2023-05-12T05:54:05Z",
     "lastTransitionTime": "2023-05-12T05:54:05Z",
-    "message": "[container runtime network not ready: NetworkReady=false reason:NetworkPluginNotReady message:Network plugin returns error: cni plugin not initialized, CSINode is not yet initialized]",
+    "message": "[container runtime network not ready: NetworkReady=false reason:NetworkPluginNotReady message:Network plugin returns error: cni plugin not initialized, CSINode is not yet initialized]",  # noqa
     "reason": "KubeletNotReady",
     "status": "False",
     "type": "Ready"
