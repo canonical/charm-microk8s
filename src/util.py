@@ -5,7 +5,7 @@ import json
 import logging
 import subprocess
 
-from ops.model import ActiveStatus, UnknownStatus, WaitingStatus
+from ops.model import ActiveStatus, MaintenanceStatus, WaitingStatus
 
 LOG = logging.getLogger(__name__)
 
@@ -22,7 +22,7 @@ def node_to_unit_status(hostname: str):
 
     except (OSError, json.JSONDecodeError) as e:
         LOG.exception("could not retrieve status of node %s: %s", hostname, e)
-        return UnknownStatus()
+        return MaintenanceStatus("waiting for node")
 
 
 def _unsafe_kubernetes_get_node_ready_condition(hostname: str):
