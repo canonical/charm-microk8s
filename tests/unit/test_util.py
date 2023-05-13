@@ -33,7 +33,7 @@ STATUS_MESSAGES = {
 }
 
 
-@mock.patch("subprocess.check_call")
+@mock.patch("subprocess.check_output")
 @pytest.mark.parametrize(
     "message, expect_status",
     [
@@ -42,7 +42,7 @@ STATUS_MESSAGES = {
         ("INVALID_STATUS", MaintenanceStatus("waiting for node")),
     ],
 )
-def test_node_to_unit_status(_check_call, message, expect_status):
-    _check_call.return_value = STATUS_MESSAGES[message].encode()
+def test_node_to_unit_status(_check_output, message, expect_status):
+    _check_output.return_value = STATUS_MESSAGES[message].encode()
 
     assert util.node_to_unit_status("fakehostname") == expect_status

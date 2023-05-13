@@ -28,15 +28,15 @@ def node_to_unit_status(hostname: str):
 def _unsafe_kubernetes_get_node_ready_condition(hostname: str):
     """Return a JSON object describing the Kubernetes node status of type Ready."""
     # worker nodes cannot use 'microk8s kubectl', invoke kubectl directly with the kubelet config
-    output = subprocess.check_call(
+    output = subprocess.check_output(
         [
-            "/snap/microk8s/current/bin/kubectl",
+            "/snap/microk8s/current/kubectl",
             "--kubeconfig=/var/snap/microk8s/current/credentials/kubelet.config",
             "get",
             "node",
             hostname,
             "-o",
-            "jsonpath={.status.conditions[?(@.type=='Ready')]",
+            "jsonpath={.status.conditions[?(@.type=='Ready')]}",
         ]
     )
     return json.loads(output)
