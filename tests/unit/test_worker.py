@@ -6,6 +6,7 @@ from unittest import mock
 import ops
 import ops.testing
 from conftest import Environment
+import pytest
 
 
 def test_install(e: Environment):
@@ -32,11 +33,13 @@ def test_install(e: Environment):
     assert isinstance(e.harness.charm.model.unit.status, ops.model.WaitingStatus)
 
 
-def test_valid_relation(e: Environment):
+@pytest.mark.parametrize("is_leader", [True, False])
+def test_valid_relation(e: Environment, is_leader: bool):
     e.node_status.return_value = ops.model.ActiveStatus("fakestatus")
     e.get_hostname.return_value = "fakehostname"
 
     e.harness.update_config({"role": "worker"})
+    e.harness.set_leader(is_leader)
     e.harness.begin_with_initial_hooks()
     unit = e.harness.charm.model.unit
     assert isinstance(unit.status, ops.model.WaitingStatus)
@@ -52,7 +55,6 @@ def test_valid_relation(e: Environment):
 
     e.check_call.reset_mock()
 
-    e.harness.remove_relation_unit(rel_id, "microk8s/0")
     e.harness.remove_relation(rel_id)
 
     e.check_call.assert_called_once_with(["microk8s", "leave"])
