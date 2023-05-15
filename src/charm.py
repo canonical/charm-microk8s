@@ -53,7 +53,8 @@ class MicroK8sCharm(CharmBase):
             self.framework.observe(self.on.update_status, self._on_update_status)
             self.framework.observe(self.on.peer_relation_joined, self._announce_hostname)
             self.framework.observe(self.on.microk8s_relation_joined, self._announce_hostname)
-            self.framework.observe(self.on.microk8s_relation_changed, self._on_relation_changed)
+            self.framework.observe(self.on.microk8s_relation_joined, self._retrieve_join_url)
+            self.framework.observe(self.on.microk8s_relation_changed, self._retrieve_join_url)
             self.framework.observe(self.on.microk8s_relation_departed, self._on_relation_departed)
         else:
             self.framework.observe(self.on.remove, self._on_remove)
@@ -147,7 +148,7 @@ class MicroK8sCharm(CharmBase):
         if self._state.joined:
             self.unit.status = util.node_to_unit_status(socket.gethostname())
 
-    def _on_relation_changed(self, event: RelationChangedEvent):
+    def _retrieve_join_url(self, event: Union[RelationChangedEvent, RelationJoinedEvent]):
         join_url = event.relation.data[event.app].get("join_url")
         if not join_url:
             return
