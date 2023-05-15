@@ -135,3 +135,20 @@ def test_follower_add_unit_worker(e: Environment):
     assert "join_url" not in relation_data
     e.check_call.assert_not_called()
     e.urandom.assert_not_called()
+
+
+def test_follower_retrieve_join_url(e: Environment):
+    e.node_status.return_value = ops.model.ActiveStatus("fakestatus")
+    e.get_hostname.return_value = "fakehostname"
+
+    e.harness.update_config({"role": "control-plane"})
+    e.harness.set_leader(False)
+    e.harness.begin_with_initial_hooks()
+
+    e.check_call.reset_mock()
+    rel_id = e.harness.charm.model.get_relation("peer").id
+    e.harness.add_relation_unit(rel_id, f"{e.harness.charm.app.name}/1")
+    e.harness.update_relation_data(rel_id, e.harness.charm.app.name, {"join_url": "fakejoinurl"})
+
+    e.check_call.assert_called_with(["microk8s", "join", "fakejoinurl", "--worker"])
+    e.node_status.assert_called_once_with("fakehostname")

@@ -65,6 +65,8 @@ class MicroK8sCharm(CharmBase):
             self.framework.observe(self.on.update_status, self._on_update_status)
             self.framework.observe(self.on.peer_relation_joined, self._announce_hostname)
             self.framework.observe(self.on.peer_relation_joined, self._add_token)
+            self.framework.observe(self.on.peer_relation_joined, self._retrieve_peer_join_url)
+            self.framework.observe(self.on.peer_relation_changed, self._retrieve_peer_join_url)
             self.framework.observe(self.on.microk8s_provides_relation_joined, self._add_token)
 
     def _worker_open_ports(self, _: InstallEvent):
@@ -155,6 +157,12 @@ class MicroK8sCharm(CharmBase):
 
         self._state.join_url = join_url
         self._on_config_changed(None)
+
+    def _retrieve_peer_join_url(self, event: Union[RelationChangedEvent, RelationJoinedEvent]):
+        if self._state.joined or self.unit.is_leader():
+            return
+
+        self._retrieve_join_url(event)
 
     def _on_relation_departed(self, _: RelationDepartedEvent):
         self._state.leaving = True
