@@ -31,7 +31,7 @@ peers:
     interface: microk8s-peer
 
 provides:
-  microk8s:
+  microk8s-provides:
     interface: microk8s-info
     scope: global
 

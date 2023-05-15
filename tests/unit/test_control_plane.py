@@ -88,7 +88,7 @@ def test_leader_add_unit_worker(e: Environment):
 
     e.check_call.reset_mock()
 
-    rel_id = e.harness.add_relation("microk8s", "microk8s-worker")
+    rel_id = e.harness.add_relation("microk8s-provides", "microk8s-worker")
     e.harness.add_relation_unit(rel_id, "microk8s-worker/0")
 
     e.check_call.assert_called_with(
