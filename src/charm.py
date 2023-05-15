@@ -50,7 +50,7 @@ class MicroK8sCharm(CharmBase):
             self.framework.observe(self.on.remove, self._on_remove)
             self.framework.observe(self.on.install, self._on_install)
             self.framework.observe(self.on.install, self._worker_open_ports)
-            self.framework.observe(self.on.config_changed, self._on_config_changed_worker)
+            self.framework.observe(self.on.config_changed, self._on_config_changed)
             self.framework.observe(self.on.update_status, self._on_update_status)
             self.framework.observe(self.on.peer_relation_joined, self._announce_hostname)
             self.framework.observe(self.on.microk8s_relation_joined, self._announce_hostname)
@@ -66,8 +66,8 @@ class MicroK8sCharm(CharmBase):
             self.framework.observe(self.on.update_status, self._on_update_status)
             self.framework.observe(self.on.peer_relation_joined, self._announce_hostname)
             self.framework.observe(self.on.peer_relation_joined, self._add_token)
-            self.framework.observe(self.on.peer_relation_joined, self._retrieve_peer_join_url)
-            self.framework.observe(self.on.peer_relation_changed, self._retrieve_peer_join_url)
+            self.framework.observe(self.on.peer_relation_joined, self._retrieve_join_url)
+            self.framework.observe(self.on.peer_relation_changed, self._retrieve_join_url)
             self.framework.observe(self.on.microk8s_provides_relation_joined, self._add_token)
 
     def _worker_open_ports(self, _: InstallEvent):
@@ -117,36 +117,6 @@ class MicroK8sCharm(CharmBase):
         if not self._state.join_url and self.unit.is_leader():
             self._state.joined = True
 
-    def _on_config_changed_worker(self, _: ConfigChangedEvent):
-        if self.config["role"] != self._state.role:
-            msg = f"role cannot change from '{self._state.role}' after deployment"
-            self.unit.status = BlockedStatus(msg)
-            return
-
-        if not self._state.installed:
-            self._on_install(None)
-
-        if self._state.joined and self._state.leaving:
-            LOG.info("leaving cluster")
-            self.unit.status = MaintenanceStatus("leaving cluster")
-            subprocess.check_call(["microk8s", "leave"])
-
-            self._state.joined = False
-            self._state.leaving = False
-            self._state.join_url = ""
-
-        if not self._state.joined:
-            if not self._state.join_url:
-                self.unit.status = WaitingStatus("waiting for control plane relation")
-                return
-
-            LOG.info("joining cluster")
-            self.unit.status = MaintenanceStatus("joining cluster")
-            subprocess.check_call(["microk8s", "join", self._state.join_url, "--worker"])
-            self._state.joined = True
-
-        self.unit.status = util.node_to_unit_status(socket.gethostname())
-
     def _on_config_changed(self, _: ConfigChangedEvent):
         if self.config["role"] != self._state.role:
             msg = f"role cannot change from '{self._state.role}' after deployment"
@@ -172,7 +142,10 @@ class MicroK8sCharm(CharmBase):
 
             LOG.info("joining cluster")
             self.unit.status = MaintenanceStatus("joining cluster")
-            subprocess.check_call(["microk8s", "join", self._state.join_url])
+            join_cmd = ["microk8s", "join", self._state.join_url]
+            if self.config["role"] == "worker":
+                join_cmd.append("--worker")
+            subprocess.check_call(join_cmd)
             self._state.joined = True
 
         self.unit.status = util.node_to_unit_status(socket.gethostname())
@@ -182,15 +155,9 @@ class MicroK8sCharm(CharmBase):
             self.unit.status = util.node_to_unit_status(socket.gethostname())
 
     def _retrieve_join_url(self, event: Union[RelationChangedEvent, RelationJoinedEvent]):
-        join_url = event.relation.data[event.app].get("join_url")
-        if not join_url:
-            return
-
-        self._state.join_url = join_url
-        self._on_config_changed_worker(None)
-
-    def _retrieve_peer_join_url(self, event: Union[RelationChangedEvent, RelationJoinedEvent]):
-        if self._state.joined or self.unit.is_leader():
+        # TODO(neoaggelos): corner case where the leader in the control plane peer relation changes
+        # before other nodes have time to join. deployment might fail in this case.
+        if self._state.joined or (self.config["role"] != "worker" and self.unit.is_leader()):
             return
 
         join_url = event.relation.data[event.app].get("join_url")
