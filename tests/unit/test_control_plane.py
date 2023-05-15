@@ -150,5 +150,5 @@ def test_follower_retrieve_join_url(e: Environment):
     e.harness.add_relation_unit(rel_id, f"{e.harness.charm.app.name}/1")
     e.harness.update_relation_data(rel_id, e.harness.charm.app.name, {"join_url": "fakejoinurl"})
 
-    e.check_call.assert_called_with(["microk8s", "join", "fakejoinurl", "--worker"])
+    e.check_call.assert_called_with(["microk8s", "join", "fakejoinurl"])
     e.node_status.assert_called_once_with("fakehostname")
