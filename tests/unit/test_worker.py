@@ -46,9 +46,9 @@ def test_valid_relation(e: Environment, is_leader: bool):
 
     rel_id = e.harness.add_relation("microk8s", "microk8s")
     e.harness.add_relation_unit(rel_id, "microk8s/0")
-    e.harness.update_relation_data(rel_id, "microk8s", {"join_url": "MOCK_JOIN_URL"})
+    e.harness.update_relation_data(rel_id, "microk8s", {"join_url": "fakejoinurl"})
 
-    e.check_call.assert_called_with(["microk8s", "join", "MOCK_JOIN_URL", "--worker"])
+    e.check_call.assert_called_with(["microk8s", "join", "fakejoinurl", "--worker"])
     e.node_status.assert_called_once_with("fakehostname")
     assert unit.status == ops.model.ActiveStatus("fakestatus")
     assert e.harness.get_relation_data(rel_id, e.harness.charm.unit)["hostname"] == "fakehostname"
@@ -73,7 +73,7 @@ def test_invalid_relation(e: Environment):
 
     rel_id = e.harness.add_relation("microk8s", "microk8s")
     e.harness.add_relation_unit(rel_id, "microk8s/0")
-    e.harness.update_relation_data(rel_id, "microk8s", {"not_a_join_url": "MOCK_JOIN_URL"})
+    e.harness.update_relation_data(rel_id, "microk8s", {"not_a_join_url": "fakejoinurl"})
 
     assert e.harness.get_relation_data(rel_id, e.harness.charm.unit)["hostname"] == "fakehostname"
 
@@ -87,3 +87,32 @@ def test_invalid_relation(e: Environment):
 
     e.check_call.assert_not_called()
     assert isinstance(e.harness.charm.model.unit.status, ops.model.WaitingStatus)
+
+
+@pytest.mark.parametrize("is_leader", [True, False])
+def test_valid_relation(e: Environment, is_leader: bool):
+    e.node_status.return_value = ops.model.ActiveStatus("fakestatus")
+    e.get_hostname.return_value = "fakehostname"
+
+    e.harness.update_config({"role": "worker"})
+    e.harness.set_leader(is_leader)
+    e.harness.begin_with_initial_hooks()
+    unit = e.harness.charm.model.unit
+    assert isinstance(unit.status, ops.model.WaitingStatus)
+
+    rel_id = e.harness.add_relation("microk8s", "microk8s")
+    e.harness.add_relation_unit(rel_id, "microk8s/0")
+    e.harness.add_relation_unit(rel_id, "microk8s/1")
+    e.harness.update_relation_data(rel_id, "microk8s", {"join_url": "fakejoinurl"})
+
+    e.check_call.assert_called_with(["microk8s", "join", "fakejoinurl", "--worker"])
+    e.node_status.assert_called_once_with("fakehostname")
+    assert unit.status == ops.model.ActiveStatus("fakestatus")
+    assert e.harness.get_relation_data(rel_id, e.harness.charm.unit)["hostname"] == "fakehostname"
+
+    e.check_call.reset_mock()
+
+    e.harness.remove_relation_unit(rel_id, "microk8s/1")
+    e.check_call.assert_not_called()
+
+    assert unit.status == ops.model.ActiveStatus("fakestatus")

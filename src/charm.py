@@ -55,7 +55,7 @@ class MicroK8sCharm(CharmBase):
             self.framework.observe(self.on.microk8s_relation_joined, self._announce_hostname)
             self.framework.observe(self.on.microk8s_relation_joined, self._retrieve_join_url)
             self.framework.observe(self.on.microk8s_relation_changed, self._retrieve_join_url)
-            self.framework.observe(self.on.microk8s_relation_departed, self._on_relation_departed)
+            self.framework.observe(self.on.microk8s_relation_broken, self._on_relation_broken)
         else:
             self.framework.observe(self.on.remove, self._on_remove)
             self.framework.observe(self.on.install, self._on_install)
@@ -164,7 +164,7 @@ class MicroK8sCharm(CharmBase):
 
         self._retrieve_join_url(event)
 
-    def _on_relation_departed(self, _: RelationDepartedEvent):
+    def _on_relation_broken(self, _: RelationBrokenEvent):
         self._state.leaving = True
         self._on_config_changed(None)
 
