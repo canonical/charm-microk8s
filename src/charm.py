@@ -17,6 +17,7 @@ from ops.charm import (
     RelationDepartedEvent,
     RelationJoinedEvent,
     RemoveEvent,
+    UpdateStatusEvent,
 )
 from ops.framework import StoredState
 from ops.model import BlockedStatus, MaintenanceStatus, WaitingStatus
@@ -44,14 +45,35 @@ class MicroK8sCharm(CharmBase):
             join_url="",
         )
 
-        self.framework.observe(self.on.remove, self._on_remove)
-        self.framework.observe(self.on.config_changed, self._on_install)
-        self.framework.observe(self.on.config_changed, self._on_config_changed)
-        self.framework.observe(self.on["cluster"].relation_joined, self._announce_hostname)
-        self.framework.observe(self.on["cluster"].relation_changed, self._announce_hostname)
-        self.framework.observe(self.on["microk8s"].relation_joined, self._announce_hostname)
-        self.framework.observe(self.on["microk8s"].relation_changed, self._on_relation_changed)
-        self.framework.observe(self.on["microk8s"].relation_departed, self._on_relation_departed)
+        if self.config["role"] == "worker":
+            self.framework.observe(self.on.remove, self._on_remove)
+            self.framework.observe(self.on.install, self._on_install)
+            self.framework.observe(self.on.install, self._worker_open_ports)
+            self.framework.observe(self.on.config_changed, self._on_config_changed)
+            self.framework.observe(self.on.update_status, self._on_update_status)
+            self.framework.observe(self.on.cluster_relation_joined, self._announce_hostname)
+            self.framework.observe(self.on.microk8s_relation_joined, self._announce_hostname)
+            self.framework.observe(self.on.microk8s_relation_changed, self._on_relation_changed)
+            self.framework.observe(self.on.microk8s_relation_departed, self._on_relation_departed)
+        else:
+            self.framework.observe(self.on.remove, self._on_remove)
+            self.framework.observe(self.on.install, self._on_install)
+            self.framework.observe(self.on.install, self._on_bootstrap_node)
+            self.framework.observe(self.on.install, self._control_plane_open_ports)
+            self.framework.observe(self.on.config_changed, self._on_config_changed)
+            self.framework.observe(self.on.update_status, self._on_update_status)
+            self.framework.observe(self.on.cluster_relation_joined, self._announce_hostname)
+            self.framework.observe(self.on.cluster_relation_joined, self._add_token)
+            self.framework.observe(self.on.microk8s_provides_relation_joined, self._add_token)
+
+    def _worker_open_ports(self, _: InstallEvent):
+        self.unit.open_port("tcp", 80)
+        self.unit.open_port("tcp", 443)
+
+    def _control_plane_open_ports(self, _: InstallEvent):
+        self.unit.open_port("tcp", 80)
+        self.unit.open_port("tcp", 443)
+        self.unit.open_port("tcp", 16443)
 
     def _on_remove(self, _: RemoveEvent):
         subprocess.run(["snap", "remove", "microk8s", "--purge"])
@@ -84,13 +106,12 @@ class MicroK8sCharm(CharmBase):
 
         subprocess.check_call(install_microk8s)
 
-        # ports for api server
-        self.unit.open_port("tcp", 16443)
-        self.unit.open_port("tcp", 80)
-        self.unit.open_port("tcp", 443)
-
         self._state.installed = True
         self._state.joined = False
+
+    def _on_bootstrap_node(self, _: InstallEvent):
+        if not self._state.join_url and self.unit.is_leader():
+            self._state.joined = True
 
     def _on_config_changed(self, _: ConfigChangedEvent):
         if self.config["role"] != self._state.role:
@@ -122,6 +143,10 @@ class MicroK8sCharm(CharmBase):
 
         self.unit.status = util.node_to_unit_status(socket.gethostname())
 
+    def _on_update_status(self, _: UpdateStatusEvent):
+        if self._state.joined:
+            self.unit.status = util.node_to_unit_status(socket.gethostname())
+
     def _on_relation_changed(self, event: RelationChangedEvent):
         join_url = event.relation.data[event.app].get("join_url")
         if not join_url:
@@ -133,6 +158,17 @@ class MicroK8sCharm(CharmBase):
     def _on_relation_departed(self, _: RelationDepartedEvent):
         self._state.leaving = True
         self._on_config_changed(None)
+
+    def _add_token(self, event: RelationJoinedEvent):
+        if not self.unit.is_leader():
+            return
+
+        token = os.urandom(16).hex()
+        subprocess.check_call(["microk8s", "add-node", "--token", token, "--token-ttl", "7200"])
+
+        event.relation.data[self.app]["join_url"] = "{}:25000/{}".format(
+            self.model.get_binding(event.relation).network.ingress_address, token
+        )
 
 
 if __name__ == "__main__":  # pragma: nocover
