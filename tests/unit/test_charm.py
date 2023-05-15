@@ -1,24 +1,14 @@
 #
 # Copyright 2023 Canonical, Ltd.
 #
-from unittest import mock
 
 import ops
 import ops.testing
 import pytest
+from conftest import Environment
 from ops.model import BlockedStatus, WaitingStatus
 
-from charm import MicroK8sCharm
 
-
-@pytest.fixture
-def harness():
-    harness = ops.testing.Harness(MicroK8sCharm)
-    yield harness
-    harness.cleanup()
-
-
-@mock.patch("subprocess.check_call")
 @pytest.mark.parametrize("role", ["worker", "control-plane", ""])
 @pytest.mark.parametrize(
     "channel, command",
@@ -28,14 +18,13 @@ def harness():
         ("1.27-strict", ["snap", "install", "microk8s", "--classic", "--channel", "1.27-strict"]),
     ],
 )
-def test_install_channel(_check_call, role, channel, command, harness: ops.testing.Harness):
-    harness.update_config({"role": role, "channel": channel})
-    harness.begin_with_initial_hooks()
+def test_install_channel(role, channel, command, e: Environment):
+    e.harness.update_config({"role": role, "channel": channel})
+    e.harness.begin_with_initial_hooks()
 
-    _check_call.assert_any_call(command)
+    e.check_call.assert_any_call(command)
 
 
-@mock.patch("subprocess.check_call")
 @pytest.mark.parametrize(
     "role, expect_status",
     [
@@ -45,31 +34,43 @@ def test_install_channel(_check_call, role, channel, command, harness: ops.testi
         ("something else", BlockedStatus),
     ],
 )
-def test_verify_charm_role(_check_call, role, expect_status, harness: ops.testing.Harness):
-    harness.update_config({"role": role})
-    harness.begin_with_initial_hooks()
+def test_verify_charm_role(e: Environment, role, expect_status):
+    e.harness.update_config({"role": role})
+    e.harness.begin_with_initial_hooks()
 
-    assert isinstance(harness.charm.unit.status, expect_status)
-
-
-@mock.patch("subprocess.check_call")
-def test_block_on_role_change(_check_call, harness: ops.testing.Harness):
-    harness.update_config({"role": "worker"})
-    harness.begin_with_initial_hooks()
-
-    assert isinstance(harness.charm.model.unit.status, ops.model.WaitingStatus)
-
-    harness.update_config({"role": "something else"})
-    assert isinstance(harness.charm.model.unit.status, ops.model.BlockedStatus)
-
-    harness.update_config({"role": "worker"})
-    assert isinstance(harness.charm.model.unit.status, ops.model.WaitingStatus)
+    assert isinstance(e.harness.charm.unit.status, expect_status)
 
 
-@mock.patch("subprocess.check_call")
-@mock.patch("subprocess.run")
-def test_remove(_run, _check_call, harness: ops.testing.Harness):
-    harness.begin_with_initial_hooks()
-    harness.charm._on_remove(None)
+def test_block_on_role_change(e: Environment):
+    e.harness.update_config({"role": "worker"})
+    e.harness.begin_with_initial_hooks()
 
-    _run.assert_called_once_with(["snap", "remove", "microk8s", "--purge"])
+    assert isinstance(e.harness.charm.model.unit.status, ops.model.WaitingStatus)
+
+    e.harness.update_config({"role": "something else"})
+    assert isinstance(e.harness.charm.model.unit.status, ops.model.BlockedStatus)
+
+    e.harness.update_config({"role": "worker"})
+    assert isinstance(e.harness.charm.model.unit.status, ops.model.WaitingStatus)
+
+
+def test_remove(e: Environment):
+    e.harness.begin_with_initial_hooks()
+    e.harness.charm._on_remove(None)
+
+    e.run.assert_called_once_with(["snap", "remove", "microk8s", "--purge"])
+
+
+def test_update_status(e: Environment):
+    e.node_status.return_value = ops.model.ActiveStatus("fakestatus2")
+    e.harness.begin_with_initial_hooks()
+
+    e.node_status.assert_not_called()
+
+    e.harness.charm._on_update_status(None)
+    e.node_status.assert_not_called()
+
+    e.harness.charm._state.joined = True
+    e.harness.charm._on_update_status(None)
+    e.node_status.assert_called_once_with(e.get_hostname.return_value)
+    assert e.harness.charm.unit.status == ops.model.ActiveStatus("fakestatus2")
