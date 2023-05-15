@@ -63,7 +63,7 @@ def test_leader_add_unit_peer(e: Environment):
 
     e.check_call.reset_mock()
 
-    rel_id = e.harness.charm.model.get_relation("cluster").id
+    rel_id = e.harness.charm.model.get_relation("peer").id
     e.harness.add_relation_unit(rel_id, f"{e.harness.charm.app.name}/1")
 
     e.check_call.assert_called_with(
@@ -88,7 +88,7 @@ def test_leader_add_unit_worker(e: Environment):
 
     e.check_call.reset_mock()
 
-    rel_id = e.harness.add_relation("microk8s-provides", "microk8s-worker")
+    rel_id = e.harness.add_relation("microk8s", "microk8s-worker")
     e.harness.add_relation_unit(rel_id, "microk8s-worker/0")
 
     e.check_call.assert_called_with(
@@ -109,7 +109,7 @@ def test_follower_add_unit_peer(e: Environment):
     e.harness.set_leader(False)
 
     e.check_call.reset_mock()
-    rel_id = e.harness.charm.model.get_relation("cluster").id
+    rel_id = e.harness.charm.model.get_relation("peer").id
     e.harness.add_relation_unit(rel_id, f"{e.harness.charm.app.name}/1")
 
     relation_data = e.harness.get_relation_data(rel_id, e.harness.charm.app)
@@ -128,7 +128,7 @@ def test_follower_add_unit_worker(e: Environment):
 
     e.check_call.reset_mock()
 
-    rel_id = e.harness.add_relation("microk8s-provides", "microk8s-worker")
+    rel_id = e.harness.add_relation("microk8s", "microk8s-worker")
     e.harness.add_relation_unit(rel_id, "microk8s-worker/0")
 
     relation_data = e.harness.get_relation_data(rel_id, e.harness.charm.app)

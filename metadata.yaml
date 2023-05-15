@@ -27,11 +27,11 @@ series:
   - jammy
 
 peers:
-  cluster:
+  peer:
     interface: microk8s-peer
 
 provides:
-  microk8s-provides:
+  microk8s:
     interface: microk8s-info
     scope: global
 

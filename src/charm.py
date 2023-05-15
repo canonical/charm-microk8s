@@ -51,7 +51,7 @@ class MicroK8sCharm(CharmBase):
             self.framework.observe(self.on.install, self._worker_open_ports)
             self.framework.observe(self.on.config_changed, self._on_config_changed)
             self.framework.observe(self.on.update_status, self._on_update_status)
-            self.framework.observe(self.on.cluster_relation_joined, self._announce_hostname)
+            self.framework.observe(self.on.peer_relation_joined, self._announce_hostname)
             self.framework.observe(self.on.microk8s_relation_joined, self._announce_hostname)
             self.framework.observe(self.on.microk8s_relation_changed, self._on_relation_changed)
             self.framework.observe(self.on.microk8s_relation_departed, self._on_relation_departed)
@@ -62,9 +62,9 @@ class MicroK8sCharm(CharmBase):
             self.framework.observe(self.on.install, self._control_plane_open_ports)
             self.framework.observe(self.on.config_changed, self._on_config_changed)
             self.framework.observe(self.on.update_status, self._on_update_status)
-            self.framework.observe(self.on.cluster_relation_joined, self._announce_hostname)
-            self.framework.observe(self.on.cluster_relation_joined, self._add_token)
-            self.framework.observe(self.on.microk8s_provides_relation_joined, self._add_token)
+            self.framework.observe(self.on.peer_relation_joined, self._announce_hostname)
+            self.framework.observe(self.on.peer_relation_joined, self._add_token)
+            self.framework.observe(self.on.microk8s_relation_joined, self._add_token)
 
     def _worker_open_ports(self, _: InstallEvent):
         self.unit.open_port("tcp", 80)
