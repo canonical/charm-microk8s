@@ -1,26 +1,30 @@
-<!--
-Avoid using this README file for information that is maintained or published elsewhere, e.g.:
+# MicroK8s
 
-* metadata.yaml > published on Charmhub
-* documentation > published on (or linked to from) Charmhub
-* detailed contribution guide > documentation or CONTRIBUTING.md
+## The smallest, fastest Kubernetes
 
-Use links instead.
--->
+Single-package fully conformant lightweight Kubernetes that works on [42 flavours of Linux](https://snapcraft.io/microk8s). Perfect for:
 
-# test-charm
+- Developer workstations
+- IoT
+- Edge
+- CI/CD
 
-Charmhub package name: operator-template
-More information: https://charmhub.io/test-charm
+## Usage
 
-Describe your charm in one or two sentences.
+This charm deploys and manages a MicroK8s cluster. It can handle scaling up and down.
 
-## Other resources
+**Minimum Requirements**: 1 vCPU and 2GB RAM.
 
-<!-- If your charm is documented somewhere else other than Charmhub, provide a link separately. -->
+**Recommended Requirements**: 2 vCPUs and 4GB RAM, 20GB disk.
 
-- [Read more](https://example.com)
+Make sure to account for extra requirements depending on the workload you are planning to deploy.
 
-- [Contributing](CONTRIBUTING.md) <!-- or link to other contribution documentation -->
+```bash
+juju deploy microk8s --constraints 'cores=2 mem=4G'
+```
 
-- See the [Juju SDK documentation](https://juju.is/docs/sdk) for more information about developing and improving charms.
+Alternatively, to specify the MicroK8s version to install, you can use:
+
+```bash
+juju deploy microk8s --constraints 'cores=2 mem=4G' --config channel=1.25
+```
