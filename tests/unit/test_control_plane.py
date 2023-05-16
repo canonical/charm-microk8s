@@ -190,17 +190,21 @@ def test_follower_remove_node(e: Environment, become_leader):
 
     prel_id = e.harness.charm.model.get_relation("peer").id
     e.harness.add_relation_unit(prel_id, f"{e.harness.charm.app.name}/1")
+    e.harness.add_relation_unit(prel_id, f"{e.harness.charm.app.name}/2")
     e.harness.update_relation_data(prel_id, f"{e.harness.charm.app.name}/1", {"hostname": "fake2"})
     e.harness.update_relation_data(prel_id, e.harness.charm.app.name, {"join_url": "fakejoinurl"})
 
     rel_id = e.harness.add_relation("microk8s-provides", "microk8s-worker")
     e.harness.add_relation_unit(rel_id, "microk8s-worker/0")
+    e.harness.add_relation_unit(rel_id, "microk8s-worker/1")
     e.harness.update_relation_data(rel_id, "microk8s-worker/0", {"hostname": "fake1"})
 
     e.harness.set_leader(become_leader)
     e.check_call.reset_mock()
     e.harness.remove_relation_unit(rel_id, "microk8s-worker/0")
+    e.harness.remove_relation_unit(rel_id, "microk8s-worker/1")
     e.harness.remove_relation_unit(prel_id, f"{e.harness.charm.app.name}/1")
+    e.harness.remove_relation_unit(prel_id, f"{e.harness.charm.app.name}/2")
 
     if become_leader:
         e.check_call.assert_has_calls(

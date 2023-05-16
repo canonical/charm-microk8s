@@ -94,7 +94,8 @@ class MicroK8sCharm(CharmBase):
             return
 
         remove_hostname = self._state.hostnames.get(event.unit.name)
-        self._state.remove_nodes.append(remove_hostname)
+        if remove_hostname:
+            self._state.remove_nodes.append(remove_hostname)
         self._on_config_changed(None)
 
     def _worker_open_ports(self, _: InstallEvent):
