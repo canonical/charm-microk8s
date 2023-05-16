@@ -1,26 +1,15 @@
-# This file populates the Overview on Charmhub.
-# See https://juju.is/docs/sdk/metadata-reference for a checklist and guidance.
+name: microk8s
 
-# The charm package name, no spaces (required)
-# See https://juju.is/docs/sdk/naming#heading--naming-charms for guidance.
-name: test-charm
+display-name: MicroK8s
 
-# The following metadata are human-readable and will be published prominently on Charmhub.
-
-# (Recommended)
-display-name: Charm Template
-
-# (Required)
-summary: A very short one-line summary of the charm.
+summary: MicroK8s is a small, fast, single-package Kubernetes for developers, IoT and edge.
 
 description: |
-  A single sentence that says what the charm is, concisely and memorably.
+  MicroK8s is a small, fast, secure, single node Kubernetes that installs on just about any Linux box. Use it for offline development, prototyping, testing, or use it on a VM as a small, cheap, reliable K8s for CI/CD. It's also a great K8s for appliances - develop your IoT apps for k8s and deploy them to MicroK8s on your boxes.
 
-  A paragraph of one to three short sentences, that describe what the charm does.
-
-  A third paragraph that explains what need the charm meets.
-
-  Finally, a paragraph that describes whom the charm is useful for.
+maintainers:
+  - Angelos Kolaitis <angelos.kolaitis@canonical.com>
+  - Kostantinos Tsakalozos <kos.tsakalozos@canonical.com>
 
 series:
   - focal
