@@ -79,7 +79,7 @@ def test_leader_peer_relation(e: Environment):
 
     e.check_call.reset_mock()
     e.harness.remove_relation_unit(rel_id, f"{e.harness.charm.app.name}/1")
-    e.check_call.assert_called_once_with(["microk8s", "remove-node", "fake1"])
+    e.check_call.assert_called_once_with(["microk8s", "remove-node", "fake1", "--force"])
 
 
 def test_leader_microk8s_provides_relation(e: Environment):
@@ -110,7 +110,7 @@ def test_leader_microk8s_provides_relation(e: Environment):
 
     e.check_call.reset_mock()
     e.harness.remove_relation_unit(rel_id, "microk8s-worker/0")
-    e.check_call.assert_called_once_with(["microk8s", "remove-node", "fake1"])
+    e.check_call.assert_called_once_with(["microk8s", "remove-node", "fake1", "--force"])
 
 
 def test_follower_peer_relation(e: Environment):
@@ -208,11 +208,9 @@ def test_follower_remove_node(e: Environment, become_leader):
     e.harness.remove_relation_unit(prel_id, f"{e.harness.charm.app.name}/2")
 
     if become_leader:
-        e.check_call.assert_has_calls(
-            [
-                mock.call(["microk8s", "remove-node", "fake1"]),
-                mock.call(["microk8s", "remove-node", "fake2"]),
-            ]
-        )
+        assert e.check_call.mock_calls == [
+            mock.call(["microk8s", "remove-node", "fake1", "--force"]),
+            mock.call(["microk8s", "remove-node", "fake2", "--force"]),
+        ]
     else:
         e.check_call.assert_not_called()

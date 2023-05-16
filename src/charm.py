@@ -165,11 +165,13 @@ class MicroK8sCharm(CharmBase):
             self._on_install(None)
 
         if self._state.joined and self.unit.is_leader() and self._state.remove_nodes:
-            for hostname in self._state.remove_nodes:
+            remove_nodes = list(self._state.remove_nodes)
+            self._state.remove_nodes = []
+            for hostname in remove_nodes:
                 LOG.info("removing node %s", hostname)
                 self.unit.status = MaintenanceStatus(f"removing node {hostname}")
                 try:
-                    self._check_call(["microk8s", "remove-node", hostname])
+                    self._check_call(["microk8s", "remove-node", hostname, "--force"])
                 except subprocess.CalledProcessError:
                     LOG.exception("failed to remove departing node %s", hostname)
 
