@@ -55,7 +55,6 @@ class MicroK8sCharm(CharmBase):
             self.framework.observe(self.on.install, self._worker_open_ports)
             self.framework.observe(self.on.config_changed, self._on_config_changed)
             self.framework.observe(self.on.update_status, self._on_update_status)
-            self.framework.observe(self.on.peer_relation_joined, self._announce_hostname)
             self.framework.observe(self.on.microk8s_relation_joined, self._announce_hostname)
             self.framework.observe(self.on.microk8s_relation_joined, self._retrieve_join_url)
             self.framework.observe(self.on.microk8s_relation_changed, self._retrieve_join_url)
@@ -67,12 +66,12 @@ class MicroK8sCharm(CharmBase):
             self.framework.observe(self.on.install, self._control_plane_open_ports)
             self.framework.observe(self.on.config_changed, self._on_config_changed)
             self.framework.observe(self.on.update_status, self._on_update_status)
-            self.framework.observe(self.on.peer_relation_joined, self._announce_hostname)
             self.framework.observe(self.on.peer_relation_joined, self._add_token)
-            self.framework.observe(self.on.peer_relation_joined, self._retrieve_join_url)
+            self.framework.observe(self.on.peer_relation_joined, self._announce_hostname)
             self.framework.observe(self.on.peer_relation_joined, self._record_hostnames)
-            self.framework.observe(self.on.peer_relation_changed, self._retrieve_join_url)
+            self.framework.observe(self.on.peer_relation_joined, self._retrieve_join_url)
             self.framework.observe(self.on.peer_relation_changed, self._record_hostnames)
+            self.framework.observe(self.on.peer_relation_changed, self._retrieve_join_url)
             self.framework.observe(self.on.peer_relation_departed, self._on_relation_departed)
             self.framework.observe(self.on.leader_elected, self._on_leader_elected)
             self.framework.observe(self.on.microk8s_provides_relation_joined, self._add_token)
@@ -97,6 +96,8 @@ class MicroK8sCharm(CharmBase):
                 self._state.remove_nodes.append(hostname)
 
         self._on_config_changed(None)
+
+    def _record_hostnames(self, event: Union[RelationChangedEvent, RelationJoinedEvent]):
         for unit in event.relation.units:
             hostname = event.relation.data[unit].get("hostname")
             if hostname is not None:
