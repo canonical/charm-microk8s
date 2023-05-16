@@ -22,6 +22,7 @@ def test_install(e: Environment):
             mock.call(["apt-get", "install", "--yes", "open-iscsi"]),
             mock.call(["apt-get", "install", "--yes", "linux-modules-extra-fakerelease"]),
             mock.call(["snap", "install", "microk8s", "--classic"]),
+            mock.call(["microk8s", "status", "--wait-ready", "--timeout=30"]),
         ]
     )
 

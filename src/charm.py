@@ -83,7 +83,6 @@ class MicroK8sCharm(CharmBase):
 
     def _record_hostnames(self, event: RelationChangedEvent):
         for unit in event.relation.units:
-            LOG.info("unit %s has %s", unit, event.relation.data.get(unit))
             hostname = event.relation.data[unit].get("hostname")
             if hostname is not None:
                 self._state.hostnames[unit.name] = hostname
@@ -98,6 +97,10 @@ class MicroK8sCharm(CharmBase):
             self._state.remove_nodes.append(remove_hostname)
         self._on_config_changed(None)
 
+    def _check_call(self, *args, **kwargs):
+        LOG.debug("Running command %s (%s)", args, kwargs)
+        subprocess.check_call(*args, **kwargs)
+
     def _worker_open_ports(self, _: InstallEvent):
         self.unit.open_port("tcp", 80)
         self.unit.open_port("tcp", 443)
@@ -108,7 +111,10 @@ class MicroK8sCharm(CharmBase):
         self.unit.open_port("tcp", 16443)
 
     def _on_remove(self, _: RemoveEvent):
-        subprocess.run(["snap", "remove", "microk8s", "--purge"])
+        try:
+            self._check_call(["snap", "remove", "microk8s", "--purge"])
+        except subprocess.CalledProcessError:
+            LOG.exception("failed to remove microk8s")
 
     def _announce_hostname(self, event: Union[RelationJoinedEvent, RelationChangedEvent]):
         event.relation.data[self.unit]["hostname"] = socket.gethostname()
@@ -127,7 +133,7 @@ class MicroK8sCharm(CharmBase):
 
         for package in packages:
             try:
-                subprocess.check_call(["apt-get", "install", "--yes", package])
+                self._check_call(["apt-get", "install", "--yes", package])
             except subprocess.CalledProcessError:
                 LOG.exception("failed to install package %s, charm may misbehave", package)
 
@@ -136,7 +142,11 @@ class MicroK8sCharm(CharmBase):
         if self.config["channel"]:
             install_microk8s.extend(["--channel", self.config["channel"]])
 
-        subprocess.check_call(install_microk8s)
+        self._check_call(install_microk8s)
+        try:
+            self._check_call(["microk8s", "status", "--wait-ready", "--timeout=30"])
+        except subprocess.CalledProcessError:
+            LOG.exception("timed out waiting for node to come ups")
 
         self._state.installed = True
         self._state.joined = False
@@ -156,13 +166,17 @@ class MicroK8sCharm(CharmBase):
 
         if self._state.joined and self.unit.is_leader() and self._state.remove_nodes:
             for hostname in self._state.remove_nodes:
+                LOG.info("removing node %s", hostname)
                 self.unit.status = MaintenanceStatus(f"removing node {hostname}")
-                subprocess.check_call(["microk8s", "remove-node", hostname])
+                try:
+                    self._check_call(["microk8s", "remove-node", hostname])
+                except subprocess.CalledProcessError:
+                    LOG.exception("failed to remove departing node %s", hostname)
 
         if self._state.joined and self._state.leaving:
             LOG.info("leaving cluster")
             self.unit.status = MaintenanceStatus("leaving cluster")
-            subprocess.check_call(["microk8s", "leave"])
+            self._check_call(["microk8s", "leave"])
 
             self._state.joined = False
             self._state.leaving = False
@@ -178,7 +192,7 @@ class MicroK8sCharm(CharmBase):
             join_cmd = ["microk8s", "join", self._state.join_url]
             if self.config["role"] == "worker":
                 join_cmd.append("--worker")
-            subprocess.check_call(join_cmd)
+            self._check_call(join_cmd)
             self._state.joined = True
 
         self.unit.status = util.node_to_unit_status(socket.gethostname())
@@ -209,7 +223,7 @@ class MicroK8sCharm(CharmBase):
             return
 
         token = os.urandom(16).hex()
-        subprocess.check_call(["microk8s", "add-node", "--token", token, "--token-ttl", "7200"])
+        self._check_call(["microk8s", "add-node", "--token", token, "--token-ttl", "7200"])
 
         event.relation.data[self.app]["join_url"] = "{}:25000/{}".format(
             self.model.get_binding(event.relation).network.ingress_address, token

@@ -56,9 +56,10 @@ def test_block_on_role_change(e: Environment):
 
 def test_remove(e: Environment):
     e.harness.begin_with_initial_hooks()
+    e.check_call.reset_mock()
     e.harness.charm._on_remove(None)
 
-    e.run.assert_called_once_with(["snap", "remove", "microk8s", "--purge"])
+    e.check_call.assert_called_once_with(["snap", "remove", "microk8s", "--purge"])
 
 
 def test_update_status(e: Environment):
