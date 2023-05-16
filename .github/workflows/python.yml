@@ -1,0 +1,39 @@
+name: Python
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+
+jobs:
+  code-quality:
+    name: Code Quality
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v3.5.2
+      - name: Setup Python
+        uses: actions/setup-python
+        with:
+          python-version: '3.8'
+      - name: Install tox
+        run: pip install tox
+      - name: Lint
+        run: tox -e lint
+
+  unit-tests:
+    name: Unit Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v3.5.2
+      - name: Setup Python
+        uses: actions/setup-python
+        with:
+          python-version: '3.8'
+      - name: Install tox
+        run: pip install tox
+      - name: Unit tests
+        run: tox -e unit
