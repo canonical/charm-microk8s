@@ -45,6 +45,7 @@ class MicroK8sCharm(CharmBase):
             leaving=False,
             join_url="",
             remove_nodes=[],
+            hostnames={},
         )
 
         if self.config["role"] == "worker":
@@ -68,19 +69,32 @@ class MicroK8sCharm(CharmBase):
             self.framework.observe(self.on.peer_relation_joined, self._announce_hostname)
             self.framework.observe(self.on.peer_relation_joined, self._add_token)
             self.framework.observe(self.on.peer_relation_joined, self._retrieve_join_url)
+            self.framework.observe(self.on.peer_relation_joined, self._record_hostnames)
             self.framework.observe(self.on.peer_relation_changed, self._retrieve_join_url)
+            self.framework.observe(self.on.peer_relation_changed, self._record_hostnames)
             self.framework.observe(self.on.peer_relation_departed, self._on_relation_departed)
             self.framework.observe(self.on.microk8s_provides_relation_joined, self._add_token)
             self.framework.observe(
+                self.on.microk8s_provides_relation_changed, self._record_hostnames
+            )
+            self.framework.observe(
                 self.on.microk8s_provides_relation_departed, self._on_relation_departed
             )
+
+    def _record_hostnames(self, event: RelationChangedEvent):
+        for unit in event.relation.units:
+            LOG.info("unit %s has %s", unit, event.relation.data.get(unit))
+            hostname = event.relation.data[unit].get("hostname")
+            if hostname is not None:
+                self._state.hostnames[unit.name] = hostname
 
     def _on_relation_departed(self, event: RelationDepartedEvent):
         # TODO(neoaggelos): what if the current leader leaves the cluster?
         if not self.unit.is_leader():
             return
 
-        self._state.remove_nodes.append(event.relation.data[event.unit]["hostname"])
+        remove_hostname = self._state.hostnames.get(event.unit.name)
+        self._state.remove_nodes.append(remove_hostname)
         self._on_config_changed(None)
 
     def _worker_open_ports(self, _: InstallEvent):
