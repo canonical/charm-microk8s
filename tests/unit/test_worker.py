@@ -100,10 +100,10 @@ def test_valid_relation(e: Environment, is_leader: bool):
     unit = e.harness.charm.model.unit
     assert isinstance(unit.status, ops.model.WaitingStatus)
 
-    rel_id = e.harness.add_relation("microk8s", "microk8s")
-    e.harness.add_relation_unit(rel_id, "microk8s/0")
-    e.harness.add_relation_unit(rel_id, "microk8s/1")
-    e.harness.update_relation_data(rel_id, "microk8s", {"join_url": "fakejoinurl"})
+    rel_id = e.harness.add_relation("microk8s", "microk8s-cp")
+    e.harness.add_relation_unit(rel_id, "microk8s-cp/0")
+    e.harness.add_relation_unit(rel_id, "microk8s-cp/1")
+    e.harness.update_relation_data(rel_id, "microk8s-cp", {"join_url": "fakejoinurl"})
 
     e.check_call.assert_called_with(["microk8s", "join", "fakejoinurl", "--worker"])
     e.node_status.assert_called_once_with("fakehostname")
@@ -112,7 +112,7 @@ def test_valid_relation(e: Environment, is_leader: bool):
 
     e.check_call.reset_mock()
 
-    e.harness.remove_relation_unit(rel_id, "microk8s/1")
+    e.harness.remove_relation_unit(rel_id, "microk8s-cp/1")
     e.check_call.assert_not_called()
 
     assert unit.status == ops.model.ActiveStatus("fakestatus")
