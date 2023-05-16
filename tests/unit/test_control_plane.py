@@ -180,8 +180,10 @@ def test_follower_retrieve_join_url(e: Environment):
     e.node_to_unit_status.assert_called_once_with("fakehostname")
 
 
-@pytest.mark.parametrize("become_leader", [True, False])
-def test_follower_remove_node(e: Environment, become_leader):
+@pytest.mark.parametrize(
+    "become_leader, after_removal", [(True, True), (True, False), (False, True), (False, False)]
+)
+def test_follower_remove_node(e: Environment, become_leader, after_removal):
     e.node_to_unit_status.return_value = ops.model.ActiveStatus("fakestatus")
     e.get_hostname.return_value = "fakehostname"
 
@@ -200,15 +202,18 @@ def test_follower_remove_node(e: Environment, become_leader):
     e.harness.add_relation_unit(rel_id, "microk8s-worker/1")
     e.harness.update_relation_data(rel_id, "microk8s-worker/0", {"hostname": "fake1"})
 
-    e.harness.set_leader(become_leader)
+    if not after_removal:
+        e.harness.set_leader(become_leader)
     e.check_call.reset_mock()
     e.harness.remove_relation_unit(rel_id, "microk8s-worker/0")
     e.harness.remove_relation_unit(rel_id, "microk8s-worker/1")
     e.harness.remove_relation_unit(prel_id, f"{e.harness.charm.app.name}/1")
     e.harness.remove_relation_unit(prel_id, f"{e.harness.charm.app.name}/2")
+    if after_removal:
+        e.harness.set_leader(become_leader)
 
     if become_leader:
-        assert e.check_call.mock_calls == [
+        assert sorted(e.check_call.mock_calls) == [
             mock.call(["microk8s", "remove-node", "fake1", "--force"]),
             mock.call(["microk8s", "remove-node", "fake2", "--force"]),
         ]

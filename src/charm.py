@@ -13,6 +13,7 @@ from ops import CharmBase, main
 from ops.charm import (
     ConfigChangedEvent,
     InstallEvent,
+    LeaderElectedEvent,
     RelationChangedEvent,
     RelationDepartedEvent,
     RelationBrokenEvent,
@@ -73,6 +74,7 @@ class MicroK8sCharm(CharmBase):
             self.framework.observe(self.on.peer_relation_changed, self._retrieve_join_url)
             self.framework.observe(self.on.peer_relation_changed, self._record_hostnames)
             self.framework.observe(self.on.peer_relation_departed, self._on_relation_departed)
+            self.framework.observe(self.on.leader_elected, self._on_leader_elected)
             self.framework.observe(self.on.microk8s_provides_relation_joined, self._add_token)
             self.framework.observe(
                 self.on.microk8s_provides_relation_changed, self._record_hostnames
@@ -81,7 +83,20 @@ class MicroK8sCharm(CharmBase):
                 self.on.microk8s_provides_relation_departed, self._on_relation_departed
             )
 
-    def _record_hostnames(self, event: RelationChangedEvent):
+    def _on_leader_elected(self, _: LeaderElectedEvent):
+        # find any nodes that are no longer with us (e.g. old leader control plane) and remove them
+        existing_unit_names = set([self.unit.name])
+
+        for relation_name in ["peer", "microk8s-provides"]:
+            for r in self.model.relations.get(relation_name) or []:
+                existing_unit_names = existing_unit_names.union([u.name for u in r.units])
+
+        for unit_name, hostname in self._state.hostnames.items():
+            if unit_name not in existing_unit_names:
+                LOG.info("unit %s not found in any relation, will remove", unit_name)
+                self._state.remove_nodes.append(hostname)
+
+        self._on_config_changed(None)
         for unit in event.relation.units:
             hostname = event.relation.data[unit].get("hostname")
             if hostname is not None:
@@ -92,7 +107,7 @@ class MicroK8sCharm(CharmBase):
         if not self.unit.is_leader():
             return
 
-        remove_hostname = self._state.hostnames.get(event.unit.name)
+        remove_hostname = self._state.hostnames.get(event.departing_unit.name)
         if remove_hostname:
             self._state.remove_nodes.append(remove_hostname)
         self._on_config_changed(None)
