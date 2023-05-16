@@ -14,7 +14,7 @@ jobs:
       - name: Check out code
         uses: actions/checkout@v3.5.2
       - name: Setup Python
-        uses: actions/setup-python
+        uses: actions/setup-python@v4
         with:
           python-version: '3.8'
       - name: Install tox
@@ -30,7 +30,7 @@ jobs:
       - name: Check out code
         uses: actions/checkout@v3.5.2
       - name: Setup Python
-        uses: actions/setup-python
+        uses: actions/setup-python@v4
         with:
           python-version: '3.8'
       - name: Install tox
