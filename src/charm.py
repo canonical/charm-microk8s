@@ -44,6 +44,7 @@ class MicroK8sCharm(CharmBase):
             joined=False,
             leaving=False,
             join_url="",
+            remove_nodes=[],
         )
 
         if self.config["role"] == "worker":
@@ -68,7 +69,19 @@ class MicroK8sCharm(CharmBase):
             self.framework.observe(self.on.peer_relation_joined, self._add_token)
             self.framework.observe(self.on.peer_relation_joined, self._retrieve_join_url)
             self.framework.observe(self.on.peer_relation_changed, self._retrieve_join_url)
+            self.framework.observe(self.on.peer_relation_departed, self._on_relation_departed)
             self.framework.observe(self.on.microk8s_provides_relation_joined, self._add_token)
+            self.framework.observe(
+                self.on.microk8s_provides_relation_departed, self._on_relation_departed
+            )
+
+    def _on_relation_departed(self, event: RelationDepartedEvent):
+        # TODO(neoaggelos): what if the current leader leaves the cluster?
+        if not self.unit.is_leader():
+            return
+
+        self._state.remove_nodes.append(event.relation.data[event.unit]["hostname"])
+        self._on_config_changed(None)
 
     def _worker_open_ports(self, _: InstallEvent):
         self.unit.open_port("tcp", 80)
@@ -125,6 +138,11 @@ class MicroK8sCharm(CharmBase):
 
         if not self._state.installed:
             self._on_install(None)
+
+        if self._state.joined and self.unit.is_leader() and self._state.remove_nodes:
+            for hostname in self._state.remove_nodes:
+                self.unit.status = MaintenanceStatus(f"removing node {hostname}")
+                subprocess.check_call(["microk8s", "remove-node", hostname])
 
         if self._state.joined and self._state.leaving:
             LOG.info("leaving cluster")

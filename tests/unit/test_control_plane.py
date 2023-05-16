@@ -49,7 +49,7 @@ def test_install_leader(e: Environment):
     assert e.harness.charm._state.joined
 
 
-def test_leader_add_unit_peer(e: Environment):
+def test_leader_peer_relation(e: Environment):
     faketoken = b"\x01" * 16
     fakeaddress = "10.10.10.10"
     e.node_status.return_value = ops.model.ActiveStatus("fakestatus")
@@ -65,6 +65,7 @@ def test_leader_add_unit_peer(e: Environment):
 
     rel_id = e.harness.charm.model.get_relation("peer").id
     e.harness.add_relation_unit(rel_id, f"{e.harness.charm.app.name}/1")
+    e.harness.update_relation_data(rel_id, f"{e.harness.charm.app.name}/1", {"hostname": "fake1"})
 
     e.check_call.assert_called_with(
         ["microk8s", "add-node", "--token", faketoken.hex(), "--token-ttl", "7200"]
@@ -73,8 +74,12 @@ def test_leader_add_unit_peer(e: Environment):
     relation_data = e.harness.get_relation_data(rel_id, e.harness.charm.app)
     assert relation_data["join_url"] == f"{fakeaddress}:25000/{faketoken.hex()}"
 
+    e.check_call.reset_mock()
+    e.harness.remove_relation_unit(rel_id, f"{e.harness.charm.app.name}/1")
+    e.check_call.assert_called_once_with(["microk8s", "remove-node", "fake1"])
 
-def test_leader_add_unit_worker(e: Environment):
+
+def test_leader_microk8s_provides_relation(e: Environment):
     faketoken = b"\x01" * 16
     fakeaddress = "10.10.10.10"
     e.node_status.return_value = ops.model.ActiveStatus("fakestatus")
@@ -90,6 +95,7 @@ def test_leader_add_unit_worker(e: Environment):
 
     rel_id = e.harness.add_relation("microk8s-provides", "microk8s-worker")
     e.harness.add_relation_unit(rel_id, "microk8s-worker/0")
+    e.harness.update_relation_data(rel_id, "microk8s-worker/0", {"hostname": "fake1"})
 
     e.check_call.assert_called_with(
         ["microk8s", "add-node", "--token", faketoken.hex(), "--token-ttl", "7200"]
@@ -98,8 +104,12 @@ def test_leader_add_unit_worker(e: Environment):
     relation_data = e.harness.get_relation_data(rel_id, e.harness.charm.app)
     assert relation_data["join_url"] == f"{fakeaddress}:25000/{faketoken.hex()}"
 
+    e.check_call.reset_mock()
+    e.harness.remove_relation_unit(rel_id, "microk8s-worker/0")
+    e.check_call.assert_called_once_with(["microk8s", "remove-node", "fake1"])
 
-def test_follower_add_unit_peer(e: Environment):
+
+def test_follower_peer_relation(e: Environment):
     e.node_status.return_value = ops.model.ActiveStatus("fakestatus")
     e.get_hostname.return_value = "fakehostname"
 
@@ -117,8 +127,12 @@ def test_follower_add_unit_peer(e: Environment):
     e.check_call.assert_not_called()
     e.urandom.assert_not_called()
 
+    e.check_call.reset_mock()
+    e.harness.remove_relation_unit(rel_id, f"{e.harness.charm.app.name}/1")
+    e.check_call.assert_not_called()
 
-def test_follower_add_unit_worker(e: Environment):
+
+def test_follower_microk8s_provides_relation(e: Environment):
     e.node_status.return_value = ops.model.ActiveStatus("fakestatus")
     e.get_hostname.return_value = "fakehostname"
     e.harness.update_config({"role": "control-plane"})
@@ -135,6 +149,10 @@ def test_follower_add_unit_worker(e: Environment):
     assert "join_url" not in relation_data
     e.check_call.assert_not_called()
     e.urandom.assert_not_called()
+
+    e.check_call.reset_mock()
+    e.harness.remove_relation_unit(rel_id, "microk8s-worker/0")
+    e.check_call.assert_not_called()
 
 
 def test_follower_retrieve_join_url(e: Environment):
