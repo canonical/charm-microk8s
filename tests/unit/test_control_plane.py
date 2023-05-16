@@ -40,7 +40,7 @@ def test_install_follower(e: Environment):
 
 
 def test_install_leader(e: Environment):
-    e.node_status.return_value = ops.model.ActiveStatus("fakestatus")
+    e.node_to_unit_status.return_value = ops.model.ActiveStatus("fakestatus")
     e.harness.update_config({"role": "control-plane"})
     e.harness.set_leader(True)
 
@@ -52,7 +52,7 @@ def test_install_leader(e: Environment):
 def test_leader_peer_relation(e: Environment):
     faketoken = b"\x01" * 16
     fakeaddress = "10.10.10.10"
-    e.node_status.return_value = ops.model.ActiveStatus("fakestatus")
+    e.node_to_unit_status.return_value = ops.model.ActiveStatus("fakestatus")
     e.get_hostname.return_value = "fakehostname"
     e.urandom.return_value = faketoken
 
@@ -82,7 +82,7 @@ def test_leader_peer_relation(e: Environment):
 def test_leader_microk8s_provides_relation(e: Environment):
     faketoken = b"\x01" * 16
     fakeaddress = "10.10.10.10"
-    e.node_status.return_value = ops.model.ActiveStatus("fakestatus")
+    e.node_to_unit_status.return_value = ops.model.ActiveStatus("fakestatus")
     e.get_hostname.return_value = "fakehostname"
     e.urandom.return_value = faketoken
 
@@ -110,7 +110,7 @@ def test_leader_microk8s_provides_relation(e: Environment):
 
 
 def test_follower_peer_relation(e: Environment):
-    e.node_status.return_value = ops.model.ActiveStatus("fakestatus")
+    e.node_to_unit_status.return_value = ops.model.ActiveStatus("fakestatus")
     e.get_hostname.return_value = "fakehostname"
 
     e.harness.update_config({"role": "control-plane"})
@@ -133,7 +133,7 @@ def test_follower_peer_relation(e: Environment):
 
 
 def test_follower_microk8s_provides_relation(e: Environment):
-    e.node_status.return_value = ops.model.ActiveStatus("fakestatus")
+    e.node_to_unit_status.return_value = ops.model.ActiveStatus("fakestatus")
     e.get_hostname.return_value = "fakehostname"
     e.harness.update_config({"role": "control-plane"})
     e.harness.set_leader(True)
@@ -156,7 +156,7 @@ def test_follower_microk8s_provides_relation(e: Environment):
 
 
 def test_follower_retrieve_join_url(e: Environment):
-    e.node_status.return_value = ops.model.ActiveStatus("fakestatus")
+    e.node_to_unit_status.return_value = ops.model.ActiveStatus("fakestatus")
     e.get_hostname.return_value = "fakehostname"
 
     e.harness.update_config({"role": "control-plane"})
@@ -169,4 +169,4 @@ def test_follower_retrieve_join_url(e: Environment):
     e.harness.update_relation_data(rel_id, e.harness.charm.app.name, {"join_url": "fakejoinurl"})
 
     e.check_call.assert_called_with(["microk8s", "join", "fakejoinurl"])
-    e.node_status.assert_called_once_with("fakehostname")
+    e.node_to_unit_status.assert_called_once_with("fakehostname")

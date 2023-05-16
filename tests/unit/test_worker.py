@@ -35,7 +35,7 @@ def test_install(e: Environment):
 
 @pytest.mark.parametrize("is_leader", [True, False])
 def test_valid_relation(e: Environment, is_leader: bool):
-    e.node_status.return_value = ops.model.ActiveStatus("fakestatus")
+    e.node_to_unit_status.return_value = ops.model.ActiveStatus("fakestatus")
     e.get_hostname.return_value = "fakehostname"
 
     e.harness.update_config({"role": "worker"})
@@ -49,7 +49,7 @@ def test_valid_relation(e: Environment, is_leader: bool):
     e.harness.update_relation_data(rel_id, "microk8s", {"join_url": "fakejoinurl"})
 
     e.check_call.assert_called_with(["microk8s", "join", "fakejoinurl", "--worker"])
-    e.node_status.assert_called_once_with("fakehostname")
+    e.node_to_unit_status.assert_called_once_with("fakehostname")
     assert unit.status == ops.model.ActiveStatus("fakestatus")
     assert e.harness.get_relation_data(rel_id, e.harness.charm.unit)["hostname"] == "fakehostname"
 
@@ -62,7 +62,7 @@ def test_valid_relation(e: Environment, is_leader: bool):
 
 
 def test_invalid_relation(e: Environment):
-    e.node_status.return_value = ops.model.ActiveStatus("fakestatus")
+    e.node_to_unit_status.return_value = ops.model.ActiveStatus("fakestatus")
     e.get_hostname.return_value = "fakehostname"
 
     e.harness.update_config({"role": "worker"})
@@ -91,7 +91,7 @@ def test_invalid_relation(e: Environment):
 
 @pytest.mark.parametrize("is_leader", [True, False])
 def test_valid_relation(e: Environment, is_leader: bool):
-    e.node_status.return_value = ops.model.ActiveStatus("fakestatus")
+    e.node_to_unit_status.return_value = ops.model.ActiveStatus("fakestatus")
     e.get_hostname.return_value = "fakehostname"
 
     e.harness.update_config({"role": "worker"})
@@ -106,7 +106,7 @@ def test_valid_relation(e: Environment, is_leader: bool):
     e.harness.update_relation_data(rel_id, "microk8s-cp", {"join_url": "fakejoinurl"})
 
     e.check_call.assert_called_with(["microk8s", "join", "fakejoinurl", "--worker"])
-    e.node_status.assert_called_once_with("fakehostname")
+    e.node_to_unit_status.assert_called_once_with("fakehostname")
     assert unit.status == ops.model.ActiveStatus("fakestatus")
     assert e.harness.get_relation_data(rel_id, e.harness.charm.unit)["hostname"] == "fakehostname"
 

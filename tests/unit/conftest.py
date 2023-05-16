@@ -19,7 +19,7 @@ class Environment:
     # mocks
     check_call: mock.MagicMock
     get_hostname: mock.MagicMock
-    node_status: mock.MagicMock
+    node_to_unit_status: mock.MagicMock
     run: mock.MagicMock
     uname: mock.MagicMock
     urandom: mock.MagicMock
@@ -31,7 +31,7 @@ def e():
     patchers = {
         "check_call": mock.patch("subprocess.check_call"),
         "get_hostname": mock.patch("socket.gethostname"),
-        "node_status": mock.patch("util.node_to_unit_status"),
+        "node_to_unit_status": mock.patch("util.node_to_unit_status"),
         "run": mock.patch("subprocess.run"),
         "uname": mock.patch("os.uname"),
         "urandom": mock.patch("os.urandom"),

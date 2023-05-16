@@ -62,15 +62,15 @@ def test_remove(e: Environment):
 
 
 def test_update_status(e: Environment):
-    e.node_status.return_value = ops.model.ActiveStatus("fakestatus2")
+    e.node_to_unit_status.return_value = ops.model.ActiveStatus("fakestatus2")
     e.harness.begin_with_initial_hooks()
 
-    e.node_status.assert_not_called()
+    e.node_to_unit_status.assert_not_called()
 
     e.harness.charm._on_update_status(None)
-    e.node_status.assert_not_called()
+    e.node_to_unit_status.assert_not_called()
 
     e.harness.charm._state.joined = True
     e.harness.charm._on_update_status(None)
-    e.node_status.assert_called_once_with(e.get_hostname.return_value)
+    e.node_to_unit_status.assert_called_once_with(e.get_hostname.return_value)
     assert e.harness.charm.unit.status == ops.model.ActiveStatus("fakestatus2")
