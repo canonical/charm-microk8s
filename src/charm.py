@@ -178,8 +178,9 @@ class MicroK8sCharm(CharmBase):
         if self._state.joined and self._state.leaving:
             LOG.info("leaving cluster")
             self.unit.status = MaintenanceStatus("leaving cluster")
-            self._check_call(["microk8s", "leave"])
+            self._check_call(["snap", "remove", "microk8s", "--purge"])
 
+            self._state.installed = False
             self._state.joined = False
             self._state.leaving = False
             self._state.join_url = ""

@@ -35,7 +35,7 @@ def test_install(e: Environment):
 
 
 @pytest.mark.parametrize("is_leader", [True, False])
-def test_valid_relation(e: Environment, is_leader: bool):
+def test_microk8s_provides_relation(e: Environment, is_leader: bool):
     e.node_to_unit_status.return_value = ops.model.ActiveStatus("fakestatus")
     e.get_hostname.return_value = "fakehostname"
 
@@ -45,9 +45,9 @@ def test_valid_relation(e: Environment, is_leader: bool):
     unit = e.harness.charm.model.unit
     assert isinstance(unit.status, ops.model.WaitingStatus)
 
-    rel_id = e.harness.add_relation("microk8s", "microk8s")
-    e.harness.add_relation_unit(rel_id, "microk8s/0")
-    e.harness.update_relation_data(rel_id, "microk8s", {"join_url": "fakejoinurl"})
+    rel_id = e.harness.add_relation("microk8s", "microk8s-cp")
+    e.harness.add_relation_unit(rel_id, "microk8s-cp/0")
+    e.harness.update_relation_data(rel_id, "microk8s-cp", {"join_url": "fakejoinurl"})
 
     e.check_call.assert_called_with(["microk8s", "join", "fakejoinurl", "--worker"])
     e.node_to_unit_status.assert_called_once_with("fakehostname")
@@ -58,11 +58,11 @@ def test_valid_relation(e: Environment, is_leader: bool):
 
     e.harness.remove_relation(rel_id)
 
-    e.check_call.assert_called_once_with(["microk8s", "leave"])
+    e.check_call.assert_called_once_with(["snap", "remove", "microk8s", "--purge"])
     assert isinstance(unit.status, ops.model.WaitingStatus)
 
 
-def test_invalid_relation(e: Environment):
+def test_microk8s_provides_invalid_relation(e: Environment):
     e.node_to_unit_status.return_value = ops.model.ActiveStatus("fakestatus")
     e.get_hostname.return_value = "fakehostname"
 
@@ -91,7 +91,7 @@ def test_invalid_relation(e: Environment):
 
 
 @pytest.mark.parametrize("is_leader", [True, False])
-def test_valid_relation(e: Environment, is_leader: bool):
+def test_microk8s_provides_relation_departed(e: Environment, is_leader: bool):
     e.node_to_unit_status.return_value = ops.model.ActiveStatus("fakestatus")
     e.get_hostname.return_value = "fakehostname"
 
