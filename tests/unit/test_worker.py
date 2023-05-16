@@ -5,8 +5,8 @@ from unittest import mock
 
 import ops
 import ops.testing
-from conftest import Environment
 import pytest
+from conftest import Environment
 
 
 def test_install(e: Environment):

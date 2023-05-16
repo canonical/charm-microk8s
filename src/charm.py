@@ -13,9 +13,9 @@ from ops import CharmBase, main
 from ops.charm import (
     ConfigChangedEvent,
     InstallEvent,
+    RelationBrokenEvent,
     RelationChangedEvent,
     RelationDepartedEvent,
-    RelationBrokenEvent,
     RelationJoinedEvent,
     RemoveEvent,
     UpdateStatusEvent,
