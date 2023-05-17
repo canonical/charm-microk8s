@@ -21,7 +21,7 @@ def node_to_unit_status(hostname: str):
         return ActiveStatus("node is ready")
 
     except (subprocess.CalledProcessError, OSError, json.JSONDecodeError) as e:
-        LOG.exception("could not retrieve status of node %s: %s", hostname, e)
+        LOG.warning("could not retrieve status of node %s: %s", hostname, e)
         return MaintenanceStatus("waiting for node")
 
 

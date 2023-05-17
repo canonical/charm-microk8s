@@ -7,6 +7,7 @@ import logging
 import os
 import socket
 import subprocess
+import time
 from typing import Union
 
 from ops import CharmBase, main
@@ -22,7 +23,7 @@ from ops.charm import (
     UpdateStatusEvent,
 )
 from ops.framework import StoredState
-from ops.model import BlockedStatus, MaintenanceStatus, WaitingStatus
+from ops.model import ActiveStatus, BlockedStatus, MaintenanceStatus, WaitingStatus
 
 import util
 
@@ -214,7 +215,9 @@ class MicroK8sCharm(CharmBase):
             self._check_call(join_cmd)
             self._state.joined = True
 
-        self.unit.status = util.node_to_unit_status(socket.gethostname())
+        while self.unit.status.__class__ not in [ActiveStatus]:
+            self.unit.status = util.node_to_unit_status(socket.gethostname())
+            time.sleep(5)
 
     def _on_update_status(self, _: UpdateStatusEvent):
         if self._state.joined:
