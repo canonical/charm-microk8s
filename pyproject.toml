@@ -15,4 +15,4 @@ line-length = 99
 target-version = ["py38"]
 
 [tool.codespell]
-skip = "build,lib,venv,icon.svg,.tox,.git,.mypy_cache,.ruff_cache,.coverage,.venv"
+skip = "docs,build,lib,venv,icon.svg,.tox,.git,.mypy_cache,.ruff_cache,.coverage,.venv"
