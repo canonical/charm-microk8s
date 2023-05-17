@@ -2,13 +2,13 @@
 applications:
   microk8s:
     charm: ../microk8s_ubuntu-20.04-amd64_ubuntu-22.04-amd64.charm
-    scale: 3
+    scale: 1
     options:
       role: control-plane
     constraints: 'mem=4G root-disk=20G'
   microk8s-worker:
     charm: ../microk8s_ubuntu-20.04-amd64_ubuntu-22.04-amd64.charm
-    scale: 3
+    scale: 1
     options:
       role: worker
     constraints: 'mem=4G root-disk=20G'
