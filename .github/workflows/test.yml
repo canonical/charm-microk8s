@@ -34,6 +34,7 @@ jobs:
       matrix:
         channel: [1.27, 1.26, 1.25]
         series: [focal, jammy]
+        juju: [2.9, 3.1]
 
     steps:
       - name: Checking out repo
@@ -43,6 +44,7 @@ jobs:
         with:
           provider: lxd
           lxd-channel: 5.0/stable
+          juju-channel: ${{ matrix.juju }}/stable
       - name: Add user to lxd group
         run: sudo usermod -a -G lxd $USER
       - name: Fetch charm
@@ -60,7 +62,8 @@ jobs:
           export MK8S_SERIES='${{ matrix.series }}'
           export MK8S_CLUSTER_SIZES='[[1, 1]]'
           export MK8S_CHARM=./build/microk8s.charm
-          sg lxd -c 'tox -e integration -- --model testing'
+          export MK8S_CHARM_CHANNEL=''
+          sg lxd -c 'tox -e integration-${{ matrix.juju }} -- --model testing'
       - name: Retrieve artifacts
         if: always()
         run: |
@@ -72,5 +75,5 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v3.1.2
         with:
-          name: logs-${{ matrix.channel }}-${{ matrix.series }}
+          name: logs-${{ matrix.channel }}-${{ matrix.series }}-juju${{ matrix.juju }}
           path: artifacts/
