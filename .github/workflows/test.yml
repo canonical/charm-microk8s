@@ -1,0 +1,55 @@
+name: Build and Test Charm
+
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+
+jobs:
+  test:
+    name: Build and test charm
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checking out repo
+        uses: actions/checkout@v3.5.2
+      - name: Configure pytest-operator
+        uses: charmed-kubernetes/actions-operator@main
+        with:
+          provider: lxd
+          lxd-channel: 5.0/stable
+      - name: Add user to lxd group
+        run: sudo usermod -a -G lxd $USER
+      - name: Build charm
+        run: |
+          charmcraft pack -v --destructive-mode
+          mv microk8s*.charm microk8s.charm
+      - name: Upload charm
+        uses: actions/upload-artifact@v3.1.2
+        with:
+          name: microk8s.charm
+          path: ./microk8s.charm
+      - name: Install tox
+        run: |
+          pip3 install tox
+      - name: Run integration tests
+        run: |
+          juju add-model testing
+          export MK8S_SNAP_CHANNELS=''
+          export MK8S_CLUSTER_SIZES='[[1, 1]]'
+          export MK8S_CHARM=./microk8s.charm
+          export MK8S_SERIES=focal
+          sg lxd -c 'tox -e integration -- --model testing'
+      - name: Retrieve artifacts
+        if: always()
+        run: |
+          mkdir artifacts
+          juju debug-log -m testing --replay > artifacts/juju.log
+          juju status -m testing --format yaml > artifacts/juju.yaml
+          cp pytest.log artifacts/pytest.log
+      - name: Upload artifacts
+        if: always()
+        uses: actions/upload-artifact@v3.1.2
+        with:
+          name: logs
+          path: artifacts/
