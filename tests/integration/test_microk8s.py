@@ -96,4 +96,4 @@ async def test_deploy(e: OpsTest, series: str, channel: str, cp_units: int, work
 
     await e.model.wait_for_idle([a.name for a in apps], timeout=60 * 60)
     for a in apps:
-        await e.model.remove_application(a.name)
+        await e.model.remove_application(a.name, block_until_done=True)
