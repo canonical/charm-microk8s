@@ -52,17 +52,17 @@ async def e(ops_test: OpsTest):
 
 
 @pytest.mark.abort_on_fail
-@pytest.mark.parametrize("snap_channel", MK8S_SNAP_CHANNELS)
+@pytest.mark.parametrize("channel", MK8S_SNAP_CHANNELS)
 @pytest.mark.parametrize("cp_units, worker_units", MK8S_CLUSTER_SIZES)
 @pytest.mark.parametrize("series", MK8S_SERIES)
-async def test_deploy(e: OpsTest, series: str, snap_channel: str, cp_units: int, worker_units: int):
-    """Deploy a cluster with the specified number of"""
+async def test_deploy(e: OpsTest, series: str, channel: str, cp_units: int, worker_units: int):
+    """Deploy a cluster and wait for units to come up"""
 
     charm_config = {}
     application_name = f"microk8s-{series}-{cp_units}c{worker_units}w"
-    if snap_channel:
-        application_name += "-v" + re.sub("[^a-z0-9]", "", snap_channel)
-        charm_config["channel"] = snap_channel
+    if channel:
+        application_name += "-v" + re.sub("[^a-z0-9]", "", channel)
+        charm_config["channel"] = channel
 
     apps = []
     apps.append(
