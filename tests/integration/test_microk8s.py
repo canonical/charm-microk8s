@@ -20,12 +20,9 @@ METADATA = yaml.safe_load(Path("./metadata.yaml").read_text())
 APP_NAME = METADATA["name"]
 
 MK8S_CHARM = os.getenv("MK8S_CHARM", "microk8s")
-MK8S_CHARM = os.getenv("MK8S_CHARM", "./microk8s_ubuntu-20.04-amd64_ubuntu-22.04-amd64.charm")
 MK8S_CHARM_CHANNEL = os.getenv("MK8S_CHARM_CHANNEL", "edge")
 MK8S_SNAP_CHANNELS = os.getenv("MK8S_SNAP_CHANNELS", "1.25 1.26 1.27").split(" ")
-MK8S_SNAP_CHANNELS = os.getenv("MK8S_SNAP_CHANNELS", "1.27").split(" ")
-# MK8S_CLUSTER_SIZES = json.loads(os.getenv("MK8S_CLUSTER_SIZES", "[[1, 0], [3, 2]]"))
-MK8S_CLUSTER_SIZES = json.loads(os.getenv("MK8S_CLUSTER_SIZES", "[[3, 1]]"))
+MK8S_CLUSTER_SIZES = json.loads(os.getenv("MK8S_CLUSTER_SIZES", "[[1, 0], [3, 2]]"))
 MK8S_CONSTRAINTS = os.getenv("MK8S_CONSTRAINTS", "mem=4G root-disk=20G")
 MK8S_SERIES = os.getenv("MK8S_SERIES", "jammy focal").split(" ")
 MK8S_PROXY = os.getenv("MK8S_PROXY")
