@@ -72,5 +72,5 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v3.1.2
         with:
-          name: logs
+          name: logs-${{ matrix.channel }}-${{ matrix.series }}
           path: artifacts/
