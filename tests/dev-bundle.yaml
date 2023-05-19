@@ -1,3 +1,6 @@
+##
+## Copyright 2023 Canonical, Ltd.
+##
 ---
 applications:
   microk8s:
