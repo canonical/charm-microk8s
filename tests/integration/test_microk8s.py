@@ -7,20 +7,16 @@ import logging
 import re
 from pathlib import Path
 
+import config
 import pytest
 import pytest_asyncio
 import yaml
 from pytest_operator.plugin import OpsTest
 
-import config
-
 LOG = logging.getLogger(__name__)
 
 METADATA = yaml.safe_load(Path("./metadata.yaml").read_text())
 APP_NAME = METADATA["name"]
-
-###################################
-# CONFIGURATION
 
 
 @pytest_asyncio.fixture(scope="module")
