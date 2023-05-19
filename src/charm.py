@@ -105,7 +105,8 @@ class MicroK8sCharm(CharmBase):
                 self._state.hostnames[unit.name] = hostname
 
     def _on_relation_departed(self, event: RelationDepartedEvent):
-        # TODO(neoaggelos): what if the current leader leaves the cluster?
+        # ΝΟΤΕ(neoaggelos): the current leader is responsible for cleaning up for
+        # departing units.
         if not self.unit.is_leader():
             return
 
