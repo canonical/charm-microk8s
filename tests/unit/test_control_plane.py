@@ -179,6 +179,9 @@ def test_follower_retrieve_join_url(e: Environment):
     e.check_call.assert_called_with(["microk8s", "join", "fakejoinurl"])
     e.node_to_unit_status.assert_called_once_with("fakehostname")
 
+    assert e.harness.charm.unit.status == ops.model.ActiveStatus("fakestatus")
+    assert e.harness.charm._state.joined
+
 
 @pytest.mark.parametrize(
     "become_leader, after_removal", [(True, True), (True, False), (False, True), (False, False)]
