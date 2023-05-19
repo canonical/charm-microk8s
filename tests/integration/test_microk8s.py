@@ -59,7 +59,7 @@ async def test_deploy(e: OpsTest, series: str, channel: str, cp_units: int, work
     """Deploy a cluster and wait for units to come up"""
 
     charm_config = {}
-    application_name = f"microk8s-{series}-{cp_units}c{worker_units}w"
+    application_name = f"microk8s-{series or 'default'}-{cp_units}c{worker_units}w"
     if channel:
         application_name += "-v" + re.sub("[^a-z0-9]", "", channel)
         charm_config["channel"] = channel
