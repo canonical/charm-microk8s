@@ -3,9 +3,7 @@
 # Copyright 2023 Canonical, Ltd.
 #
 
-import json
 import logging
-import os
 import re
 from pathlib import Path
 
@@ -14,37 +12,35 @@ import pytest_asyncio
 import yaml
 from pytest_operator.plugin import OpsTest
 
+import config
+
 LOG = logging.getLogger(__name__)
 
 METADATA = yaml.safe_load(Path("./metadata.yaml").read_text())
 APP_NAME = METADATA["name"]
 
-MK8S_CHARM = os.getenv("MK8S_CHARM", "microk8s")
-MK8S_CHARM_CHANNEL = os.getenv("MK8S_CHARM_CHANNEL", "edge")
-MK8S_SNAP_CHANNELS = os.getenv("MK8S_SNAP_CHANNELS", "1.25 1.26 1.27").split(" ")
-MK8S_CLUSTER_SIZES = json.loads(os.getenv("MK8S_CLUSTER_SIZES", "[[1, 0], [3, 2]]"))
-MK8S_CONSTRAINTS = os.getenv("MK8S_CONSTRAINTS", "mem=4G root-disk=20G")
-MK8S_SERIES = os.getenv("MK8S_SERIES", "jammy focal").split(" ")
-MK8S_PROXY = os.getenv("MK8S_PROXY")
-MK8S_NO_PROXY = os.getenv("MK8S_NO_PROXY")
+###################################
+# CONFIGURATION
 
 
 @pytest_asyncio.fixture(scope="module")
 async def e(ops_test: OpsTest):
-    """fixture to setup environment and deploy machines. this is done to spin up machines
-    only once and save time for individual version tests"""
+    """fixture to setup environment and configuration settings on the testing model."""
 
-    global MK8S_CHARM
-    if MK8S_CHARM == "build":
-        MK8S_CHARM = await ops_test.build_charm(".")
+    if config.MK8S_CHARM == "build":
+        config.MK8S_CHARM = await ops_test.build_charm(".")
 
     model_config = {"logging-config": "<root>=INFO;unit=DEBUG"}
-    if MK8S_PROXY is not None:
+    if config.MK8S_PROXY is not None:
         model_config.update(
-            {"http-proxy": MK8S_PROXY, "https-proxy": MK8S_PROXY, "ftp-proxy": MK8S_PROXY}
+            {
+                "http-proxy": config.MK8S_PROXY,
+                "https-proxy": config.MK8S_PROXY,
+                "ftp-proxy": config.MK8S_PROXY,
+            }
         )
-    if MK8S_NO_PROXY is not None:
-        model_config.update({"no-proxy": MK8S_NO_PROXY})
+    if config.MK8S_NO_PROXY is not None:
+        model_config.update({"no-proxy": config.MK8S_NO_PROXY})
 
     await ops_test.model.set_config(model_config)
 
@@ -52,9 +48,9 @@ async def e(ops_test: OpsTest):
 
 
 @pytest.mark.abort_on_fail
-@pytest.mark.parametrize("channel", MK8S_SNAP_CHANNELS)
-@pytest.mark.parametrize("cp_units, worker_units", MK8S_CLUSTER_SIZES)
-@pytest.mark.parametrize("series", MK8S_SERIES)
+@pytest.mark.parametrize("channel", config.MK8S_SNAP_CHANNELS)
+@pytest.mark.parametrize("cp_units, worker_units", config.MK8S_CLUSTER_SIZES)
+@pytest.mark.parametrize("series", config.MK8S_SERIES)
 async def test_deploy(e: OpsTest, series: str, channel: str, cp_units: int, worker_units: int):
     """Deploy a cluster and wait for units to come up"""
 
@@ -67,26 +63,26 @@ async def test_deploy(e: OpsTest, series: str, channel: str, cp_units: int, work
     apps = []
     apps.append(
         await e.model.deploy(
-            MK8S_CHARM,
+            config.MK8S_CHARM,
             application_name=application_name,
             num_units=cp_units,
             config=charm_config,
-            channel=MK8S_CHARM_CHANNEL,
+            channel=config.MK8S_CHARM_CHANNEL,
             series=series,
-            constraints=MK8S_CONSTRAINTS,
+            constraints=config.MK8S_CONSTRAINTS,
         )
     )
 
     if worker_units > 0:
         apps.append(
             await e.model.deploy(
-                MK8S_CHARM,
+                config.MK8S_CHARM,
                 application_name=f"{application_name}-worker",
                 num_units=worker_units,
                 config={"role": "worker", **charm_config},
-                channel=MK8S_CHARM_CHANNEL,
+                channel=config.MK8S_CHARM_CHANNEL,
                 series=series,
-                constraints=MK8S_CONSTRAINTS,
+                constraints=config.MK8S_CONSTRAINTS,
             )
         )
 
