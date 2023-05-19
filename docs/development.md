@@ -18,12 +18,12 @@ Integration tests require a registered Juju controller. You can setup a controll
 # for juju 2.9
 sudo snap install juju --channel 2.9/stable --classic
 juju bootstrap lxd
-tox -e integration-2.9      # for juju 2.9
+tox -e integration-2.9
 
 # for juju 3.1
 sudo snap install juju --channel 3.1/stable
 juju bootstrap lxd
-tox -e integration-3.1      # for juju 3.1
+tox -e integration-3.1
 ```
 
 ### Local development and testing
