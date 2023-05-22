@@ -1,0 +1,88 @@
+name: Integration tests
+
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+
+concurrency:
+  group: ${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/master' }}
+
+jobs:
+  build:
+    name: Build
+    runs-on: ubuntu-20.04
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v3.5.2
+      - name: Install charmcraft
+        run: sudo snap install charmcraft --classic
+      - name: Build charm
+        run: |
+          charmcraft pack -v --destructive-mode
+          mv microk8s*.charm microk8s.charm
+      - name: Upload charm
+        uses: actions/upload-artifact@v3.1.2
+        with:
+          name: microk8s.charm
+          path: ./microk8s.charm
+
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    needs: build
+    strategy:
+      fail-fast: true
+      matrix:
+        include:
+          - { control_plane: 3, workers: 0, channel: '', series: '', juju: '2.9' }
+          - { control_plane: 3, workers: 0, channel: '', series: '', juju: '3.1' }
+        control_plane: [1]
+        workers: [1]
+        channel: [1.27, 1.26, 1.25]
+        series: [focal, jammy]
+        juju: [2.9, 3.1]
+
+    steps:
+      - name: Checking out repo
+        uses: actions/checkout@v3.5.2
+      - name: Configure pytest-operator
+        uses: charmed-kubernetes/actions-operator@main
+        with:
+          provider: lxd
+          lxd-channel: 5.0/stable
+          juju-channel: ${{ matrix.juju }}/stable
+      - name: Add user to lxd group
+        run: sudo usermod -a -G lxd $USER
+      - name: Fetch charm
+        uses: actions/download-artifact@v3.0.2
+        with:
+          name: microk8s.charm
+          path: build
+      - name: Install tox
+        run: |
+          pip3 install tox
+      - name: Run integration tests
+        run: |
+          juju add-model testing
+          export MK8S_SNAP_CHANNELS='${{ matrix.channel }}'
+          export MK8S_SERIES='${{ matrix.series }}'
+          export MK8S_CLUSTER_SIZES='[[${{ matrix.control_plane }}, ${{ matrix.workers }}]]'
+          export MK8S_CHARM=./build/microk8s.charm
+          export MK8S_CHARM_CHANNEL=''
+          sg lxd -c 'tox -e integration-${{ matrix.juju }} -- --model testing'
+      - name: Retrieve artifacts
+        if: always()
+        run: |
+          mkdir artifacts
+          juju debug-log -m testing --replay > artifacts/juju.log
+          juju status -m testing --format yaml > artifacts/juju.yaml
+          cp pytest.log artifacts/pytest.log
+      - name: Upload artifacts
+        if: always()
+        uses: actions/upload-artifact@v3.1.2
+        with:
+          name: logs-${{ matrix.channel }}-${{ matrix.series }}-juju${{ matrix.juju }}-${{ matrix.control_plane }}c${{ matrix.workers }}w
+          path: artifacts/
