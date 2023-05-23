@@ -387,7 +387,7 @@ class MicroK8sCluster(Object):
         url = event.join_url
         logger.debug("Using join URL: {}".format(url))
         try:
-            join_cmd = ["/snap/bin/microk8s", "join", url]
+            join_cmd = ["microk8s", "join", url]
             if self.model.config.get("skip_verify"):
                 join_cmd += ["--skip-verify"]
 
