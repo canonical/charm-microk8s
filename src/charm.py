@@ -3,12 +3,13 @@
 # Copyright 2023 Canonical, Ltd.
 #
 
+import json
 import logging
 import os
 import socket
 import subprocess
 import time
-from typing import Union
+from typing import Any, Union
 
 from ops import CharmBase, main
 from ops.charm import (
@@ -33,6 +34,14 @@ LOG = logging.getLogger(__name__)
 class MicroK8sCharm(CharmBase):
     _state = StoredState()
 
+    def _get_peer_data(self, key: str, default: Any) -> Any:
+        if (v := self.model.get_relation("peer").data[self.app].get(key)) is not None:
+            return json.loads(v)
+        return default
+
+    def _set_peer_data(self, key: str, new_data: Any):
+        self.model.get_relation("peer").data[self.app][key] = json.dumps(new_data)
+
     def __init__(self, *args):
         super().__init__(*args)
 
@@ -46,7 +55,6 @@ class MicroK8sCharm(CharmBase):
             joined=False,
             leaving=False,
             join_url="",
-            remove_nodes=[],
             hostnames={},
         )
 
@@ -91,10 +99,13 @@ class MicroK8sCharm(CharmBase):
             for r in self.model.relations.get(relation_name) or []:
                 existing_unit_names = existing_unit_names.union([u.name for u in r.units])
 
+        remove_nodes = self._get_peer_data("remove_nodes", [])
         for unit_name, hostname in self._state.hostnames.items():
             if unit_name not in existing_unit_names:
-                LOG.info("unit %s not found in any relation, will remove", unit_name)
-                self._state.remove_nodes.append(hostname)
+                LOG.info("unit %s not found in any relation, will remove %s", unit_name, hostname)
+                remove_nodes.append(hostname)
+
+        self._set_peer_data("remove_nodes", remove_nodes)
 
         self._on_config_changed(None)
 
@@ -112,7 +123,10 @@ class MicroK8sCharm(CharmBase):
 
         remove_hostname = self._state.hostnames.get(event.departing_unit.name)
         if remove_hostname:
-            self._state.remove_nodes.append(remove_hostname)
+            remove_nodes = self._get_peer_data("remove_nodes", [])
+            remove_nodes.append(remove_hostname)
+            self._set_peer_data("remove_nodes", remove_nodes)
+
         self._on_config_changed(None)
 
     def _check_call(self, *args, **kwargs):
@@ -182,16 +196,20 @@ class MicroK8sCharm(CharmBase):
         if not self._state.installed:
             self._on_install(None)
 
-        if self._state.joined and self.unit.is_leader() and self._state.remove_nodes:
-            remove_nodes = list(self._state.remove_nodes)
-            self._state.remove_nodes = []
+        if self._state.joined and self.unit.is_leader():
+            remove_nodes = self._get_peer_data("remove_nodes", [])
+
+            new_remove_nodes = []
             for hostname in remove_nodes:
                 LOG.info("removing node %s", hostname)
                 self.unit.status = MaintenanceStatus(f"removing node {hostname}")
                 try:
                     self._check_call(["microk8s", "remove-node", hostname, "--force"])
                 except subprocess.CalledProcessError:
+                    new_remove_nodes.append(hostname)
                     LOG.exception("failed to remove departing node %s", hostname)
+
+            self._set_peer_data("remove_nodes", new_remove_nodes)
 
         if self._state.joined and self._state.leaving:
             LOG.info("leaving cluster")
