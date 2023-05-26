@@ -517,10 +517,11 @@ class MicroK8sCluster(Object):
             pass
         kubeconfig["clusters"][0]["cluster"]["server"] = "https://{}:16443".format(public_address)
 
-        config_path = "/home/ubuntu/config"
-        with open(config_path, "w") as fout:
-            yaml.dump(kubeconfig, fout)
+        home = os.environ.get("HOME") or "/home/ubuntu"
+        config_path = Path(home) / "config"
+        with config_path.open("w") as fout:
+            yaml.safe_dump(kubeconfig, fout)
 
-        subprocess.check_call(["chown", "-R", "ubuntu:ubuntu", config_path])
         logger.info("Wrote kubeconfig to %s", config_path)
-        event.set_results({"kubeconfig": config_path})
+
+        event.set_results({"kubeconfig": config_path, "content": yaml.safe_dump(kubeconfig)})
