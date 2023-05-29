@@ -82,6 +82,36 @@ def test_leader_peer_relation(e: Environment):
     e.check_call.assert_called_once_with(["microk8s", "remove-node", "fake1", "--force"])
 
 
+def test_leader_peer_relation_leave(e: Environment):
+    e.node_to_unit_status.return_value = ops.model.ActiveStatus("fakestatus")
+    e.get_hostname.return_value = "fakehostname"
+    fakeaddress = "10.10.10.10"
+
+    e.harness.add_network(fakeaddress)
+    e.harness.update_config({"role": "control-plane"})
+    e.harness.set_leader(True)
+    e.harness.begin_with_initial_hooks()
+
+    e.check_call.reset_mock()
+
+    rel = e.harness.charm.model.get_relation("peer")
+    e.harness.add_relation_unit(rel.id, f"{e.harness.charm.app.name}/1")
+    e.harness.update_relation_data(rel.id, f"{e.harness.charm.app.name}/1", {"hostname": "fake1"})
+
+    e.check_call.reset_mock()
+
+    # NOTE(neoaggelos): mock self departed event
+    e.harness.charm.on["peer"].relation_departed.emit(
+        relation=rel,
+        app=e.harness.charm.app,
+        unit=e.harness.charm.unit,
+        departing_unit_name=e.harness.charm.unit.name,
+    )
+
+    relation_data = e.harness.get_relation_data(rel.id, e.harness.charm.app.name)
+    assert relation_data["remove_nodes"] == '["fakehostname"]'
+
+
 def test_leader_microk8s_provides_relation(e: Environment):
     faketoken = b"\x01" * 16
     fakeaddress = "10.10.10.10"
@@ -183,14 +213,12 @@ def test_follower_retrieve_join_url(e: Environment):
     assert e.harness.charm._state.joined
 
 
-@pytest.mark.parametrize(
-    "become_leader, after_removal", [(True, True), (True, False), (False, True), (False, False)]
-)
-def test_follower_remove_node(e: Environment, become_leader, after_removal):
+@pytest.mark.parametrize("become_leader", [True, False])
+def test_follower_become_leader_remove_departing_nodes(e: Environment, become_leader: bool):
     e.node_to_unit_status.return_value = ops.model.ActiveStatus("fakestatus")
     e.get_hostname.return_value = "fakehostname"
 
-    e.harness.update_config({"role": "control-plane"})
+    e.harness.update_config({"role": "control-plane", "addons": ""})
     e.harness.set_leader(False)
     e.harness.begin_with_initial_hooks()
 
@@ -205,16 +233,46 @@ def test_follower_remove_node(e: Environment, become_leader, after_removal):
     e.harness.add_relation_unit(rel_id, "microk8s-worker/1")
     e.harness.update_relation_data(rel_id, "microk8s-worker/0", {"hostname": "fake1"})
 
-    if not after_removal:
+    if become_leader:
         e.harness.set_leader(become_leader)
+
     e.check_call.reset_mock()
     e.harness.remove_relation_unit(rel_id, "microk8s-worker/0")
     e.harness.remove_relation_unit(rel_id, "microk8s-worker/1")
     e.harness.remove_relation_unit(prel_id, f"{e.harness.charm.app.name}/1")
     e.harness.remove_relation_unit(prel_id, f"{e.harness.charm.app.name}/2")
-    if after_removal:
-        e.harness.set_leader(become_leader)
 
+    if become_leader:
+        assert sorted(e.check_call.mock_calls) == [
+            mock.call(["microk8s", "remove-node", "fake1", "--force"]),
+            mock.call(["microk8s", "remove-node", "fake2", "--force"]),
+        ]
+    else:
+        e.check_call.assert_not_called()
+
+
+@pytest.mark.parametrize("become_leader", [True, False])
+def test_follower_become_leader_remove_already_departed_nodes(e: Environment, become_leader: bool):
+    e.node_to_unit_status.return_value = ops.model.ActiveStatus("fakestatus")
+    e.get_hostname.return_value = "fakehostname"
+
+    e.harness.update_config({"role": "control-plane", "addons": ""})
+    e.harness.set_leader(False)
+    e.harness.begin_with_initial_hooks()
+
+    prel_id = e.harness.charm.model.get_relation("peer").id
+    e.harness.add_relation_unit(prel_id, f"{e.harness.charm.app.name}/1")
+    e.harness.add_relation_unit(prel_id, f"{e.harness.charm.app.name}/2")
+    e.harness.update_relation_data(prel_id, f"{e.harness.charm.app.name}/1", {"hostname": "fake2"})
+
+    e.harness.update_relation_data(prel_id, e.harness.charm.app.name, {"join_url": "fakejoinurl"})
+
+    e.check_call.reset_mock()
+    e.harness.update_relation_data(
+        prel_id, e.harness.charm.app.name, {"remove_nodes": '["fake1", "fake2", "fakehostname"]'}
+    )
+
+    e.harness.set_leader(become_leader)
     if become_leader:
         assert sorted(e.check_call.mock_calls) == [
             mock.call(["microk8s", "remove-node", "fake1", "--force"]),

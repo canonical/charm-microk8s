@@ -56,6 +56,7 @@ class MicroK8sCharm(CharmBase):
             leaving=False,
             join_url="",
             hostnames={},
+            hostname=socket.gethostname(),
         )
 
         if self.config["role"] == "worker":
@@ -82,7 +83,7 @@ class MicroK8sCharm(CharmBase):
             self.framework.observe(self.on.peer_relation_changed, self._record_hostnames)
             self.framework.observe(self.on.peer_relation_changed, self._retrieve_join_url)
             self.framework.observe(self.on.peer_relation_departed, self._on_relation_departed)
-            self.framework.observe(self.on.leader_elected, self._on_leader_elected)
+            self.framework.observe(self.on.leader_elected, self._on_config_changed)
             self.framework.observe(self.on.microk8s_provides_relation_joined, self._add_token)
             self.framework.observe(
                 self.on.microk8s_provides_relation_changed, self._record_hostnames
@@ -91,24 +92,6 @@ class MicroK8sCharm(CharmBase):
                 self.on.microk8s_provides_relation_departed, self._on_relation_departed
             )
 
-    def _on_leader_elected(self, _: LeaderElectedEvent):
-        # find any nodes that are no longer with us (e.g. old leader control plane) and remove them
-        existing_unit_names = set([self.unit.name])
-
-        for relation_name in ["peer", "microk8s-provides"]:
-            for r in self.model.relations.get(relation_name) or []:
-                existing_unit_names = existing_unit_names.union([u.name for u in r.units])
-
-        remove_nodes = self._get_peer_data("remove_nodes", [])
-        for unit_name, hostname in self._state.hostnames.items():
-            if unit_name not in existing_unit_names:
-                LOG.info("unit %s not found in any relation, will remove %s", unit_name, hostname)
-                remove_nodes.append(hostname)
-
-        self._set_peer_data("remove_nodes", remove_nodes)
-
-        self._on_config_changed(None)
-
     def _record_hostnames(self, event: Union[RelationChangedEvent, RelationJoinedEvent]):
         for unit in event.relation.units:
             hostname = event.relation.data[unit].get("hostname")
@@ -116,12 +99,10 @@ class MicroK8sCharm(CharmBase):
                 self._state.hostnames[unit.name] = hostname
 
     def _on_relation_departed(self, event: RelationDepartedEvent):
-        # ΝΟΤΕ(neoaggelos): the current leader is responsible for cleaning up for
-        # departing units.
+        remove_hostname = self._state.hostnames.pop(event.departing_unit.name, None)
         if not self.unit.is_leader():
             return
 
-        remove_hostname = self._state.hostnames.get(event.departing_unit.name)
         if remove_hostname:
             remove_nodes = self._get_peer_data("remove_nodes", [])
             remove_nodes.append(remove_hostname)
@@ -149,7 +130,9 @@ class MicroK8sCharm(CharmBase):
             LOG.exception("failed to remove microk8s")
 
     def _announce_hostname(self, event: Union[RelationJoinedEvent, RelationChangedEvent]):
-        event.relation.data[self.unit]["hostname"] = socket.gethostname()
+        self._state.hostname = socket.gethostname()
+        self._state.hostnames[self.unit.name] = self._state.hostname
+        event.relation.data[self.unit]["hostname"] = self._state.hostname
 
     def _on_install(self, _: InstallEvent):
         if self._state.installed:
@@ -187,7 +170,7 @@ class MicroK8sCharm(CharmBase):
         if not self._state.join_url and self.unit.is_leader():
             self._state.joined = True
 
-    def _on_config_changed(self, _: ConfigChangedEvent):
+    def _on_config_changed(self, _: Union[ConfigChangedEvent, LeaderElectedEvent]):
         if self.config["role"] != self._state.role:
             msg = f"role cannot change from '{self._state.role}' after deployment"
             self.unit.status = BlockedStatus(msg)
@@ -200,7 +183,12 @@ class MicroK8sCharm(CharmBase):
             remove_nodes = self._get_peer_data("remove_nodes", [])
 
             new_remove_nodes = []
-            for hostname in remove_nodes:
+            for hostname in set(remove_nodes):
+                # skip self, someone else will remove us when they become leader
+                if hostname == self._state.hostname:
+                    new_remove_nodes.append(hostname)
+                    continue
+
                 LOG.info("removing node %s", hostname)
                 self.unit.status = MaintenanceStatus(f"removing node {hostname}")
                 try:
