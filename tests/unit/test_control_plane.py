@@ -9,23 +9,16 @@ import pytest
 from conftest import Environment
 
 
-def test_install(e: Environment):
+@pytest.mark.parametrize("is_leader", [True, False])
+def test_install(e: Environment, is_leader: bool):
     e.uname.return_value.release = "fakerelease"
+    e.node_to_unit_status.return_value = ops.model.ActiveStatus("fakestatus")
 
     e.harness.update_config({"role": "control-plane"})
+    e.harness.set_leader(is_leader)
     e.harness.begin_with_initial_hooks()
 
     e.uname.assert_called_once()
-    e.check_call.assert_has_calls(
-        [
-            mock.call(["apt-get", "install", "--yes", "nfs-common"]),
-            mock.call(["apt-get", "install", "--yes", "open-iscsi"]),
-            mock.call(["apt-get", "install", "--yes", "linux-modules-extra-fakerelease"]),
-            mock.call(["snap", "install", "microk8s", "--classic"]),
-            mock.call(["microk8s", "status", "--wait-ready", "--timeout=30"]),
-        ]
-    )
-
     assert e.harness.charm.model.unit.opened_ports() == {
         ops.model.OpenedPort(protocol="tcp", port=80),
         ops.model.OpenedPort(protocol="tcp", port=443),
@@ -34,19 +27,43 @@ def test_install(e: Environment):
 
 
 def test_install_follower(e: Environment):
+    e.uname.return_value.release = "fakerelease"
     e.harness.update_config({"role": "control-plane"})
     e.harness.set_leader(False)
 
     e.harness.begin_with_initial_hooks()
+
+    assert e.check_call.mock_calls == [
+        mock.call(["apt-get", "install", "--yes", "nfs-common"]),
+        mock.call(["apt-get", "install", "--yes", "open-iscsi"]),
+        mock.call(["apt-get", "install", "--yes", "linux-modules-extra-fakerelease"]),
+        mock.call(["snap", "install", "microk8s", "--classic"]),
+        mock.call(["microk8s", "status", "--wait-ready", "--timeout=30"]),
+    ]
+
     assert isinstance(e.harness.charm.unit.status, ops.model.WaitingStatus)
 
 
 def test_install_leader(e: Environment):
+    e.uname.return_value.release = "fakerelease"
     e.node_to_unit_status.return_value = ops.model.ActiveStatus("fakestatus")
     e.harness.update_config({"role": "control-plane"})
     e.harness.set_leader(True)
 
     e.harness.begin_with_initial_hooks()
+
+    assert e.check_call.call_args_list == [
+        mock.call(["apt-get", "install", "--yes", "nfs-common"]),
+        mock.call(["apt-get", "install", "--yes", "open-iscsi"]),
+        mock.call(["apt-get", "install", "--yes", "linux-modules-extra-fakerelease"]),
+        mock.call(["snap", "install", "microk8s", "--classic"]),
+        mock.call(["microk8s", "status", "--wait-ready", "--timeout=30"]),
+        mock.call(["microk8s", "enable", "dns"]),
+        mock.call(["microk8s", "enable", "rbac"]),
+        mock.call(["microk8s", "enable", "hostpath-storage"]),
+        mock.call(["microk8s", "enable", "ingress"]),
+    ]
+
     assert e.harness.charm.unit.status == ops.model.ActiveStatus("fakestatus")
     assert e.harness.charm._state.joined
 

@@ -16,15 +16,13 @@ def test_install(e: Environment):
     e.harness.begin_with_initial_hooks()
 
     e.uname.assert_called_once()
-    e.check_call.assert_has_calls(
-        [
-            mock.call(["apt-get", "install", "--yes", "nfs-common"]),
-            mock.call(["apt-get", "install", "--yes", "open-iscsi"]),
-            mock.call(["apt-get", "install", "--yes", "linux-modules-extra-fakerelease"]),
-            mock.call(["snap", "install", "microk8s", "--classic"]),
-            mock.call(["microk8s", "status", "--wait-ready", "--timeout=30"]),
-        ]
-    )
+    assert e.check_call.mock_calls == [
+        mock.call(["apt-get", "install", "--yes", "nfs-common"]),
+        mock.call(["apt-get", "install", "--yes", "open-iscsi"]),
+        mock.call(["apt-get", "install", "--yes", "linux-modules-extra-fakerelease"]),
+        mock.call(["snap", "install", "microk8s", "--classic"]),
+        mock.call(["microk8s", "status", "--wait-ready", "--timeout=30"]),
+    ]
 
     assert e.harness.charm.model.unit.opened_ports() == {
         ops.model.OpenedPort(protocol="tcp", port=80),

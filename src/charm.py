@@ -6,6 +6,7 @@
 import json
 import logging
 import os
+import shlex
 import socket
 import subprocess
 import time
@@ -221,6 +222,27 @@ class MicroK8sCharm(CharmBase):
                 join_cmd.append("--worker")
             self._check_call(join_cmd)
             self._state.joined = True
+
+        if self.config["role"] != "worker" and self.unit.is_leader():
+            enabled_addons = self._get_peer_data("enabled_addons", [])
+            target_addons = shlex.split(self.config["addons"])
+
+            for addon in enabled_addons:
+                if addon not in target_addons:
+                    # drop any arguments from the addon (if any)
+                    # e.g. 'dns:10.0.0.10' -> 'dns'
+                    addon_name, *_ = addon.split(":", maxsplit=2)
+                    self.unit.status = MaintenanceStatus(f"disable addon {addon_name}")
+                    self._check_call(["microk8s", "disable", addon_name])
+                    enabled_addons.remove(addon)
+
+            for addon in target_addons:
+                if addon not in enabled_addons:
+                    self.unit.status = MaintenanceStatus(f"enable addon {addon}")
+                    self._check_call(["microk8s", "enable", addon])
+                    enabled_addons.append(addon)
+
+            self._set_peer_data("enabled_addons", enabled_addons)
 
         while self.unit.status.__class__ not in [ActiveStatus]:
             self.unit.status = util.node_to_unit_status(socket.gethostname())

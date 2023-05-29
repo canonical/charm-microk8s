@@ -4,6 +4,10 @@
 # See https://juju.is/docs/config for guidance.
 
 options:
+  addons:
+    description: Addons to enable
+    default: "dns rbac hostpath-storage ingress"
+    type: string
   role:
     description: Role for this microk8s deployment
     default: ""
