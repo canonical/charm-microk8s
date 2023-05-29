@@ -12,19 +12,12 @@ from ops.model import BlockedStatus, WaitingStatus
 
 
 @pytest.mark.parametrize("role", ["worker", "control-plane", ""])
-@pytest.mark.parametrize(
-    "channel, command",
-    [
-        ("", ["snap", "install", "microk8s", "--classic"]),
-        ("1.27/stable", ["snap", "install", "microk8s", "--classic", "--channel", "1.27/stable"]),
-        ("1.27-strict", ["snap", "install", "microk8s", "--classic", "--channel", "1.27-strict"]),
-    ],
-)
-def test_install_channel(role, channel, command, e: Environment):
-    e.harness.update_config({"role": role, "channel": channel})
+def test_install_channel(role, e: Environment):
+    e.harness.update_config({"role": role, "channel": "fakechannel"})
     e.harness.begin_with_initial_hooks()
 
-    e.check_call.assert_any_call(command)
+    e.util.install_required_packages.assert_called_once()
+    e.microk8s.install.assert_called_once_with("fakechannel")
 
 
 @pytest.mark.parametrize(
@@ -58,62 +51,43 @@ def test_block_on_role_change(e: Environment):
 
 def test_remove(e: Environment):
     e.harness.begin_with_initial_hooks()
-    e.check_call.reset_mock()
     e.harness.charm._on_remove(None)
 
-    e.check_call.assert_called_once_with(["snap", "remove", "microk8s", "--purge"])
+    e.microk8s.uninstall.assert_called_once()
 
 
 def test_update_status(e: Environment):
-    e.node_to_unit_status.return_value = ops.model.ActiveStatus("fakestatus2")
+    e.microk8s.get_unit_status.return_value = ops.model.ActiveStatus("fakestatus2")
     e.harness.begin_with_initial_hooks()
 
-    e.node_to_unit_status.assert_not_called()
+    e.microk8s.get_unit_status.assert_not_called()
 
     e.harness.charm._on_update_status(None)
-    e.node_to_unit_status.assert_not_called()
+    e.microk8s.get_unit_status.assert_not_called()
 
     e.harness.charm._state.joined = True
     e.harness.charm._on_update_status(None)
-    e.node_to_unit_status.assert_called_once_with(e.get_hostname.return_value)
+    e.microk8s.get_unit_status.assert_called_once_with(e.gethostname.return_value)
     assert e.harness.charm.unit.status == ops.model.ActiveStatus("fakestatus2")
 
 
 @pytest.mark.parametrize("role", ["", "control-plane", "worker"])
 @pytest.mark.parametrize("is_leader", [True, False])
 def test_addons(e: Environment, role: str, is_leader: bool):
-    e.node_to_unit_status.return_value = ops.model.ActiveStatus("fakestatus")
-    e.get_hostname.return_value = "fakehostname"
+    e.microk8s.get_unit_status.return_value = ops.model.ActiveStatus("fakestatus")
 
     e.harness.update_config({"role": role, "addons": ""})
     e.harness.set_leader(is_leader)
     e.harness.begin_with_initial_hooks()
 
-    e.check_call.reset_mock()
-
     e.harness.update_config({"addons": "dns rbac"})
-    e.harness.update_config({"addons": "dns"})
-    e.harness.update_config({"addons": "dns ingress rbac"})
-    e.harness.update_config({"addons": "dns:10.0.0.10 hostpath-storage ingress rbac"})
-    e.harness.update_config({"addons": "dns:10.0.0.20 hostpath-storage ingress rbac"})
+    e.harness.update_config({"addons": "dns rbac"})
+    e.harness.update_config({"addons": "dns:1.1.1.1 rbac ingress"})
 
-    if role in ["", "control-plane"] and is_leader:
-        assert e.check_call.mock_calls == [
-            # 1. enable dns and rbac
-            mock.call(["microk8s", "enable", "dns"]),
-            mock.call(["microk8s", "enable", "rbac"]),
-            # 2. disable rbac
-            mock.call(["microk8s", "disable", "rbac"]),
-            # 3. enable ingress and rbac
-            mock.call(["microk8s", "enable", "ingress"]),
-            mock.call(["microk8s", "enable", "rbac"]),
-            # 4. disable dns and re-enable with arguments, then enable hostpath-storage
-            mock.call(["microk8s", "disable", "dns"]),
-            mock.call(["microk8s", "enable", "dns:10.0.0.10"]),
-            mock.call(["microk8s", "enable", "hostpath-storage"]),
-            # 5. disable dns and re-enable with different arguments
-            mock.call(["microk8s", "disable", "dns"]),
-            mock.call(["microk8s", "enable", "dns:10.0.0.20"]),
+    if is_leader and role in ["", "control-plane"]:
+        assert e.microk8s.reconcile_addons.mock_calls == [
+            mock.call([], ["dns", "rbac"]),
+            mock.call(["dns", "rbac"], ["dns:1.1.1.1", "rbac", "ingress"]),
         ]
     else:
-        e.check_call.assert_not_called()
+        e.microk8s.reconcile_addons.assert_not_called()

@@ -1,42 +1,36 @@
 #
 # Copyright 2023 Canonical, Ltd.
 #
-import json
 import logging
+import os
+import shlex
 import subprocess
-
-from ops.model import ActiveStatus, MaintenanceStatus, WaitingStatus
 
 LOG = logging.getLogger(__name__)
 
 
-def node_to_unit_status(hostname: str):
-    """Retrieve Kubernetes node status and convert to Juju unit status."""
+def check_call(*args, **kwargs):
+    """log and run command"""
+    LOG.debug("Execute: %s (args=%s, kwargs=%s)", shlex.join(args[0]), args, kwargs)
+    return subprocess.check_call(*args, **kwargs)
+
+
+def install_required_packages():
+    """install useful apt packages for microk8s"""
+
+    # FIXME(neoaggelos): these are only really required for OpenEBS. Perhaps we can skip them
+    packages = ["nfs-common", "open-iscsi"]
+
     try:
-        ready_condition = _unsafe_kubernetes_get_node_ready_condition(hostname)
-        if ready_condition["status"] == "False":
-            LOG.warning("node %s is not ready: %s", hostname, ready_condition)
-            return WaitingStatus(f"node is not ready: {ready_condition['reason']}")
+        packages.append(f"linux-modules-extra-{os.uname().release}")
+    except OSError:
+        LOG.exception("could not retrieve kernel version, will not install extra modules")
 
-        return ActiveStatus("node is ready")
+    LOG.info("Installing required packages %s", packages)
 
-    except (subprocess.CalledProcessError, OSError, json.JSONDecodeError) as e:
-        LOG.warning("could not retrieve status of node %s: %s", hostname, e)
-        return MaintenanceStatus("waiting for node")
-
-
-def _unsafe_kubernetes_get_node_ready_condition(hostname: str):
-    """Return a JSON object describing the Kubernetes node status of type Ready."""
-    # worker nodes cannot use 'microk8s kubectl', invoke kubectl directly with the kubelet config
-    output = subprocess.check_output(
-        [
-            "/snap/microk8s/current/kubectl",
-            "--kubeconfig=/var/snap/microk8s/current/credentials/kubelet.config",
-            "get",
-            "node",
-            hostname,
-            "-o",
-            "jsonpath={.status.conditions[?(@.type=='Ready')]}",
-        ]
-    )
-    return json.loads(output)
+    for package in packages:
+        try:
+            LOG.info("Installing package %s", package)
+            check_call(["apt-get", "install", "--yes", package])
+        except subprocess.CalledProcessError:
+            LOG.exception("failed to install package %s, charm may misbehave", package)

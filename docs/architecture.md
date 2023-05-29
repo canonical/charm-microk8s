@@ -52,3 +52,34 @@ When deploying the charm with `role=""` or `role="control-plane"`, the charm wil
 When deploying the charm with `role="worker"`, the charm will deploy worker-only nodes. The nodes will wait for a `microk8s` relation to an existing microk8s control plane application.
 
 ![worker](./fsm/worker.png)
+
+### Source
+
+The source code is in the `src/` folder and the tests are in `tests/`. The code structure is as follows:
+
+```yaml
+charm-microk8s:                     # Root directory
+- charmcraft.yaml                   # Charm charmcraft.yaml file
+- config.yaml                       # Defines charm configuration options
+- metadata.yaml                     # Charm metadata.yaml file
+- lxd-profile.yaml                  # LXD profile for the charm to work on LXD
+- tox.ini                           # CI and development tooling
+- docs:
+  - architecture.md                 # Document architecture decisions for the charm
+  - development.md                  # Getting started with developing the charm and running tests
+- src:
+  - charm.py                        # Main charm source code and entry point
+  - microk8s.py                     # Implement microk8s functionality
+  - util.py                         # Implement helpers and utilities
+- tests:
+  - unit:
+    - conftest.py                   # Shared test fixtures
+    - test_charm.py                 # Unit tests for src/charm.py
+    - test_charm_control_plane.py   # Unit tests for src/charm.py (control plane specific)
+    - test_charm_worker.py          # Unit tests for src/charm.py (worker specific)
+    - test_microk8s.py              # Unit tests for src/microk8s.py
+    - test_util.py                  # Unit tests for src/util.py
+  - integration:
+    - config.py                     # Integration tests configuration file
+    - test_microk8s.py              # Integration tests
+```
