@@ -22,7 +22,7 @@ def test_install(e: Environment, is_leader: bool):
     e.microk8s.wait_ready.assert_called_once()
 
     if not is_leader:
-        e.microk8s.enable_addon.assert_not_called()
+        e.microk8s.reconcile_addons.assert_not_called()
         assert isinstance(e.harness.charm.unit.status, ops.model.WaitingStatus)
     else:
         e.microk8s.reconcile_addons.assert_called_once_with([], ["dns"])
@@ -56,7 +56,7 @@ def test_leader_peer_relation(e: Environment):
     assert e.harness.charm._state.hostnames[f"{e.harness.charm.app.name}/1"] == "f-1"
 
     e.harness.remove_relation_unit(rel_id, f"{e.harness.charm.app.name}/1")
-    assert e.microk8s.remove_node.called_once_with("f-1")
+    e.microk8s.remove_node.assert_called_once_with("f-1")
 
 
 def test_leader_peer_relation_leave(e: Environment):
@@ -106,7 +106,7 @@ def test_leader_microk8s_provides_relation(e: Environment):
     assert e.harness.charm._state.hostnames["microk8s-worker/0"] == "f-1"
 
     e.harness.remove_relation_unit(rel_id, "microk8s-worker/0")
-    assert e.microk8s.remove_node.called_once_with("f-1")
+    e.microk8s.remove_node.assert_called_once_with("f-1")
 
 
 def test_follower_peer_relation(e: Environment):

@@ -30,11 +30,11 @@ def e():
     harness = ops.testing.Harness(MicroK8sCharm)
     patchers = {
         # standard library mocks
-        "gethostname": mock.patch("socket.gethostname"),
-        "sleep": mock.patch("time.sleep"),
+        "gethostname": mock.patch("socket.gethostname", autospec=True),
+        "sleep": mock.patch("time.sleep", autospec=True),
         # project mocks
-        "microk8s": mock.patch("charm.microk8s"),
-        "util": mock.patch("charm.util"),
+        "microk8s": mock.patch("charm.microk8s", autospec=True),
+        "util": mock.patch("charm.util", autospec=True),
     }
 
     mocks = {}
