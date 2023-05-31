@@ -1,18 +1,42 @@
-# This file defines charm config options, and populates the Configure tab on Charmhub.
-# If your charm does not require configuration options, delete this file entirely.
-#
-# See https://juju.is/docs/config for guidance.
-
 options:
   addons:
-    description: Addons to enable
+    description: |
+      Space-separated list of addons that should be enabled and managed by the charm. Removing
+      an addon from this list will disable it in the cluster.
+
+      See https://microk8s.io/docs/addons for a comprehensive list of addons available in MicroK8s.
+
+      Use "addon:arg1:arg2" to specify arguments when enabling a specific addon.
+
+      Examples:
+      - "dns rbac hostpath-storage ingress"
+      - "dns rbac hostpath-storage ingress gpu:--version=v1.10.1"
+
     default: "dns rbac hostpath-storage ingress"
     type: string
-  role:
-    description: Role for this microk8s deployment
+  channel:
+    description: |
+      Specify MicroK8s version to install. This is the channel that will be passed to the "snap
+      install microk8s" command. See also https://microk8s.io/docs/setting-snap-channel
+
+      Examples:
+      - ""                  # install latest version
+      - "1.27/stable"       # install MicroK8s 1.27 from the stable branch
+      - "1.27/edge"         # install MicroK8s 1.27 from the edge branch (getting all latest fixes)
+      - "1.27-strict"       # install MicroK8s 1.27 with strict confinement
     default: ""
     type: string
-  channel:
-    description: MicroK8s channel to install
+  role:
+    description: |
+      Role for MicroK8s deployment, one of "", "control-plane" or "worker".
+
+      Set the role to "control-plane" or "" to deploy all units as control plane nodes and form an
+      HA control plane.
+
+      Set the role to "worker" to deploy all units as workers. When deploying workers, the units
+      will remain in waiting status until they are related to a microk8s control plane.
+
+      The charm role cannot and must not be changed after deployment. Doing so will cause the units
+      to go into error state until the change is reverted.
     default: ""
     type: string
