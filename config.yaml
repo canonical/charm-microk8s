@@ -1,19 +1,4 @@
 options:
-  addons:
-    description: |
-      Space-separated list of addons that should be enabled and managed by the charm. Removing
-      an addon from this list will disable it in the cluster.
-
-      See https://microk8s.io/docs/addons for a comprehensive list of addons available in MicroK8s.
-
-      Use "addon:arg1:arg2" to specify arguments when enabling a specific addon.
-
-      Examples:
-      - "dns rbac hostpath-storage ingress"
-      - "dns rbac hostpath-storage ingress gpu:--version=v1.10.1"
-
-    default: "dns rbac hostpath-storage ingress"
-    type: string
   channel:
     description: |
       Specify MicroK8s version to install. This is the channel that will be passed to the "snap

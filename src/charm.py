@@ -198,14 +198,6 @@ class MicroK8sCharm(CharmBase):
             microk8s.join(self._state.join_url, self.config["role"] == "worker")
             self._state.joined = True
 
-        if self.config["role"] != "worker" and self.unit.is_leader():
-            enabled_addons = self._get_peer_data("enabled_addons", [])
-            target_addons = shlex.split(self.config["addons"])
-
-            if enabled_addons != target_addons:
-                microk8s.reconcile_addons(enabled_addons, target_addons)
-                self._set_peer_data("enabled_addons", target_addons)
-
         while self.unit.status.__class__ not in [ActiveStatus]:
             self.unit.status = microk8s.get_unit_status(socket.gethostname())
             time.sleep(5)

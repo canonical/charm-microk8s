@@ -91,20 +91,3 @@ def get_unit_status(hostname: str):
     except (subprocess.CalledProcessError, json.JSONDecodeError, KeyError) as e:
         LOG.warning("could not retrieve status of node %s: %s", hostname, e)
         return MaintenanceStatus("waiting for node")
-
-
-def reconcile_addons(enabled_addons: list, target_addons: list):
-    """disable removed and enable missing addons"""
-    LOG.info("Reconciling addons (current=%s, wanted=%s)", enabled_addons, target_addons)
-    for addon in enabled_addons:
-        if addon not in target_addons:
-            # drop any arguments from the addon (if any)
-            # e.g. 'dns:10.0.0.10' -> 'dns'
-            addon_name, *_ = addon.split(":", maxsplit=2)
-            LOG.info("Disabling addon %s", addon_name)
-            util.check_call(["microk8s", "disable", addon_name])
-
-    for addon in target_addons:
-        if addon not in enabled_addons:
-            LOG.info("Enabling addon %s", addon)
-            util.check_call(["microk8s", "enable", addon])

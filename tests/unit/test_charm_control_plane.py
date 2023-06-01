@@ -13,7 +13,7 @@ from conftest import Environment
 def test_install(e: Environment, is_leader: bool):
     e.microk8s.get_unit_status.return_value = ops.model.ActiveStatus("fakestatus")
 
-    e.harness.update_config({"role": "control-plane", "addons": "dns"})
+    e.harness.update_config({"role": "control-plane"})
     e.harness.set_leader(is_leader)
     e.harness.begin_with_initial_hooks()
 
@@ -22,10 +22,8 @@ def test_install(e: Environment, is_leader: bool):
     e.microk8s.wait_ready.assert_called_once()
 
     if not is_leader:
-        e.microk8s.reconcile_addons.assert_not_called()
         assert isinstance(e.harness.charm.unit.status, ops.model.WaitingStatus)
     else:
-        e.microk8s.reconcile_addons.assert_called_once_with([], ["dns"])
         assert e.harness.charm.unit.status == ops.model.ActiveStatus("fakestatus")
         assert e.harness.charm._state.joined
 
@@ -178,7 +176,7 @@ def test_follower_become_leader_remove_departing_nodes(e: Environment, become_le
     e.microk8s.get_unit_status.return_value = ops.model.ActiveStatus("fakestatus")
     e.gethostname.return_value = "fakehostname"
 
-    e.harness.update_config({"role": "control-plane", "addons": ""})
+    e.harness.update_config({"role": "control-plane"})
     e.harness.set_leader(False)
     e.harness.begin_with_initial_hooks()
 
@@ -212,7 +210,7 @@ def test_follower_become_leader_remove_already_departed_nodes(e: Environment, be
     e.microk8s.get_unit_status.return_value = ops.model.ActiveStatus("fakestatus")
     e.gethostname.return_value = "fakehostname"
 
-    e.harness.update_config({"role": "control-plane", "addons": ""})
+    e.harness.update_config({"role": "control-plane"})
     e.harness.set_leader(False)
     e.harness.begin_with_initial_hooks()
 
