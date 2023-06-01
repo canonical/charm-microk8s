@@ -41,6 +41,7 @@ class TestCharm(unittest.TestCase):
                 call(["/usr/bin/apt-get", "install", "--yes", "nfs-common"]),
                 call(["/usr/bin/apt-get", "install", "--yes", "linux-modules-extra-5.13"]),
                 call(["/usr/bin/snap", "install", "microk8s", "--classic"]),
+                call(["microk8s", "status", "--wait-ready", "--timeout=300"]),
                 call(["/usr/sbin/addgroup", "ubuntu", "microk8s"]),
                 call(["/usr/bin/snap", "alias", "microk8s.kubectl", "kubectl"]),
                 call(["open-port", "16443/tcp"]),
@@ -94,6 +95,7 @@ class TestCharm(unittest.TestCase):
                 call(["/usr/bin/apt-get", "install", "--yes", "nfs-common"]),
                 call(["/usr/bin/apt-get", "install", "--yes", "linux-modules-extra-5.13"]),
                 call(["/usr/bin/snap", "install", "microk8s", "--channel=1.26-strict"]),
+                call(["microk8s", "status", "--wait-ready", "--timeout=300"]),
                 call(["/usr/sbin/addgroup", "ubuntu", "snap_microk8s"]),
                 call(["/usr/bin/snap", "alias", "microk8s.kubectl", "kubectl"]),
                 call(["open-port", "16443/tcp"]),
@@ -142,6 +144,7 @@ class TestCharm(unittest.TestCase):
             [
                 call(["/usr/bin/apt-get", "install", "--yes", "nfs-common"]),
                 call(["/usr/bin/snap", "install", "microk8s", "--classic"]),
+                call(["microk8s", "status", "--wait-ready", "--timeout=300"]),
                 call(["/usr/sbin/addgroup", "ubuntu", "microk8s"]),
                 call(["/usr/bin/snap", "alias", "microk8s.kubectl", "kubectl"]),
                 call(["open-port", "16443/tcp"]),
