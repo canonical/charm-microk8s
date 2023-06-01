@@ -2,8 +2,6 @@
 # Copyright 2023 Canonical, Ltd.
 #
 
-from unittest import mock
-
 import ops
 import ops.testing
 import pytest

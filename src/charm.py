@@ -5,7 +5,6 @@
 
 import json
 import logging
-import shlex
 import socket
 import subprocess
 import time
