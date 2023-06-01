@@ -386,6 +386,10 @@ class MicroK8sCluster(Object):
         self.model.unit.status = MaintenanceStatus("joining the microk8s cluster")
         url = event.join_url
         logger.debug("Using join URL: {}".format(url))
+
+        lockfile = Path(NO_CERT_REISSUE_LOCKFILE)
+        if lockfile.exists():
+            lockfile.unlink(missing_ok=True)
         try:
             join_cmd = ["microk8s", "join", url]
             if self.model.config.get("skip_verify"):
@@ -491,6 +495,12 @@ class MicroK8sCluster(Object):
 
     def _manage_cert_reissue_lock(self, event):
         """Manage lock file to enable/disable cert reissue."""
+        if self._state.joined:
+            logger.debug(
+                "Node is part of a cluster, ignoring certificate "
+                "re-issue lock configuration."
+            )
+            return
         disable_cert_reissue = self.model.config["disable_cert_reissue"]
         if disable_cert_reissue:
             Path(NO_CERT_REISSUE_LOCKFILE).touch()
