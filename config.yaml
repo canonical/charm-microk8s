@@ -2,18 +2,6 @@
 ## Copyright 2023 Canonical, Ltd.
 ##
 options:
-  channel:
-    description: |
-      Specify MicroK8s version to install. This is the channel that will be passed to the "snap
-      install microk8s" command. See also https://microk8s.io/docs/setting-snap-channel
-
-      Examples:
-      - ""                  # install latest version
-      - "1.27/stable"       # install MicroK8s 1.27 from the stable branch
-      - "1.27/edge"         # install MicroK8s 1.27 from the edge branch (getting all latest fixes)
-      - "1.27-strict"       # install MicroK8s 1.27 with strict confinement
-    default: ""
-    type: string
   role:
     description: |
       Role for MicroK8s deployment, one of "", "control-plane" or "worker".

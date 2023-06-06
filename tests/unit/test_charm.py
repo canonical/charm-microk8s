@@ -10,12 +10,19 @@ from ops.model import BlockedStatus, WaitingStatus
 
 
 @pytest.mark.parametrize("role", ["worker", "control-plane", ""])
-def test_install_channel(role, e: Environment):
-    e.harness.update_config({"role": role, "channel": "fakechannel"})
+def test_install(role, e: Environment):
+    e.harness.update_config(
+        {
+            "role": role,
+            "containerd_http_proxy": "fakehttpproxy",
+            "containerd_https_proxy": "fakehttpsproxy",
+            "containerd_no_proxy": "fakenoproxy",
+        }
+    )
     e.harness.begin_with_initial_hooks()
 
-    e.util.install_required_packages.assert_called_once()
-    e.microk8s.install.assert_called_once_with("fakechannel")
+    e.util.install_required_packages.assert_called_once_with()
+    e.microk8s.install.assert_called_once_with()
 
 
 @pytest.mark.parametrize(
@@ -67,3 +74,15 @@ def test_update_status(e: Environment):
     e.harness.charm._on_update_status(None)
     e.microk8s.get_unit_status.assert_called_once_with(e.gethostname.return_value)
     assert e.harness.charm.unit.status == ops.model.ActiveStatus("fakestatus2")
+
+
+@pytest.mark.parametrize("role", ["", "control-plane", "worker"])
+def test_charm_upgrade(e: Environment, role: str):
+    e.microk8s.get_unit_status.return_value = ops.model.ActiveStatus("fakestatus")
+
+    e.harness.update_config({"role": role, "automatic_certificate_reissue": True})
+    e.harness.begin_with_initial_hooks()
+
+    e.harness.charm.on.upgrade_charm.emit()
+
+    e.microk8s.upgrade.assert_called_once()

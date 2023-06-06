@@ -18,7 +18,7 @@ def test_install(e: Environment, is_leader: bool):
     e.harness.begin_with_initial_hooks()
 
     e.util.install_required_packages.assert_called_once()
-    e.microk8s.install.assert_called_once_with("")
+    e.microk8s.install.assert_called_once_with()
     e.microk8s.wait_ready.assert_called_once()
 
     if not is_leader:

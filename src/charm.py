@@ -21,6 +21,7 @@ from ops.charm import (
     RelationJoinedEvent,
     RemoveEvent,
     UpdateStatusEvent,
+    UpgradeCharmEvent,
 )
 from ops.framework import StoredState
 from ops.model import ActiveStatus, BlockedStatus, MaintenanceStatus, WaitingStatus
@@ -63,6 +64,7 @@ class MicroK8sCharm(CharmBase):
             self.framework.observe(self.on.remove, self._on_remove)
             self.framework.observe(self.on.install, self._on_install)
             self.framework.observe(self.on.install, self._worker_open_ports)
+            self.framework.observe(self.on.upgrade_charm, self._on_upgrade)
             self.framework.observe(self.on.config_changed, self._on_config_changed)
             self.framework.observe(self.on.update_status, self._on_update_status)
             self.framework.observe(self.on.microk8s_relation_joined, self._announce_hostname)
@@ -74,6 +76,7 @@ class MicroK8sCharm(CharmBase):
             self.framework.observe(self.on.install, self._on_install)
             self.framework.observe(self.on.install, self._on_bootstrap_node)
             self.framework.observe(self.on.install, self._control_plane_open_ports)
+            self.framework.observe(self.on.upgrade_charm, self._on_upgrade)
             self.framework.observe(self.on.config_changed, self._on_config_changed)
             self.framework.observe(self.on.update_status, self._on_update_status)
             self.framework.observe(self.on.peer_relation_joined, self._add_token)
@@ -138,7 +141,7 @@ class MicroK8sCharm(CharmBase):
         util.install_required_packages()
 
         self.unit.status = MaintenanceStatus("installing MicroK8s")
-        microk8s.install(self.config["channel"])
+        microk8s.install()
         try:
             microk8s.wait_ready()
         except subprocess.CalledProcessError:
@@ -236,6 +239,10 @@ class MicroK8sCharm(CharmBase):
         event.relation.data[self.app]["join_url"] = "{}:25000/{}".format(
             self.model.get_binding(event.relation).network.ingress_address, token
         )
+
+    def _on_upgrade(self, _: UpgradeCharmEvent):
+        microk8s.upgrade()
+        self._on_config_changed(None)
 
 
 if __name__ == "__main__":  # pragma: nocover

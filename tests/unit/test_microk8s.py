@@ -6,21 +6,24 @@ from unittest import mock
 import pytest
 from ops.model import ActiveStatus, MaintenanceStatus, WaitingStatus
 
+import charm_config
 import microk8s
 
 
 @mock.patch("subprocess.check_call")
-@pytest.mark.parametrize(
-    "channel, command",
-    [
-        ("", ["snap", "install", "microk8s", "--classic"]),
-        ("1.27/stable", ["snap", "install", "microk8s", "--classic", "--channel", "1.27/stable"]),
-        ("1.27-strict", ["snap", "install", "microk8s", "--classic", "--channel", "1.27-strict"]),
-    ],
-)
-def test_microk8s_install(check_call: mock.MagicMock, channel: str, command: list):
-    microk8s.install(channel)
-    check_call.assert_called_once_with(command)
+def test_microk8s_install(check_call: mock.MagicMock):
+    microk8s.install()
+    check_call.assert_called_once_with(
+        ["snap", "install", "microk8s", "--classic", "--channel", charm_config.SNAP_CHANNEL]
+    )
+
+
+@mock.patch("subprocess.check_call")
+def test_microk8s_upgrade(check_call: mock.MagicMock):
+    microk8s.upgrade()
+    check_call.assert_called_once_with(
+        ["snap", "refresh", "microk8s", "--channel", charm_config.SNAP_CHANNEL]
+    )
 
 
 @mock.patch("subprocess.check_call")

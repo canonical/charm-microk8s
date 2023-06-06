@@ -10,22 +10,36 @@ from typing import Optional
 
 from ops.model import ActiveStatus, MaintenanceStatus, WaitingStatus
 
+import charm_config
 import util
 
 LOG = logging.getLogger(__name__)
 
 
-SNAP = Path("/snap/microk8s/current")
-SNAP_DATA = Path("/var/snap/microk8s/current")
-SNAP_COMMON = Path("/var/snap/microk8s/common")
+def snap_dir() -> Path:
+    return Path("/snap/microk8s/current")
 
 
-def install(channel: Optional[str] = None):
+def snap_data_dir() -> Path:
+    return Path("/var/snap/microk8s/current")
+
+
+def snap_common_dir() -> Path:
+    return Path("")
+
+
+def install():
     """`snap install microk8s`"""
-    LOG.info("Installing MicroK8s (channel %s)", channel)
-    cmd = ["snap", "install", "microk8s", "--classic"]
-    if channel:
-        cmd.extend(["--channel", channel])
+    LOG.info("Installing MicroK8s (channel %s)", charm_config.SNAP_CHANNEL)
+    cmd = ["snap", "install", "microk8s", "--classic", "--channel", charm_config.SNAP_CHANNEL]
+
+    util.check_call(cmd)
+
+
+def upgrade():
+    """upgrade microk8s to charm version"""
+    LOG.info("Upgrade MicroK8s (channel %s)", charm_config.SNAP_CHANNEL)
+    cmd = ["snap", "refresh", "microk8s", "--channel", charm_config.SNAP_CHANNEL]
 
     util.check_call(cmd)
 
