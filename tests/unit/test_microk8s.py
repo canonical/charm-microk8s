@@ -281,3 +281,14 @@ def test_microk8s_configure_hostpath_storage(
         mock.call(["microk8s", "status", "-a", "hostpath-storage"], capture_output=True),
         *expect_calls,
     ]
+
+
+@pytest.mark.parametrize("enable,method", [(True, "Node,RBAC"), (False, "AlwaysAllow")])
+@mock.patch("microk8s.apply_launch_configuration")
+def test_microk8s_configure_rbac(
+    apply_launch_configuration: mock.MagicMock, enable: bool, method: str
+):
+    microk8s.configure_rbac(enable)
+    apply_launch_configuration.assert_called_once_with(
+        {"extraKubeAPIServerArgs": {"--authorization-mode": method}}
+    )

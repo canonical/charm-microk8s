@@ -226,3 +226,32 @@ def test_config_hostpath_storage(e: Environment, role: str, is_leader: bool, has
         e.microk8s.configure_hostpath_storage.assert_called_once_with(False)
     else:
         e.microk8s.configure_hostpath_storage.assert_not_called()
+
+
+@pytest.mark.parametrize("role", ["", "control-plane", "worker"])
+@pytest.mark.parametrize("is_leader", [False, True])
+@pytest.mark.parametrize("has_joined", [False, True])
+def test_config_rbac(e: Environment, role: str, is_leader: bool, has_joined: bool):
+    e.microk8s.get_unit_status.return_value = ops.model.ActiveStatus("fakestatus")
+
+    e.harness.update_config({"role": role})
+    e.harness.set_leader(is_leader)
+    e.harness.begin_with_initial_hooks()
+
+    e.harness.charm._state.joined = has_joined
+    e.microk8s.configure_rbac.reset_mock()
+
+    # only the leader control plane unit enables
+    e.harness.update_config({"rbac": True})
+    if role != "worker" and has_joined:
+        e.microk8s.configure_rbac.assert_called_once_with(True)
+    else:
+        e.microk8s.configure_rbac.assert_not_called()
+
+    # only the leader control plane unit disables
+    e.microk8s.configure_rbac.reset_mock()
+    e.harness.update_config({"rbac": False})
+    if role != "worker" and has_joined:
+        e.microk8s.configure_rbac.assert_called_once_with(False)
+    else:
+        e.microk8s.configure_rbac.assert_not_called()

@@ -7,6 +7,8 @@ import logging
 
 import config
 import pytest
+from conftest import run_unit
+from juju.unit import Unit
 from pytest_operator.plugin import OpsTest
 
 LOG = logging.getLogger(__name__)
@@ -33,6 +35,33 @@ async def test_microk8s_cluster(e: OpsTest, series: str, cp_units: int, worker_u
             constraints=config.MK8S_CONSTRAINTS,
         )
     )
+
+    await e.model.wait_for_idle([application_name], timeout=60 * 60)
+
+    u: Unit = e.model.applications[application_name].units[0]
+
+    # When rbac is not enabled, we can't query for `system:node` cluster    role
+    rc, stdout, stderr = await run_unit(u, "microk8s kubectl get clusterrole system:node")
+    LOG.info("RBAC output %s", (rc, stdout, stderr))
+    assert rc == 1
+
+    await e.model.wait_for_idle([application_name], timeout=60 * 60)
+
+    # When rbac is enabled via configs, we can get `system:node` clusterrole successfully
+    await e.model.applications[application_name].set_config(
+        config={"rbac": "true"},
+    )
+
+    await e.model.wait_for_idle([application_name], timeout=60 * 60)
+
+    rc, stdout, stderr = await run_unit(u, "microk8s status -w")
+    LOG.info("MicroK8s status output %s", (rc, stdout, stderr))
+
+    rc, stdout, stderr = await run_unit(u, "microk8s kubectl get clusterrole system:node")
+    LOG.info("RBAC output %s", (rc, stdout, stderr))
+    assert rc == 0
+
+    await e.model.wait_for_idle([application_name], timeout=60 * 60)
 
     if worker_units > 0:
         apps.append(

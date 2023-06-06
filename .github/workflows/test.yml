@@ -34,7 +34,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: build
     strategy:
-      fail-fast: true
+      # fail-fast: true
       matrix:
         control_plane: [1, 3]
         workers: [1]

@@ -121,3 +121,7 @@ options:
     description: Allow hostpath storage provisioner on the cluster
     default: false
     type: boolean
+  rbac:
+    description: Enable Role-based access control (RBAC) authorization on the cluster
+    default: false
+    type: boolean

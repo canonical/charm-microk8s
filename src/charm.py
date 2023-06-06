@@ -68,12 +68,12 @@ class MicroK8sCharm(CharmBase):
             self.framework.observe(self.on.config_changed, self.config_containerd_proxy)
             self.framework.observe(self.on.config_changed, self.config_containerd_registries)
             self.framework.observe(self.on.config_changed, self.update_status)
-            self.framework.observe(self.on.control_plane_relation_joined, self.on_install)
-            self.framework.observe(self.on.control_plane_relation_joined, self.announce_hostname)
-            self.framework.observe(self.on.control_plane_relation_changed, self.join_cluster)
-            self.framework.observe(self.on.control_plane_relation_changed, self.update_status)
-            self.framework.observe(self.on.control_plane_relation_broken, self.leave_cluster)
-            self.framework.observe(self.on.control_plane_relation_broken, self.update_status)
+            self.framework.observe(self.on.microk8s_relation_joined, self.on_install)
+            self.framework.observe(self.on.microk8s_relation_joined, self.announce_hostname)
+            self.framework.observe(self.on.microk8s_relation_changed, self.join_cluster)
+            self.framework.observe(self.on.microk8s_relation_changed, self.update_status)
+            self.framework.observe(self.on.microk8s_relation_broken, self.leave_cluster)
+            self.framework.observe(self.on.microk8s_relation_broken, self.update_status)
         else:
             self.framework.observe(self.on.remove, self.on_remove)
             self.framework.observe(self.on.upgrade_charm, self.on_upgrade)
@@ -88,6 +88,7 @@ class MicroK8sCharm(CharmBase):
             self.framework.observe(self.on.config_changed, self.config_hostpath_storage)
             self.framework.observe(self.on.config_changed, self.config_certificate_reissue)
             self.framework.observe(self.on.config_changed, self.config_extra_sans)
+            self.framework.observe(self.on.config_changed, self.config_rbac)
             self.framework.observe(self.on.config_changed, self.update_status)
             self.framework.observe(self.on.peer_relation_joined, self.add_node)
             self.framework.observe(self.on.peer_relation_joined, self.announce_hostname)
@@ -104,11 +105,17 @@ class MicroK8sCharm(CharmBase):
             self.framework.observe(self.on.peer_relation_departed, self.update_status)
             self.framework.observe(self.on.leader_elected, self.remove_departed_nodes)
             self.framework.observe(self.on.leader_elected, self.update_status)
-            self.framework.observe(self.on.workers_relation_joined, self.add_node)
-            self.framework.observe(self.on.workers_relation_changed, self.record_hostnames)
-            self.framework.observe(self.on.workers_relation_departed, self.on_relation_departed)
-            self.framework.observe(self.on.workers_relation_departed, self.remove_departed_nodes)
-            self.framework.observe(self.on.workers_relation_departed, self.update_status)
+            self.framework.observe(self.on.microk8s_provides_relation_joined, self.add_node)
+            self.framework.observe(
+                self.on.microk8s_provides_relation_changed, self.record_hostnames
+            )
+            self.framework.observe(
+                self.on.microk8s_provides_relation_departed, self.on_relation_departed
+            )
+            self.framework.observe(
+                self.on.microk8s_provides_relation_departed, self.remove_departed_nodes
+            )
+            self.framework.observe(self.on.microk8s_provides_relation_departed, self.update_status)
 
     def on_remove(self, _: RemoveEvent):
         try:
@@ -168,6 +175,15 @@ class MicroK8sCharm(CharmBase):
             self.unit.status = BlockedStatus(
                 "failed to apply containerd_custom_registries, check logs for details"
             )
+
+    def config_rbac(self, _: ConfigChangedEvent):
+        if isinstance(self.unit.status, BlockedStatus):
+            return
+
+        if self._state.joined:
+            LOG.info("Ensure RBAC mode is %s", self.config["rbac"])
+            microk8s.wait_ready()
+            microk8s.configure_rbac(self.config["rbac"])
 
     def config_hostpath_storage(self, _: ConfigChangedEvent):
         if isinstance(self.unit.status, BlockedStatus):
