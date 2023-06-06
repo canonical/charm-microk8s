@@ -173,6 +173,7 @@ def test_follower_retrieve_join_url(e: Environment):
     e.microk8s.join.assert_called_once_with("fakejoinurl", False)
     e.microk8s.wait_ready.assert_called_once_with()
     e.microk8s.get_unit_status.assert_called_once_with("fakehostname")
+    e.microk8s.disable_cert_reissue.assert_called_once()
 
     assert e.harness.charm.unit.status == ops.model.ActiveStatus("fakestatus")
     assert e.harness.charm._state.joined
