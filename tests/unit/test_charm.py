@@ -10,19 +10,12 @@ from ops.model import BlockedStatus, WaitingStatus
 
 
 @pytest.mark.parametrize("role", ["worker", "control-plane", ""])
-@pytest.mark.parametrize(
-    "channel, command",
-    [
-        ("", ["snap", "install", "microk8s", "--classic"]),
-        ("1.27/stable", ["snap", "install", "microk8s", "--classic", "--channel", "1.27/stable"]),
-        ("1.27-strict", ["snap", "install", "microk8s", "--classic", "--channel", "1.27-strict"]),
-    ],
-)
-def test_install_channel(role, channel, command, e: Environment):
-    e.harness.update_config({"role": role, "channel": channel})
+def test_install_channel(role, e: Environment):
+    e.harness.update_config({"role": role, "channel": "fakechannel"})
     e.harness.begin_with_initial_hooks()
 
-    e.check_call.assert_any_call(command)
+    e.util.install_required_packages.assert_called_once()
+    e.microk8s.install.assert_called_once_with("fakechannel")
 
 
 @pytest.mark.parametrize(
@@ -56,22 +49,21 @@ def test_block_on_role_change(e: Environment):
 
 def test_remove(e: Environment):
     e.harness.begin_with_initial_hooks()
-    e.check_call.reset_mock()
     e.harness.charm._on_remove(None)
 
-    e.check_call.assert_called_once_with(["snap", "remove", "microk8s", "--purge"])
+    e.microk8s.uninstall.assert_called_once()
 
 
 def test_update_status(e: Environment):
-    e.node_to_unit_status.return_value = ops.model.ActiveStatus("fakestatus2")
+    e.microk8s.get_unit_status.return_value = ops.model.ActiveStatus("fakestatus2")
     e.harness.begin_with_initial_hooks()
 
-    e.node_to_unit_status.assert_not_called()
+    e.microk8s.get_unit_status.assert_not_called()
 
     e.harness.charm._on_update_status(None)
-    e.node_to_unit_status.assert_not_called()
+    e.microk8s.get_unit_status.assert_not_called()
 
     e.harness.charm._state.joined = True
     e.harness.charm._on_update_status(None)
-    e.node_to_unit_status.assert_called_once_with(e.get_hostname.return_value)
+    e.microk8s.get_unit_status.assert_called_once_with(e.gethostname.return_value)
     assert e.harness.charm.unit.status == ops.model.ActiveStatus("fakestatus2")

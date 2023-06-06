@@ -16,27 +16,25 @@ class Environment:
 
     harness: ops.testing.Harness
 
-    # mocks
-    check_call: mock.MagicMock
-    get_hostname: mock.MagicMock
-    node_to_unit_status: mock.MagicMock
-    run: mock.MagicMock
+    # standard library mocks
+    gethostname: mock.MagicMock
     sleep: mock.MagicMock
-    uname: mock.MagicMock
-    urandom: mock.MagicMock
+
+    # project mocks
+    microk8s: mock.MagicMock
+    util: mock.MagicMock
 
 
 @pytest.fixture
 def e():
     harness = ops.testing.Harness(MicroK8sCharm)
     patchers = {
-        "check_call": mock.patch("subprocess.check_call"),
-        "get_hostname": mock.patch("socket.gethostname"),
-        "node_to_unit_status": mock.patch("util.node_to_unit_status"),
-        "run": mock.patch("subprocess.run"),
-        "sleep": mock.patch("time.sleep"),
-        "uname": mock.patch("os.uname"),
-        "urandom": mock.patch("os.urandom"),
+        # standard library mocks
+        "gethostname": mock.patch("socket.gethostname", autospec=True),
+        "sleep": mock.patch("time.sleep", autospec=True),
+        # project mocks
+        "microk8s": mock.patch("charm.microk8s", autospec=True),
+        "util": mock.patch("charm.util", autospec=True),
     }
 
     mocks = {}
