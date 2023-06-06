@@ -231,3 +231,16 @@ def write_local_kubeconfig():
     """write kubeconfig file for the cluster"""
     p = util.ensure_call(["microk8s", "config"], capture_output=True)
     util.ensure_file(Path("/root/.kube/config"), p.stdout.decode(), 0o600, 0, 0)
+
+
+def configure_dns(ip: str, domain: str):
+    """update kubelet dns configuration"""
+    LOG.info("Use DNS %s (domain %s)", ip, domain)
+    apply_launch_configuration(
+        {
+            "extraKubeletArgs": {
+                "--cluster-dns": ip,
+                "--cluster-domain": domain,
+            }
+        }
+    )

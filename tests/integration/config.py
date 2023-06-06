@@ -75,3 +75,11 @@ MK8S_GRAFANA_AGENT_CHARM = os.getenv("MK8S_GRAFANA_AGENT_CHARM", "ch:grafana-age
 # MK8S_GRAFANA_AGENT_CHANNEL is the CharmHub channel to use for the grafana-agent charm.
 #   - 'edge'                   <-- install charm from 'edge' channel
 MK8S_GRAFANA_AGENT_CHANNEL = os.getenv("MK8S_GRAFANA_AGENT_CHANNEL", "edge")
+
+# MK8S_COREDNS_CHARM is the core-dns charm for integration tests.
+#   - 'ch:coredns'              <-- install charm 'coredns' from CharmHub
+MK8S_COREDNS_CHARM = os.getenv("MK8S_COREDNS_CHARM", "ch:coredns")
+
+# MK8S_COREDNS_CHANNEL is the CharmHub channel to use for the core-dns charm.
+#   - 'edge'                    <-- install charm from 'edge' channel
+MK8S_COREDNS_CHANNEL = os.getenv("MK8S_COREDNS_CHANNEL", "edge")

@@ -81,6 +81,12 @@ class MicroK8sCharm(CharmBase):
             self.framework.observe(self.on.control_plane_relation_changed, self.update_status)
             self.framework.observe(self.on.control_plane_relation_broken, self.leave_cluster)
             self.framework.observe(self.on.control_plane_relation_broken, self.update_status)
+
+            # coredns integration
+            self.framework.observe(self.on.dns_relation_joined, self.config_dns)
+            self.framework.observe(self.on.dns_relation_joined, self.update_status)
+            self.framework.observe(self.on.dns_relation_changed, self.config_dns)
+            self.framework.observe(self.on.dns_relation_changed, self.update_status)
         else:
             # lifecycle
             self.framework.observe(self.on.remove, self.on_remove)
@@ -138,6 +144,12 @@ class MicroK8sCharm(CharmBase):
                 dashboard_dirs=["src/grafana_dashboards"],
                 refresh_events=[self.on.peer_relation_changed, self.on.upgrade_charm],
             )
+
+            # coredns integration
+            self.framework.observe(self.on.dns_relation_joined, self.config_dns)
+            self.framework.observe(self.on.dns_relation_joined, self.update_status)
+            self.framework.observe(self.on.dns_relation_changed, self.config_dns)
+            self.framework.observe(self.on.dns_relation_changed, self.update_status)
 
             # kubernetes-info
             self.framework.observe(self.on.kubernetes_info_relation_joined, self._k8s_info)
@@ -259,6 +271,27 @@ class MicroK8sCharm(CharmBase):
 
         if self._state.role != "worker":
             microk8s.write_local_kubeconfig()
+
+    def config_dns(self, _: Union[RelationJoinedEvent, RelationChangedEvent]):
+        if isinstance(self.unit.status, BlockedStatus):
+            return
+
+        if not self._state.joined:
+            return
+
+        dns_relation = self.model.get_relation("dns")
+        if not dns_relation:
+            return
+
+        dns_ip, dns_domain = None, None
+        for unit in dns_relation.units:
+            dns_ip = dns_ip or dns_relation.data[unit].get("sdn-ip")
+            dns_domain = dns_domain or dns_relation.data[unit].get("domain")
+        if not dns_ip or not dns_domain:
+            return
+
+        self.unit.status = MaintenanceStatus("configuring DNS")
+        microk8s.configure_dns(dns_ip, dns_domain)
 
     def record_hostnames(self, event: Union[RelationChangedEvent, RelationJoinedEvent]):
         for unit in event.relation.units:

@@ -303,3 +303,12 @@ def test_microk8s_write_local_kubeconfig(ensure_file: mock.MagicMock, ensure_cal
     ensure_file.assert_called_once_with(
         Path("/root/.kube/config"), ensure_call.return_value.stdout.decode.return_value, 0o600, 0, 0
     )
+
+
+@mock.patch("microk8s.apply_launch_configuration")
+def test_microk8s_configure_dns(apply_launch_configuration: mock.MagicMock):
+    microk8s.configure_dns("fakeip", "fakedomain")
+
+    apply_launch_configuration.assert_called_once_with(
+        {"extraKubeletArgs": {"--cluster-dns": "fakeip", "--cluster-domain": "fakedomain"}}
+    )

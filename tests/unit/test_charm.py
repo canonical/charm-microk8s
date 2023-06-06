@@ -255,3 +255,34 @@ def test_config_rbac(e: Environment, role: str, is_leader: bool, has_joined: boo
         e.microk8s.configure_rbac.assert_called_once_with(False)
     else:
         e.microk8s.configure_rbac.assert_not_called()
+
+
+@pytest.mark.parametrize("role", ["", "control-plane", "worker"])
+@pytest.mark.parametrize("is_leader", [False, True])
+@pytest.mark.parametrize("has_joined", [False, True])
+def test_relation_dns(e: Environment, role: str, is_leader: bool, has_joined: bool):
+    e.microk8s.get_unit_status.return_value = ops.model.ActiveStatus("fakestatus")
+
+    e.harness.update_config({"role": role})
+    e.harness.set_leader(is_leader)
+    e.harness.begin_with_initial_hooks()
+
+    e.harness.charm._state.joined = has_joined
+    e.microk8s.configure_dns.reset_mock()
+
+    rel_id = e.harness.add_relation("dns", "coredns")
+    e.harness.add_relation_unit(rel_id, "coredns/0")
+    e.harness.update_relation_data(rel_id, "coredns/0", {"key": "value"})
+
+    # no dns-ip and domain set yet
+    e.microk8s.configure_dns.assert_not_called()
+
+    # set dns-ip and domain, all joined units set
+    e.harness.update_relation_data(
+        rel_id, "coredns/0", {"sdn-ip": "fakeip", "domain": "fakedomain"}
+    )
+    if has_joined:
+        e.microk8s.configure_dns.assert_called_once_with("fakeip", "fakedomain")
+        assert e.harness.charm.unit.status == ops.model.ActiveStatus("fakestatus")
+    else:
+        e.microk8s.configure_dns.assert_not_called()
