@@ -1,6 +1,7 @@
 #
 # Copyright 2023 Canonical, Ltd.
 #
+from pathlib import Path
 from unittest import mock
 
 import pytest
@@ -120,6 +121,50 @@ def test_microk8s_get_unit_status(check_output: mock.MagicMock, message: str, ex
         ]
     )
     assert status == expect_status
+
+
+@mock.patch("microk8s.snap_data_dir", autospec=True)
+@mock.patch("util.ensure_file", autospec=True)
+@mock.patch("util.ensure_block", autospec=True)
+@mock.patch("util.check_call", autospec=True)
+@pytest.mark.parametrize("changed", (True, False))
+@pytest.mark.parametrize("containerd_env_contents", ("", "ulimit -n 1000"))
+def test_microk8s_set_containerd_proxy_options(
+    check_call: mock.MagicMock,
+    ensure_block: mock.MagicMock,
+    ensure_file: mock.MagicMock,
+    snap_data_dir: mock.MagicMock,
+    changed: bool,
+    containerd_env_contents: str,
+    tmp_path: Path,
+):
+    ensure_file.return_value = changed
+    snap_data_dir.return_value = tmp_path
+
+    # initial contents
+    (tmp_path / "args").mkdir()
+    (tmp_path / "args" / "containerd-env").write_text(containerd_env_contents)
+
+    # no change when empty
+    microk8s.set_containerd_proxy_options("", "", "")
+    ensure_file.assert_not_called()
+    ensure_block.assert_not_called()
+    check_call.assert_not_called()
+
+    # change config and restart service if something changed
+    microk8s.set_containerd_proxy_options("fake1", "fake2", "no-proxy")
+    ensure_block.assert_called_once_with(
+        containerd_env_contents,
+        "http_proxy=fake1\nhttps_proxy=fake2\nno_proxy=no-proxy",
+        "{mark} managed by microk8s charm",
+    )
+    ensure_file.assert_called_once_with(
+        tmp_path / "args" / "containerd-env", ensure_block.return_value, 0o600, 0, 0
+    )
+    if changed:
+        check_call.assert_called_once_with(["snap", "restart", "microk8s.daemon-containerd"])
+    else:
+        check_call.assert_not_called()
 
 
 @mock.patch("microk8s.snap_data_dir")

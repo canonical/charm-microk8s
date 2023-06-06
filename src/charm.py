@@ -163,6 +163,12 @@ class MicroK8sCharm(CharmBase):
         if not self._state.installed:
             self._on_install(None)
 
+        microk8s.set_containerd_proxy_options(
+            self.config["containerd_http_proxy"],
+            self.config["containerd_https_proxy"],
+            self.config["containerd_no_proxy"],
+        )
+
         if self._state.joined and self.unit.is_leader():
             remove_nodes = self._get_peer_data("remove_nodes", [])
 

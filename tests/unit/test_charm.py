@@ -23,6 +23,9 @@ def test_install(role, e: Environment):
 
     e.util.install_required_packages.assert_called_once_with()
     e.microk8s.install.assert_called_once_with()
+    e.microk8s.set_containerd_proxy_options.assert_called_once_with(
+        "fakehttpproxy", "fakehttpsproxy", "fakenoproxy"
+    )
 
 
 @pytest.mark.parametrize(

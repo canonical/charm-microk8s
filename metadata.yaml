@@ -26,6 +26,9 @@ provides:
   microk8s-provides:
     interface: microk8s-info
     scope: global
+  microk8s-addons:
+    interface: microk8s-addons
+    scope: container
 
 requires:
   microk8s:

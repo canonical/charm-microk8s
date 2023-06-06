@@ -16,6 +16,29 @@ options:
       to go into error state until the change is reverted.
     default: ""
     type: string
+  containerd_http_proxy:
+    description: |
+      Set an HTTP proxy to be used by containerd to pull images from image registries. This is
+      useful when deploying the charm on a constrained environment.
+
+      Example: "http://squid.internal:3128"
+    default: ""
+    type: string
+  containerd_https_proxy:
+    description: |
+      Set an HTTPS proxy to be used by containerd to pull images from image registries. This is
+      useful when deploying the charm on a constrained environment.
+
+      Example: "http://squid.internal:3128"
+    default: ""
+    type: string
+  containerd_no_proxy:
+    description: |
+      When configuring an HTTP/HTTPS proxy for containerd, specify the list of IP ranges to exclude.
+
+      Example: "127.0.0.1,10.0.0.0/8,192.168.0.0/16,172.16.0.0/12"
+    default: ""
+    type: string
   automatic_certificate_reissue:
     description: |
       By default, MicroK8s will automatically regenerate server certificates when the IP address

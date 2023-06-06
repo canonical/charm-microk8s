@@ -4,9 +4,9 @@
 import json
 import logging
 import os
+import shlex
 import subprocess
 from pathlib import Path
-from typing import Optional
 
 from ops.model import ActiveStatus, MaintenanceStatus, WaitingStatus
 
@@ -86,8 +86,8 @@ def get_unit_status(hostname: str):
         # use the kubectl binary with the kubelet config directly
         output = subprocess.check_output(
             [
-                f"{SNAP}/kubectl",
-                f"--kubeconfig={SNAP_DATA}/credentials/kubelet.config",
+                f"{snap_dir()}/kubectl",
+                f"--kubeconfig={snap_data_dir()}/credentials/kubelet.config",
                 "get",
                 "node",
                 hostname,
@@ -105,6 +105,34 @@ def get_unit_status(hostname: str):
     except (subprocess.CalledProcessError, json.JSONDecodeError, KeyError) as e:
         LOG.warning("could not retrieve status of node %s: %s", hostname, e)
         return MaintenanceStatus("waiting for node")
+
+
+def set_containerd_proxy_options(http_proxy: str, https_proxy: str, no_proxy: str):
+    """update containerd http proxy configuration and restart containerd if changed"""
+
+    proxy_config = []
+    if http_proxy:
+        proxy_config.append(f"http_proxy={shlex.quote(http_proxy)}")
+    if https_proxy:
+        proxy_config.append(f"https_proxy={shlex.quote(https_proxy)}")
+    if no_proxy:
+        proxy_config.append(f"no_proxy={shlex.quote(no_proxy)}")
+
+    if not proxy_config:
+        LOG.debug("No containerd proxy configuration specified")
+        return
+
+    LOG.info("Set containerd http proxy configuration %s", proxy_config)
+
+    path = snap_data_dir() / "args" / "containerd-env"
+    containerd_env = path.read_text() if path.exists() else ""
+    new_containerd_env = util.ensure_block(
+        containerd_env, "\n".join(proxy_config), "{mark} managed by microk8s charm"
+    )
+
+    if util.ensure_file(path, new_containerd_env, 0o600, 0, 0):
+        LOG.info("Restart containerd to apply environment configuration")
+        util.check_call(["snap", "restart", "microk8s.daemon-containerd"])
 
 
 def disable_cert_reissue():

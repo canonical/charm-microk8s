@@ -58,3 +58,23 @@ def ensure_file(
         os.chown(file, uid, gid)
 
     return changed
+
+
+def ensure_block(data: str, block: str, block_marker: str) -> str:
+    """return a copy of data and ensure that it contains `block`, surrounded by the specified
+    `block_marker`. `block_marker` can contain `{mark}`, which is replaced with begin and end
+    """
+
+    if block_marker:
+        marker_begin = "\n" + block_marker.replace("{mark}", "begin") + "\n"
+        marker_end = "\n" + block_marker.replace("{mark}", "end") + "\n"
+    else:
+        marker_begin, marker_end = "\n", "\n"
+
+    begin_index = data.rfind(marker_begin)
+    end_index = data.find(marker_end, begin_index + 1)
+
+    if begin_index == -1 or end_index == -1:
+        return f"{data}{marker_begin}{block}{marker_end}"
+
+    return f"{data[:begin_index]}{marker_begin}{block}{data[end_index:]}"
