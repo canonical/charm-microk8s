@@ -105,3 +105,12 @@ def get_unit_status(hostname: str):
     except (subprocess.CalledProcessError, json.JSONDecodeError, KeyError) as e:
         LOG.warning("could not retrieve status of node %s: %s", hostname, e)
         return MaintenanceStatus("waiting for node")
+
+
+def disable_cert_reissue():
+    """disable automatic cert reissue. this must never be done on nodes that have not yet joined"""
+    LOG.info("Disable automatic certificate reissue")
+
+    path = snap_data_dir() / "var" / "lock" / "no-cert-reissue"
+    if not path.exists():
+        util.ensure_file(path, "", 0o600, 0, 0)

@@ -198,7 +198,11 @@ class MicroK8sCharm(CharmBase):
 
             self.unit.status = MaintenanceStatus("joining cluster")
             microk8s.join(self._state.join_url, self.config["role"] == "worker")
+            microk8s.wait_ready()
             self._state.joined = True
+
+        if self._state.joined and not self.config["automatic_certificate_reissue"]:
+            microk8s.disable_cert_reissue()
 
         while self.unit.status.__class__ not in [ActiveStatus]:
             self.unit.status = microk8s.get_unit_status(socket.gethostname())

@@ -120,3 +120,21 @@ def test_microk8s_get_unit_status(check_output: mock.MagicMock, message: str, ex
         ]
     )
     assert status == expect_status
+
+
+@mock.patch("microk8s.snap_data_dir")
+@mock.patch("os.chown")
+@mock.patch("os.chmod")
+def test_microk8s_disable_cert_reissue(
+    chmod: mock.MagicMock, chown: mock.MagicMock, snap_data_dir: mock.MagicMock, tmp_path: Path
+):
+    snap_data_dir.return_value = tmp_path
+
+    # disable cert reissue, ensure lock file exists
+    microk8s.disable_cert_reissue()
+    chown.assert_called_once_with(tmp_path / "var" / "lock" / "no-cert-reissue", 0, 0)
+    chmod.assert_called_once_with(tmp_path / "var" / "lock" / "no-cert-reissue", 0o600)
+    assert (tmp_path / "var" / "lock" / "no-cert-reissue").exists()
+
+    microk8s.disable_cert_reissue()
+    assert (tmp_path / "var" / "lock" / "no-cert-reissue").exists()

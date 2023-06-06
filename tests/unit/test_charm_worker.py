@@ -35,11 +35,14 @@ def test_microk8s_provides_relation(e: Environment, is_leader: bool):
     unit = e.harness.charm.model.unit
     assert isinstance(unit.status, ops.model.WaitingStatus)
 
+    e.microk8s.wait_ready.reset_mock()
+
     rel_id = e.harness.add_relation("microk8s", "microk8s-cp")
     e.harness.add_relation_unit(rel_id, "microk8s-cp/0")
     e.harness.update_relation_data(rel_id, "microk8s-cp", {"join_url": "fakejoinurl"})
 
     e.microk8s.join.assert_called_once_with("fakejoinurl", True)
+    e.microk8s.wait_ready.assert_called_once_with()
     e.microk8s.get_unit_status.assert_called_once_with("fakehostname")
     assert unit.status == ops.model.ActiveStatus("fakestatus")
     assert e.harness.get_relation_data(rel_id, e.harness.charm.unit)["hostname"] == "fakehostname"
@@ -82,6 +85,9 @@ def test_microk8s_provides_relation_departed(e: Environment, is_leader: bool):
     e.harness.update_config({"role": "worker"})
     e.harness.set_leader(is_leader)
     e.harness.begin_with_initial_hooks()
+
+    e.microk8s.wait_ready.reset_mock()
+
     unit = e.harness.charm.model.unit
     assert isinstance(unit.status, ops.model.WaitingStatus)
 
@@ -91,6 +97,7 @@ def test_microk8s_provides_relation_departed(e: Environment, is_leader: bool):
     e.harness.update_relation_data(rel_id, "microk8s-cp", {"join_url": "fakejoinurl"})
 
     e.microk8s.join.assert_called_once_with("fakejoinurl", True)
+    e.microk8s.wait_ready.assert_called_once_with()
     e.microk8s.get_unit_status.assert_called_once_with("fakehostname")
     assert unit.status == ops.model.ActiveStatus("fakestatus")
     assert e.harness.get_relation_data(rel_id, e.harness.charm.unit)["hostname"] == "fakehostname"

@@ -16,3 +16,15 @@ options:
       to go into error state until the change is reverted.
     default: ""
     type: string
+  automatic_certificate_reissue:
+    description: |
+      By default, MicroK8s will automatically regenerate server certificates when the IP address
+      of the host machine changes. This is problematic in scenarios where a bridge is configured
+      on the host and IP addresses on the bridge are changed frequently.
+
+      Set this flag to false if that is the case to prevent MicroK8s from continuously restarting
+      and affecting the service.
+
+      This option is ignored and does not have any effect on multi-node clusters.
+    default: true
+    type: boolean
