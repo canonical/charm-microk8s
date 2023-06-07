@@ -207,8 +207,13 @@ class MicroK8sCharm(CharmBase):
             microk8s.wait_ready()
             self._state.joined = True
 
-        if self._state.joined and not self.config["automatic_certificate_reissue"]:
-            microk8s.disable_cert_reissue()
+        if self._state.joined and self.config["role"] != "worker":
+            if not self.config["automatic_certificate_reissue"]:
+                microk8s.disable_cert_reissue()
+
+            # parse extra_sans and configure
+            self.unit.status = MaintenanceStatus("configuring extra SANs")
+            microk8s.configure_extra_sans(self.config["extra_sans"])
 
         while self.unit.status.__class__ not in [ActiveStatus]:
             self.unit.status = microk8s.get_unit_status(socket.gethostname())

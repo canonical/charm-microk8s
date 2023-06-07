@@ -51,3 +51,25 @@ options:
       This option is ignored and does not have any effect on multi-node clusters.
     default: true
     type: boolean
+  extra_sans:
+    description: |
+      Comma-separated list of extra Subject Alternate Names that will be added to the kube-apiserver
+      certificates. This is useful in cases where the MicroK8s control plane is made accessible over
+      a floating IP or with DNS round-robin load-balancing.
+
+      The list may contain valid IP addresses or hostnames. If %UNIT_PUBLIC_ADDRESS% is in the list,
+      it will be replaced by Juju with the public address of the unit (e.g. the OpenStack floating
+      IP).
+
+      Note that the charm will not configure any DNS records or virtual IPs, these have to be setup
+      by the administrator separately.
+
+      Examples:
+
+      - ""                        # do nothing
+      - "10.10.10.10"             # add '10.10.10.10' as a SAN
+      - "k8s-1.lan"               # add 'k8s-1.lan' as a SAN
+      - "10.10.10.10,k8s-1.lan"   # add two SANs
+      - "%UNIT_PUBLIC_ADDRESS%"   # add the public unit address as a SAN
+    default: "%UNIT_PUBLIC_ADDRESS%"
+    type: string

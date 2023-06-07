@@ -1,6 +1,7 @@
 #
 # Copyright 2023 Canonical, Ltd.
 #
+import ipaddress
 import json
 import logging
 import os
@@ -11,6 +12,7 @@ from pathlib import Path
 from ops.model import ActiveStatus, MaintenanceStatus, WaitingStatus
 
 import charm_config
+import ops_helpers
 import util
 
 LOG = logging.getLogger(__name__)
@@ -142,3 +144,40 @@ def disable_cert_reissue():
     path = snap_data_dir() / "var" / "lock" / "no-cert-reissue"
     if not path.exists():
         util.ensure_file(path, "", 0o600, 0, 0)
+
+
+def configure_extra_sans(extra_sans_str: str):
+    """add a list of extra SANs that are accepted by the kube-apiserver"""
+
+    if not extra_sans_str:
+        LOG.debug("No extra SANs will be configured")
+        return
+
+    if "%UNIT_PUBLIC_ADDRESS%" in extra_sans_str:
+        extra_sans_str = extra_sans_str.replace(
+            "%UNIT_PUBLIC_ADDRESS%", ops_helpers.get_unit_public_address()
+        )
+
+    extra_sans = extra_sans_str.split(",")
+
+    LOG.info("Configuring extra SANs %s", extra_sans)
+
+    entries = ["[ alt_names ]"]
+    for idx, san in enumerate(extra_sans):
+        prefix = "IP"
+        try:
+            ipaddress.ip_address(san)
+        except ValueError:
+            prefix = "DNS"
+
+        entries.append(f"{prefix}.{idx + 1000} = {san}")
+
+    path = snap_data_dir() / "certs" / "csr.conf.template"
+    csr_conf = path.read_text() if path.exists() else ""
+    new_csr_conf = util.ensure_block(
+        csr_conf, "\n".join(entries), "# {mark} managed by microk8s charm"
+    )
+
+    if util.ensure_file(path, new_csr_conf, 0o600, 0, 0):
+        LOG.info("Refresh kube-apiserver cert for new SANs")
+        util.check_call(["microk8s", "refresh-certs", "-e", "server.crt"])
