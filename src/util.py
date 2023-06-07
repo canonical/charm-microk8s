@@ -5,6 +5,7 @@ import logging
 import os
 import shlex
 import subprocess
+import time
 from pathlib import Path
 
 LOG = logging.getLogger(__name__)
@@ -80,7 +81,9 @@ def ensure_block(data: str, block: str, block_marker: str) -> str:
     return f"{data[:begin_index]}{marker_begin}{block}{data[end_index:]}"
 
 
-def _ensure_func(f: callable, args: list, kwargs: dict, retry_on, max_retries: int = 10):
+def _ensure_func(
+    f: callable, args: list, kwargs: dict, retry_on, max_retries: int = 10, backoff: int = 2
+):
     """run a function until it does not raise one of the exceptions from retry_on"""
     for idx in range(max_retries - 1):
         try:
@@ -88,6 +91,7 @@ def _ensure_func(f: callable, args: list, kwargs: dict, retry_on, max_retries: i
             return
         except retry_on:
             LOG.exception("action not successful (try %d of %d)", idx + 1, max_retries)
+            time.sleep(backoff)
 
     # last time run unprotected and raise any exception
     f(*args, **kwargs)

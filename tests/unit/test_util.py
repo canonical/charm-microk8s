@@ -104,8 +104,9 @@ def test_ensure_block(name: str, text: str, block: str, mark: str, expected: lis
     assert util.ensure_block(text, block, mark) == expected
 
 
+@mock.patch("time.sleep")
 @mock.patch("subprocess.check_call")
-def test_ensure_call(check_call: mock.MagicMock):
+def test_ensure_call(check_call: mock.MagicMock, sleep: mock.MagicMock):
     # first time raises exception, second time succeeds
     check_call.side_effect = (subprocess.CalledProcessError(-1, "cmd"), None)
 
@@ -115,9 +116,11 @@ def test_ensure_call(check_call: mock.MagicMock):
         mock.call(["echo"], env={"KEY": "VALUE"}),
         mock.call(["echo"], env={"KEY": "VALUE"}),
     ]
+    sleep.assert_called_once_with(2)
 
 
-def test_ensure_func():
+@mock.patch("time.sleep")
+def test_ensure_func(sleep: mock.MagicMock):
     m = mock.MagicMock()
 
     args = [1, 2, 3]
@@ -126,20 +129,24 @@ def test_ensure_func():
     # other exceptions are raised
     m.side_effect = ValueError("some error")
     with pytest.raises(ValueError):
-        util._ensure_func(m, args, kwargs, retry_on=KeyError)
+        util._ensure_func(m, args, kwargs, retry_on=KeyError, backoff=20)
 
     m.assert_called_once_with(*args, **kwargs)
+    sleep.assert_not_called()
 
     # eventually succeeds (side effect raises 5 exceptions, then succeeds)
     m.reset_mock()
     m.side_effect = [ValueError("some error")] * 5 + [None]
-    util._ensure_func(m, args, kwargs, retry_on=ValueError)
+    util._ensure_func(m, args, kwargs, retry_on=ValueError, backoff=20)
     assert m.mock_calls == [mock.call(*args, **kwargs)] * 6
+    assert sleep.mock_calls == [mock.call(20)] * 5
 
     # exception is raised after max_retries
+    sleep.reset_mock()
     m.reset_mock()
     m.side_effect = [ValueError("some error")] * 5
     with pytest.raises(ValueError):
-        util._ensure_func(m, args, kwargs, retry_on=ValueError, max_retries=3)
+        util._ensure_func(m, args, kwargs, retry_on=ValueError, max_retries=3, backoff=20)
 
     assert m.mock_calls == [mock.call(*args, **kwargs)] * 3
+    assert sleep.mock_calls == [mock.call(20)] * 2
