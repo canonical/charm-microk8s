@@ -11,15 +11,15 @@ import charm_config
 import microk8s
 
 
-@mock.patch("subprocess.check_call")
-def test_microk8s_install(check_call: mock.MagicMock):
+@mock.patch("util.ensure_call")
+def test_microk8s_install(ensure_call: mock.MagicMock):
     microk8s.install()
-    check_call.assert_called_once_with(
+    ensure_call.assert_called_once_with(
         ["snap", "install", "microk8s", "--classic", "--channel", charm_config.SNAP_CHANNEL]
     )
 
 
-@mock.patch("subprocess.check_call")
+@mock.patch("util.check_call")
 def test_microk8s_upgrade(check_call: mock.MagicMock):
     microk8s.upgrade()
     check_call.assert_called_once_with(
@@ -27,45 +27,45 @@ def test_microk8s_upgrade(check_call: mock.MagicMock):
     )
 
 
-@mock.patch("subprocess.check_call")
-def test_microk8s_uninstall(check_call: mock.MagicMock):
+@mock.patch("util.ensure_call")
+def test_microk8s_uninstall(ensure_call: mock.MagicMock):
     microk8s.uninstall()
-    check_call.assert_called_once_with(["snap", "remove", "microk8s", "--purge"])
+    ensure_call.assert_called_once_with(["snap", "remove", "microk8s", "--purge"])
 
 
-@mock.patch("subprocess.check_call")
-def test_microk8s_wait_ready(check_call: mock.MagicMock):
+@mock.patch("util.ensure_call")
+def test_microk8s_wait_ready(ensure_call: mock.MagicMock):
     microk8s.wait_ready(timeout=5)
-    check_call.assert_called_once_with(["microk8s", "status", "--wait-ready", "--timeout=5"])
+    ensure_call.assert_called_once_with(["microk8s", "status", "--wait-ready", "--timeout=5"])
 
 
-@mock.patch("subprocess.check_call")
-def test_microk8s_remove_node(check_call: mock.MagicMock):
+@mock.patch("util.ensure_call")
+def test_microk8s_remove_node(ensure_call: mock.MagicMock):
     microk8s.remove_node("node-1")
-    check_call.assert_called_once_with(["microk8s", "remove-node", "node-1", "--force"])
+    ensure_call.assert_called_once_with(["microk8s", "remove-node", "node-1", "--force"])
 
 
-@mock.patch("subprocess.check_call")
-def test_microk8s_join(check_call: mock.MagicMock):
+@mock.patch("util.ensure_call")
+def test_microk8s_join(ensure_call: mock.MagicMock):
     join_url = "10.10.10.10:25000/01010101010101010101010101010101"
 
     microk8s.join(join_url, False)
-    check_call.assert_called_once_with(["microk8s", "join", join_url])
-    check_call.reset_mock()
+    ensure_call.assert_called_once_with(["microk8s", "join", join_url])
+    ensure_call.reset_mock()
 
     microk8s.join(join_url, True)
-    check_call.assert_called_once_with(["microk8s", "join", join_url, "--worker"])
+    ensure_call.assert_called_once_with(["microk8s", "join", join_url, "--worker"])
 
 
-@mock.patch("subprocess.check_call")
+@mock.patch("util.ensure_call")
 @mock.patch("os.urandom")
-def test_microk8s_add_node(urandom: mock.MagicMock, check_call: mock.MagicMock):
+def test_microk8s_add_node(urandom: mock.MagicMock, ensure_call: mock.MagicMock):
     urandom.return_value = b"\x01" * 16
 
     token = microk8s.add_node()
     assert token == "01010101010101010101010101010101"
     urandom.assert_called_once_with(16)
-    check_call.assert_called_once_with(
+    ensure_call.assert_called_once_with(
         ["microk8s", "add-node", "--token", token, "--token-ttl", "7200"]
     )
 
@@ -126,11 +126,11 @@ def test_microk8s_get_unit_status(check_output: mock.MagicMock, message: str, ex
 @mock.patch("microk8s.snap_data_dir", autospec=True)
 @mock.patch("util.ensure_file", autospec=True)
 @mock.patch("util.ensure_block", autospec=True)
-@mock.patch("util.check_call", autospec=True)
+@mock.patch("util.ensure_call", autospec=True)
 @pytest.mark.parametrize("changed", (True, False))
 @pytest.mark.parametrize("containerd_env_contents", ("", "ulimit -n 1000"))
 def test_microk8s_set_containerd_proxy_options(
-    check_call: mock.MagicMock,
+    ensure_call: mock.MagicMock,
     ensure_block: mock.MagicMock,
     ensure_file: mock.MagicMock,
     snap_data_dir: mock.MagicMock,
@@ -149,7 +149,7 @@ def test_microk8s_set_containerd_proxy_options(
     microk8s.set_containerd_proxy_options("", "", "")
     ensure_file.assert_not_called()
     ensure_block.assert_not_called()
-    check_call.assert_not_called()
+    ensure_call.assert_not_called()
 
     # change config and restart service if something changed
     microk8s.set_containerd_proxy_options("fake1", "fake2", "no-proxy")
@@ -162,9 +162,9 @@ def test_microk8s_set_containerd_proxy_options(
         tmp_path / "args" / "containerd-env", ensure_block.return_value, 0o600, 0, 0
     )
     if changed:
-        check_call.assert_called_once_with(["snap", "restart", "microk8s.daemon-containerd"])
+        ensure_call.assert_called_once_with(["snap", "restart", "microk8s.daemon-containerd"])
     else:
-        check_call.assert_not_called()
+        ensure_call.assert_not_called()
 
 
 @mock.patch("microk8s.snap_data_dir")
@@ -188,12 +188,12 @@ def test_microk8s_disable_cert_reissue(
 @mock.patch("microk8s.snap_data_dir", autospec=True)
 @mock.patch("util.ensure_file", autospec=True)
 @mock.patch("util.ensure_block", autospec=True)
-@mock.patch("util.check_call", autospec=True)
+@mock.patch("util.ensure_call", autospec=True)
 @mock.patch("ops_helpers.get_unit_public_address", autospec=True)
 @pytest.mark.parametrize("changed", (True, False))
 def test_microk8s_configure_extra_sans(
     get_unit_public_address: mock.MagicMock,
-    check_call: mock.MagicMock,
+    ensure_call: mock.MagicMock,
     ensure_block: mock.MagicMock,
     ensure_file: mock.MagicMock,
     snap_data_dir: mock.MagicMock,
@@ -208,7 +208,7 @@ def test_microk8s_configure_extra_sans(
     microk8s.configure_extra_sans([])
     ensure_file.assert_not_called()
     ensure_block.assert_not_called()
-    check_call.assert_not_called()
+    ensure_call.assert_not_called()
     get_unit_public_address.assert_not_called()
 
     # change config and restart service if something changed
@@ -224,9 +224,9 @@ def test_microk8s_configure_extra_sans(
         tmp_path / "certs" / "csr.conf.template", ensure_block.return_value, 0o600, 0, 0
     )
     if changed:
-        check_call.assert_called_once_with(["microk8s", "refresh-certs", "-e", "server.crt"])
+        ensure_call.assert_called_once_with(["microk8s", "refresh-certs", "-e", "server.crt"])
     else:
-        check_call.assert_not_called()
+        ensure_call.assert_not_called()
 
     ensure_block.reset_mock()
 

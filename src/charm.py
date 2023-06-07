@@ -7,7 +7,6 @@ import json
 import logging
 import socket
 import subprocess
-import time
 from typing import Any, Union
 
 from ops import CharmBase, main
@@ -111,7 +110,7 @@ class MicroK8sCharm(CharmBase):
             remove_nodes.append(remove_hostname)
             self._set_peer_data("remove_nodes", remove_nodes)
 
-        self._on_config_changed(None)
+        self.on.config_changed.emit()
 
     def _worker_open_ports(self, _: InstallEvent):
         self.unit.open_port("tcp", 80)
@@ -154,7 +153,7 @@ class MicroK8sCharm(CharmBase):
         if not self._state.join_url and self.unit.is_leader():
             self._state.joined = True
 
-    def _on_config_changed(self, _: Union[ConfigChangedEvent, LeaderElectedEvent]):
+    def _on_config_changed(self, event: Union[ConfigChangedEvent, LeaderElectedEvent]):
         if self.config["role"] != self._state.role:
             msg = f"role cannot change from '{self._state.role}' after deployment"
             self.unit.status = BlockedStatus(msg)
@@ -215,9 +214,9 @@ class MicroK8sCharm(CharmBase):
             self.unit.status = MaintenanceStatus("configuring extra SANs")
             microk8s.configure_extra_sans(self.config["extra_sans"])
 
-        while self.unit.status.__class__ not in [ActiveStatus]:
-            self.unit.status = microk8s.get_unit_status(socket.gethostname())
-            time.sleep(5)
+        self.unit.status = microk8s.get_unit_status(socket.gethostname())
+        if self.unit.status.__class__ != ActiveStatus:
+            event.defer()
 
     def _on_update_status(self, _: UpdateStatusEvent):
         if self._state.joined:
@@ -237,12 +236,12 @@ class MicroK8sCharm(CharmBase):
             return
 
         self._state.join_url = join_url
-        self._on_config_changed(None)
+        self.on.config_changed.emit()
 
     def _on_relation_broken(self, _: RelationBrokenEvent):
         self._state.leaving = True
         LOG.info("Leaving the cluster")
-        self._on_config_changed(None)
+        self.on.config_changed.emit()
 
     def _add_token(self, event: RelationJoinedEvent):
         if not self.unit.is_leader():
@@ -257,7 +256,7 @@ class MicroK8sCharm(CharmBase):
 
     def _on_upgrade(self, _: UpgradeCharmEvent):
         microk8s.upgrade()
-        self._on_config_changed(None)
+        self.on.config_changed.emit()
 
 
 if __name__ == "__main__":  # pragma: nocover

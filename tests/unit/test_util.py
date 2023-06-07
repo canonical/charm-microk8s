@@ -102,3 +102,44 @@ def test_ensure_file(chmod: mock.MagicMock, chown: mock.MagicMock, tmp_path: Pat
 def test_ensure_block(name: str, text: str, block: str, mark: str, expected: list):
     _ = name
     assert util.ensure_block(text, block, mark) == expected
+
+
+@mock.patch("subprocess.check_call")
+def test_ensure_call(check_call: mock.MagicMock):
+    # first time raises exception, second time succeeds
+    check_call.side_effect = (subprocess.CalledProcessError(-1, "cmd"), None)
+
+    util.ensure_call(["echo"], env={"KEY": "VALUE"})
+
+    assert check_call.mock_calls == [
+        mock.call(["echo"], env={"KEY": "VALUE"}),
+        mock.call(["echo"], env={"KEY": "VALUE"}),
+    ]
+
+
+def test_ensure_func():
+    m = mock.MagicMock()
+
+    args = [1, 2, 3]
+    kwargs = {"key": "value"}
+
+    # other exceptions are raised
+    m.side_effect = ValueError("some error")
+    with pytest.raises(ValueError):
+        util._ensure_func(m, args, kwargs, retry_on=KeyError)
+
+    m.assert_called_once_with(*args, **kwargs)
+
+    # eventually succeeds (side effect raises 5 exceptions, then succeeds)
+    m.reset_mock()
+    m.side_effect = [ValueError("some error")] * 5 + [None]
+    util._ensure_func(m, args, kwargs, retry_on=ValueError)
+    assert m.mock_calls == [mock.call(*args, **kwargs)] * 6
+
+    # exception is raised after max_retries
+    m.reset_mock()
+    m.side_effect = [ValueError("some error")] * 5
+    with pytest.raises(ValueError):
+        util._ensure_func(m, args, kwargs, retry_on=ValueError, max_retries=3)
+
+    assert m.mock_calls == [mock.call(*args, **kwargs)] * 3

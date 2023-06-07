@@ -18,7 +18,6 @@ class Environment:
 
     # standard library mocks
     gethostname: mock.MagicMock
-    sleep: mock.MagicMock
 
     # project mocks
     microk8s: mock.MagicMock
@@ -31,7 +30,6 @@ def e():
     patchers = {
         # standard library mocks
         "gethostname": mock.patch("socket.gethostname", autospec=True),
-        "sleep": mock.patch("time.sleep", autospec=True),
         # project mocks
         "microk8s": mock.patch("charm.microk8s", autospec=True),
         "util": mock.patch("charm.util", autospec=True),

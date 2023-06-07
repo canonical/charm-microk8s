@@ -78,3 +78,21 @@ def ensure_block(data: str, block: str, block_marker: str) -> str:
         return f"{data}{marker_begin}{block}{marker_end}"
 
     return f"{data[:begin_index]}{marker_begin}{block}{data[end_index:]}"
+
+
+def _ensure_func(f: callable, args: list, kwargs: dict, retry_on, max_retries: int = 10):
+    """run a function until it does not raise one of the exceptions from retry_on"""
+    for idx in range(max_retries - 1):
+        try:
+            f(*args, **kwargs)
+            return
+        except retry_on:
+            LOG.exception("action not successful (try %d of %d)", idx + 1, max_retries)
+
+    # last time run unprotected and raise any exception
+    f(*args, **kwargs)
+
+
+def ensure_call(*args, **kwargs):
+    """repeatedly run a command until it succeeds. any args are passed to subprocess.check_call"""
+    return _ensure_func(check_call, args, kwargs, subprocess.CalledProcessError)

@@ -31,7 +31,7 @@ def install():
     LOG.info("Installing MicroK8s (channel %s)", charm_config.SNAP_CHANNEL)
     cmd = ["snap", "install", "microk8s", "--classic", "--channel", charm_config.SNAP_CHANNEL]
 
-    util.check_call(cmd)
+    util.ensure_call(cmd)
 
 
 def upgrade():
@@ -45,19 +45,19 @@ def upgrade():
 def wait_ready(timeout: int = 30):
     """`microk8s status --wait-ready`"""
     LOG.info("Wait for MicroK8s to become ready")
-    util.check_call(["microk8s", "status", "--wait-ready", f"--timeout={timeout}"])
+    util.ensure_call(["microk8s", "status", "--wait-ready", f"--timeout={timeout}"])
 
 
 def uninstall():
     """`snap remove microk8s --purge`"""
     LOG.info("Uninstall MicroK8s")
-    util.check_call(["snap", "remove", "microk8s", "--purge"])
+    util.ensure_call(["snap", "remove", "microk8s", "--purge"])
 
 
 def remove_node(hostname: str):
     """`microk8s remove-node --force`"""
     LOG.info("Removing node %s from cluster", hostname)
-    util.check_call(["microk8s", "remove-node", hostname, "--force"])
+    util.ensure_call(["microk8s", "remove-node", hostname, "--force"])
 
 
 def join(join_url: str, worker: bool):
@@ -67,14 +67,14 @@ def join(join_url: str, worker: bool):
     if worker:
         cmd.append("--worker")
 
-    util.check_call(cmd)
+    util.ensure_call(cmd)
 
 
 def add_node() -> str:
     """`microk8s add-node` and return join token"""
     LOG.info("Generating token for new node")
     token = os.urandom(16).hex()
-    util.check_call(["microk8s", "add-node", "--token", token, "--token-ttl", "7200"])
+    util.ensure_call(["microk8s", "add-node", "--token", token, "--token-ttl", "7200"])
     return token
 
 
@@ -130,7 +130,7 @@ def set_containerd_proxy_options(http_proxy: str, https_proxy: str, no_proxy: st
 
     if util.ensure_file(path, new_containerd_env, 0o600, 0, 0):
         LOG.info("Restart containerd to apply environment configuration")
-        util.check_call(["snap", "restart", "microk8s.daemon-containerd"])
+        util.ensure_call(["snap", "restart", "microk8s.daemon-containerd"])
 
 
 def disable_cert_reissue():
@@ -156,8 +156,6 @@ def configure_extra_sans(extra_sans_str: str):
 
     extra_sans = extra_sans_str.split(",")
 
-    LOG.info("Configuring extra SANs %s", extra_sans)
-
     entries = ["[ alt_names ]"]
     for idx, san in enumerate(extra_sans):
         prefix = "IP"
@@ -175,5 +173,5 @@ def configure_extra_sans(extra_sans_str: str):
     )
 
     if util.ensure_file(path, new_csr_conf, 0o600, 0, 0):
-        LOG.info("Refresh kube-apiserver cert for new SANs")
-        util.check_call(["microk8s", "refresh-certs", "-e", "server.crt"])
+        LOG.info("Update kube-apiserver certificate with extra SANs %s", extra_sans)
+        util.ensure_call(["microk8s", "refresh-certs", "-e", "server.crt"])
