@@ -30,7 +30,7 @@ jobs:
           path: ./microk8s.charm
 
   test:
-    name: Test
+    name: Test - ${{ matrix.control_plane}}cp${{ matrix.workers}}w - ${{ matrix.series }} - juju ${{ matrix.juju }}
     runs-on: ubuntu-latest
     needs: build
     strategy:
@@ -79,5 +79,5 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v3.1.2
         with:
-          name: logs-${{ matrix.series }}-juju${{ matrix.juju }}-${{ matrix.control_plane }}c${{ matrix.workers }}w
+          name: logs - ${{ matrix.control_plane}}cp${{ matrix.workers}}w - ${{ matrix.series }} - juju ${{ matrix.juju }}
           path: artifacts/
