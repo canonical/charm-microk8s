@@ -7,7 +7,6 @@ import json
 import logging
 import socket
 import subprocess
-import time
 from typing import Any, Union
 
 from charms.grafana_agent.v0.cos_agent import COSAgentProvider
