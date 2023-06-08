@@ -1,11 +1,12 @@
-name: cla-check
+name: CLA
 
 on:
   pull_request:
     branches: [master, default]
 
 jobs:
-  cla-check:
+  check:
+    name: Check
     runs-on: ubuntu-latest
     steps:
       - name: Check if CLA signed

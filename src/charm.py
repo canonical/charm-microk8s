@@ -210,7 +210,6 @@ class MicroK8sCharm(CharmBase):
             if not self.config["automatic_certificate_reissue"]:
                 microk8s.disable_cert_reissue()
 
-            # parse extra_sans and configure
             self.unit.status = MaintenanceStatus("configuring extra SANs")
             microk8s.configure_extra_sans(self.config["extra_sans"])
 

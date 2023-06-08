@@ -19,10 +19,10 @@ def test_microk8s_install(ensure_call: mock.MagicMock):
     )
 
 
-@mock.patch("util.check_call")
-def test_microk8s_upgrade(check_call: mock.MagicMock):
+@mock.patch("util.ensure_call")
+def test_microk8s_upgrade(ensure_call: mock.MagicMock):
     microk8s.upgrade()
-    check_call.assert_called_once_with(
+    ensure_call.assert_called_once_with(
         ["snap", "refresh", "microk8s", "--channel", charm_config.SNAP_CHANNEL]
     )
 

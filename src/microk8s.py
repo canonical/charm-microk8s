@@ -36,10 +36,10 @@ def install():
 
 def upgrade():
     """upgrade microk8s to charm version"""
-    LOG.info("Upgrade MicroK8s (channel %s)", charm_config.SNAP_CHANNEL)
+    LOG.info("Upgrade MicroK8s (channel %s)", charm_config.SNAP_CHANNEL or "default")
     cmd = ["snap", "refresh", "microk8s", "--channel", charm_config.SNAP_CHANNEL]
 
-    util.check_call(cmd)
+    util.ensure_call(cmd)
 
 
 def wait_ready(timeout: int = 30):
