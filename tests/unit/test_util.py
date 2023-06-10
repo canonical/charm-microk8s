@@ -49,10 +49,10 @@ def test_ensure_file(chmod: mock.MagicMock, chown: mock.MagicMock, tmp_path: Pat
     chown.assert_not_called()
 
     # test create file
-    changed = util.ensure_file(tmp_path / "file", "faketext", 0o400, 0, 1000)
+    changed = util.ensure_file(tmp_path / "file", "faketext", 0o600, 0, 1000)
     assert Path(tmp_path / "file").read_text() == "faketext", "failed to write file"
     assert changed, "creating a file that does not exist previously should return True"
-    chmod.assert_called_with(tmp_path / "file", 0o400)
+    chmod.assert_called_with(tmp_path / "file", 0o600)
     chown.assert_called_with(tmp_path / "file", 0, 1000)
 
     # test overwrite file with same contents
@@ -61,7 +61,7 @@ def test_ensure_file(chmod: mock.MagicMock, chown: mock.MagicMock, tmp_path: Pat
     assert not changed, "file must not have changed"
 
     # test overwrite file with new contents
-    changed = util.ensure_file(tmp_path / "file", "faketext2", 0o400, 1000, 1000)
+    changed = util.ensure_file(tmp_path / "file", "faketext2", 0o600, 1000, 1000)
     assert Path(tmp_path / "file").read_text() == "faketext2", "contents should change"
     assert changed, "file must have changed"
 

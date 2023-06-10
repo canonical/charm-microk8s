@@ -129,3 +129,47 @@ def test_charm_upgrade(e: Environment, role: str):
     e.harness.charm.on.upgrade_charm.emit()
 
     e.microk8s.upgrade.assert_called_once()
+
+
+@pytest.mark.parametrize("role", ["", "control-plane"])
+@pytest.mark.parametrize("has_joined", [False, True])
+def test_config_containerd_custom_registries(e: Environment, role: str, has_joined: bool):
+    e.microk8s.get_unit_status.return_value = ops.model.ActiveStatus("fakestatus")
+
+    e.harness.update_config({"role": role, "containerd_custom_registries": "[]"})
+    e.harness.set_leader(has_joined)
+    e.harness.begin_with_initial_hooks()
+
+    e.harness.charm._state.joined = has_joined
+
+    e.containerd.parse_registries.assert_called()
+    e.containerd.ensure_registry_configs.assert_called()
+
+    # normal operation
+    e.containerd.parse_registries.reset_mock()
+    e.containerd.ensure_registry_configs.reset_mock()
+
+    e.harness.update_config({"containerd_custom_registries": "fakeval"})
+    e.containerd.parse_registries.assert_called_once_with("fakeval")
+    e.containerd.ensure_registry_configs.assert_called_once_with(
+        e.containerd.parse_registries.return_value
+    )
+
+    # no configuration
+    e.containerd.parse_registries.reset_mock()
+    e.containerd.ensure_registry_configs.reset_mock()
+    e.containerd.parse_registries.return_value = []
+
+    e.harness.update_config({"containerd_custom_registries": "fakeval2"})
+    e.containerd.parse_registries.assert_called_once_with("fakeval2")
+    e.containerd.ensure_registry_configs.assert_not_called()
+
+    # exception
+    e.containerd.parse_registries.reset_mock()
+    e.containerd.ensure_registry_configs.reset_mock()
+
+    e.containerd.parse_registries.side_effect = [ValueError("fake error")]
+
+    e.harness.update_config({"containerd_custom_registries": "fakeval"})
+    e.containerd.parse_registries.assert_called_once_with("fakeval")
+    assert e.harness.charm.unit.status.__class__ == BlockedStatus

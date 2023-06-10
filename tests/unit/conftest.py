@@ -20,6 +20,7 @@ class Environment:
     gethostname: mock.MagicMock
 
     # project mocks
+    containerd: mock.MagicMock
     microk8s: mock.MagicMock
     util: mock.MagicMock
 
@@ -31,6 +32,7 @@ def e():
         # standard library mocks
         "gethostname": mock.patch("socket.gethostname", autospec=True),
         # project mocks
+        "containerd": mock.patch("charm.containerd", autospec=True),
         "microk8s": mock.patch("charm.microk8s", autospec=True),
         "util": mock.patch("charm.util", autospec=True),
     }

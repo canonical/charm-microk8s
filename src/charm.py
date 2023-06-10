@@ -25,6 +25,7 @@ from ops.charm import (
 from ops.framework import StoredState
 from ops.model import ActiveStatus, BlockedStatus, MaintenanceStatus, WaitingStatus
 
+import containerd
 import microk8s
 import util
 
@@ -168,6 +169,18 @@ class MicroK8sCharm(CharmBase):
             self.config["containerd_no_proxy"],
         )
 
+        try:
+            registries = containerd.parse_registries(self.config["containerd_custom_registries"])
+            if registries:
+                self.unit.status = MaintenanceStatus("configure containerd registries")
+                containerd.ensure_registry_configs(registries)
+        except (ValueError, subprocess.CalledProcessError, OSError):
+            LOG.exception("failed to configure containerd registries")
+            self.unit.status = BlockedStatus(
+                "failed to apply containerd_custom_registries, check logs for details"
+            )
+            return
+
         if self._state.joined and self.unit.is_leader():
             remove_nodes = self._get_peer_data("remove_nodes", [])
 
@@ -217,9 +230,11 @@ class MicroK8sCharm(CharmBase):
         if self.unit.status.__class__ != ActiveStatus:
             event.defer()
 
-    def _on_update_status(self, _: UpdateStatusEvent):
+    def _on_update_status(self, event: UpdateStatusEvent):
         if self._state.joined:
             self.unit.status = microk8s.get_unit_status(socket.gethostname())
+            if self.unit.status.__class__ != ActiveStatus:
+                event.defer()
 
     def _retrieve_join_url(self, event: Union[RelationChangedEvent, RelationJoinedEvent]):
         # TODO(neoaggelos): corner case where the leader in the control plane peer relation changes
