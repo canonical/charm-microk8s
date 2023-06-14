@@ -11,12 +11,12 @@ import util
 
 
 @mock.patch("os.uname")
-@mock.patch("subprocess.check_call")
-def test_install_required_packages(check_call: mock.MagicMock, uname: mock.MagicMock):
+@mock.patch("util.run")
+def test_install_required_packages(run: mock.MagicMock, uname: mock.MagicMock):
     uname.return_value.release = "fakerelease"
     util.install_required_packages()
 
-    assert check_call.mock_calls == [
+    assert run.mock_calls == [
         mock.call(["apt-get", "install", "--yes", "nfs-common"]),
         mock.call(["apt-get", "install", "--yes", "open-iscsi"]),
         mock.call(["apt-get", "install", "--yes", "linux-modules-extra-fakerelease"]),
@@ -24,14 +24,14 @@ def test_install_required_packages(check_call: mock.MagicMock, uname: mock.Magic
 
 
 @mock.patch("os.uname")
-@mock.patch("subprocess.check_call")
-def test_install_required_packages_exceptions(check_call: mock.MagicMock, uname: mock.MagicMock):
+@mock.patch("util.run")
+def test_install_required_packages_exceptions(run: mock.MagicMock, uname: mock.MagicMock):
     uname.side_effect = OSError("fake exception")
-    check_call.side_effect = subprocess.CalledProcessError(-1, "fake exception")
+    run.side_effect = subprocess.CalledProcessError(-1, "fake exception")
 
     util.install_required_packages()
 
-    assert check_call.mock_calls == [
+    assert run.mock_calls == [
         mock.call(["apt-get", "install", "--yes", "nfs-common"]),
         mock.call(["apt-get", "install", "--yes", "open-iscsi"]),
     ]
@@ -105,16 +105,16 @@ def test_ensure_block(name: str, text: str, block: str, mark: str, expected: lis
 
 
 @mock.patch("time.sleep")
-@mock.patch("subprocess.check_call")
-def test_ensure_call(check_call: mock.MagicMock, sleep: mock.MagicMock):
+@mock.patch("subprocess.run")
+def test_ensure_call(run: mock.MagicMock, sleep: mock.MagicMock):
     # first time raises exception, second time succeeds
-    check_call.side_effect = (subprocess.CalledProcessError(-1, "cmd"), None)
+    run.side_effect = (subprocess.CalledProcessError(-1, "cmd"), None)
 
     util.ensure_call(["echo"], env={"KEY": "VALUE"})
 
-    assert check_call.mock_calls == [
-        mock.call(["echo"], env={"KEY": "VALUE"}),
-        mock.call(["echo"], env={"KEY": "VALUE"}),
+    assert run.mock_calls == [
+        mock.call(["echo"], env={"KEY": "VALUE"}, check=True),
+        mock.call(["echo"], env={"KEY": "VALUE"}, check=True),
     ]
     sleep.assert_called_once_with(2)
 

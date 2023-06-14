@@ -11,10 +11,12 @@ from pathlib import Path
 LOG = logging.getLogger(__name__)
 
 
-def check_call(*args, **kwargs):
+def run(*args, **kwargs):
     """log and run command"""
+    kwargs.setdefault("check", True)
+
     LOG.debug("Execute: %s (args=%s, kwargs=%s)", shlex.join(args[0]), args, kwargs)
-    return subprocess.check_call(*args, **kwargs)
+    subprocess.run(*args, **kwargs)
 
 
 def install_required_packages():
@@ -33,7 +35,7 @@ def install_required_packages():
     for package in packages:
         try:
             LOG.info("Installing package %s", package)
-            check_call(["apt-get", "install", "--yes", package])
+            run(["apt-get", "install", "--yes", package])
         except subprocess.CalledProcessError:
             LOG.exception("failed to install package %s, charm may misbehave", package)
 
@@ -99,4 +101,4 @@ def _ensure_func(
 
 def ensure_call(*args, **kwargs):
     """repeatedly run a command until it succeeds. any args are passed to subprocess.check_call"""
-    return _ensure_func(check_call, args, kwargs, subprocess.CalledProcessError)
+    return _ensure_func(run, args, kwargs, subprocess.CalledProcessError)
