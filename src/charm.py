@@ -137,6 +137,8 @@ class MicroK8sCharm(CharmBase):
                 dashboard_dirs=["src/grafana_dashboards"],
                 refresh_events=[self.on.peer_relation_changed, self.on.upgrade_charm],
             )
+            self.framework.observe(self.on.dns_relation_joined, self._on_dns_relation_changed)
+            self.framework.observe(self.on.dns_relation_changed, self._on_dns_relation_changed)
 
     def on_remove(self, _: RemoveEvent):
         try:

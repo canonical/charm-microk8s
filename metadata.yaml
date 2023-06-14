@@ -42,3 +42,6 @@ requires:
     interface: microk8s-info
     scope: global
     limit: 1
+  dns:
+    interface: kube-dns
+    limit: 1
