@@ -2,6 +2,8 @@
 # Copyright 2023 Canonical, Ltd.
 #
 
+from unittest import mock
+
 import ops
 import ops.testing
 import pytest
@@ -77,6 +79,21 @@ def test_update_status(e: Environment):
     e.harness.charm._on_update_status(None)
     e.microk8s.get_unit_status.assert_called_once_with(e.gethostname.return_value)
     assert e.harness.charm.unit.status == ops.model.ActiveStatus("fakestatus2")
+
+    # reset
+    e.microk8s.get_unit_status.reset_mock()
+    e.microk8s.wait_ready.reset_mock()
+
+    # test retry until active status
+    e.microk8s.get_unit_status.side_effect = [
+        ops.model.WaitingStatus("s"),
+        ops.model.ActiveStatus("fakestatus3"),
+    ]
+    e.harness.charm._on_update_status(None)
+
+    assert e.microk8s.get_unit_status.mock_calls == [mock.call(e.gethostname.return_value)] * 2
+    e.microk8s.wait_ready.assert_called_once()
+    assert e.harness.charm.unit.status == ops.model.ActiveStatus("fakestatus3")
 
 
 @pytest.mark.parametrize("role", ["", "control-plane"])

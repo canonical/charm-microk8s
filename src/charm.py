@@ -154,7 +154,7 @@ class MicroK8sCharm(CharmBase):
         if not self._state.join_url and self.unit.is_leader():
             self._state.joined = True
 
-    def _on_config_changed(self, event: Union[ConfigChangedEvent, LeaderElectedEvent]):
+    def _on_config_changed(self, _: Union[ConfigChangedEvent, LeaderElectedEvent]):
         if self.config["role"] != self._state.role:
             msg = f"role cannot change from '{self._state.role}' after deployment"
             self.unit.status = BlockedStatus(msg)
@@ -219,22 +219,21 @@ class MicroK8sCharm(CharmBase):
             microk8s.wait_ready()
             self._state.joined = True
 
-        if self._state.joined and self.config["role"] != "worker":
+        if self.config["role"] != "worker":
             if not self.config["automatic_certificate_reissue"]:
                 microk8s.disable_cert_reissue()
 
             self.unit.status = MaintenanceStatus("configuring extra SANs")
             microk8s.configure_extra_sans(self.config["extra_sans"])
 
-        self.unit.status = microk8s.get_unit_status(socket.gethostname())
-        if self.unit.status.__class__ != ActiveStatus:
-            event.defer()
+        self.on.update_status.emit()
 
-    def _on_update_status(self, event: UpdateStatusEvent):
+    def _on_update_status(self, _: UpdateStatusEvent):
         if self._state.joined:
             self.unit.status = microk8s.get_unit_status(socket.gethostname())
             if self.unit.status.__class__ != ActiveStatus:
-                event.defer()
+                microk8s.wait_ready()
+                self.on.update_status.emit()
 
     def _retrieve_join_url(self, event: Union[RelationChangedEvent, RelationJoinedEvent]):
         # TODO(neoaggelos): corner case where the leader in the control plane peer relation changes
