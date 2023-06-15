@@ -11,12 +11,12 @@ from pathlib import Path
 LOG = logging.getLogger(__name__)
 
 
-def run(*args, **kwargs):
+def run(*args, **kwargs) -> subprocess.CompletedProcess:
     """log and run command"""
     kwargs.setdefault("check", True)
 
     LOG.debug("Execute: %s (args=%s, kwargs=%s)", shlex.join(args[0]), args, kwargs)
-    subprocess.run(*args, **kwargs)
+    return subprocess.run(*args, **kwargs)
 
 
 def install_required_packages():
@@ -89,16 +89,15 @@ def _ensure_func(
     """run a function until it does not raise one of the exceptions from retry_on"""
     for idx in range(max_retries - 1):
         try:
-            f(*args, **kwargs)
-            return
+            return f(*args, **kwargs)
         except retry_on:
             LOG.exception("action not successful (try %d of %d)", idx + 1, max_retries)
             time.sleep(backoff)
 
     # last time run unprotected and raise any exception
-    f(*args, **kwargs)
+    return f(*args, **kwargs)
 
 
-def ensure_call(*args, **kwargs):
+def ensure_call(*args, **kwargs) -> subprocess.CompletedProcess:
     """repeatedly run a command until it succeeds. any args are passed to subprocess.check_call"""
     return _ensure_func(run, args, kwargs, subprocess.CalledProcessError)

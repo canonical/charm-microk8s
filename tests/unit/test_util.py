@@ -108,10 +108,10 @@ def test_ensure_block(name: str, text: str, block: str, mark: str, expected: lis
 @mock.patch("subprocess.run")
 def test_ensure_call(run: mock.MagicMock, sleep: mock.MagicMock):
     # first time raises exception, second time succeeds
-    run.side_effect = (subprocess.CalledProcessError(-1, "cmd"), None)
+    run.side_effect = (subprocess.CalledProcessError(-1, "cmd"), "retval")
 
-    util.ensure_call(["echo"], env={"KEY": "VALUE"})
-
+    r = util.ensure_call(["echo"], env={"KEY": "VALUE"})
+    assert r == "retval"
     assert run.mock_calls == [
         mock.call(["echo"], env={"KEY": "VALUE"}, check=True),
         mock.call(["echo"], env={"KEY": "VALUE"}, check=True),
@@ -136,10 +136,11 @@ def test_ensure_func(sleep: mock.MagicMock):
 
     # eventually succeeds (side effect raises 5 exceptions, then succeeds)
     m.reset_mock()
-    m.side_effect = [ValueError("some error")] * 5 + [None]
-    util._ensure_func(m, args, kwargs, retry_on=ValueError, backoff=20)
+    m.side_effect = [ValueError("some error")] * 5 + ["retval"]
+    r = util._ensure_func(m, args, kwargs, retry_on=ValueError, backoff=20)
     assert m.mock_calls == [mock.call(*args, **kwargs)] * 6
     assert sleep.mock_calls == [mock.call(20)] * 5
+    assert r == "retval"
 
     # exception is raised after max_retries
     sleep.reset_mock()
