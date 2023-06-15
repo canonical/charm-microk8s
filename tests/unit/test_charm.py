@@ -82,7 +82,6 @@ def test_update_status(e: Environment):
 
     # reset
     e.microk8s.get_unit_status.reset_mock()
-    e.microk8s.wait_ready.reset_mock()
 
     # test retry until active status
     e.microk8s.get_unit_status.side_effect = [
@@ -92,7 +91,6 @@ def test_update_status(e: Environment):
     e.harness.charm._on_update_status(None)
 
     assert e.microk8s.get_unit_status.mock_calls == [mock.call(e.gethostname.return_value)] * 2
-    e.microk8s.wait_ready.assert_called_once()
     assert e.harness.charm.unit.status == ops.model.ActiveStatus("fakestatus3")
 
 

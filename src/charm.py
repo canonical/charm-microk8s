@@ -235,7 +235,6 @@ class MicroK8sCharm(CharmBase):
         if self._state.joined:
             self.unit.status = microk8s.get_unit_status(socket.gethostname())
             if self.unit.status.__class__ != ActiveStatus:
-                microk8s.wait_ready()
                 self.on.update_status.emit()
 
     def _retrieve_join_url(self, event: Union[RelationChangedEvent, RelationJoinedEvent]):
