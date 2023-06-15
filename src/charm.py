@@ -7,6 +7,7 @@ import json
 import logging
 import socket
 import subprocess
+import time
 from typing import Any, Union
 
 from ops import CharmBase, main
@@ -233,9 +234,10 @@ class MicroK8sCharm(CharmBase):
 
     def _on_update_status(self, _: UpdateStatusEvent):
         if self._state.joined:
-            self.unit.status = microk8s.get_unit_status(socket.gethostname())
-            if self.unit.status.__class__ != ActiveStatus:
-                self.on.update_status.emit()
+            self.unit.status = WaitingStatus("waiting for node")
+            while self.unit.status.__class__ != ActiveStatus:
+                time.sleep(2)
+                self.unit.status = microk8s.get_unit_status(socket.gethostname())
 
     def _retrieve_join_url(self, event: Union[RelationChangedEvent, RelationJoinedEvent]):
         # TODO(neoaggelos): corner case where the leader in the control plane peer relation changes
