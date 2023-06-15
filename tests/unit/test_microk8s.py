@@ -248,12 +248,15 @@ def test_microk8s_apply_launch_configuration(ensure_call: mock.MagicMock):
     microk8s.apply_launch_configuration({"key": "value"})
 
     ensure_call.assert_called_once_with(
-        ["/snap/microk8s/current/bin/cluster-agent", "init", "--config-file", "-"],
+        [
+            "snap",
+            "run",
+            "--shell",
+            "microk8s.daemon-cluster-agent",
+            "-c",
+            "/snap/microk8s/current/bin/cluster-agent init --config-file -",
+        ],
         input=b'{"version": "0.1.0", "key": "value"}',
-        env={
-            "SNAP": "/snap/microk8s/current",
-            "SNAP_DATA": "/var/snap/microk8s/current",
-        },
     )
 
 

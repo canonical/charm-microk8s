@@ -147,9 +147,17 @@ def disable_cert_reissue():
 def apply_launch_configuration(config: dict):
     """apply a launch configuration on the local node"""
     util.ensure_call(
-        [(snap_dir() / "bin" / "cluster-agent").as_posix(), "init", "--config-file", "-"],
+        [
+            "snap",
+            "run",
+            "--shell",
+            "microk8s.daemon-cluster-agent",
+            "-c",
+            shlex.join(
+                [(snap_dir() / "bin" / "cluster-agent").as_posix(), "init", "--config-file", "-"]
+            ),
+        ],
         input=json.dumps({"version": "0.1.0", **config}).encode(),
-        env={"SNAP": snap_dir().as_posix(), "SNAP_DATA": snap_data_dir().as_posix()},
     )
 
 
