@@ -34,7 +34,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: build
     strategy:
-      fail-fast: true
+      # fail-fast: true
       matrix:
         control_plane: [1, 3]
         workers: [1]
@@ -43,6 +43,8 @@ jobs:
     steps:
       - name: Checking out repo
         uses: actions/checkout@v3.5.2
+      - name: Setup tmate session
+        uses: mxschmitt/action-tmate@v3
       - name: Configure pytest-operator
         uses: charmed-kubernetes/actions-operator@main
         with:
