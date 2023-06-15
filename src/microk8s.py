@@ -1,7 +1,6 @@
 #
 # Copyright 2023 Canonical, Ltd.
 #
-import ipaddress
 import json
 import logging
 import os
@@ -135,43 +134,34 @@ def set_containerd_proxy_options(http_proxy: str, https_proxy: str, no_proxy: st
 
 def disable_cert_reissue():
     """disable automatic cert reissue. this must never be done on nodes that have not yet joined"""
-    LOG.info("Disable automatic certificate reissue")
-
     path = snap_data_dir() / "var" / "lock" / "no-cert-reissue"
     if not path.exists():
+        LOG.info("Disable automatic certificate reissue")
         util.ensure_file(path, "", 0o600, 0, 0)
+
+
+def apply_launch_configuration(config: dict):
+    """apply a launch configuration on the local node"""
+    util.ensure_call(
+        [snap_dir() / "bin" / "cluster-agent", "init", "--config-file", "-"],
+        input=json.dumps({"version": "0.1.0", **config}).encode(),
+        env={"SNAP": snap_dir(), "SNAP_DATA": snap_data_dir()},
+    )
 
 
 def configure_extra_sans(extra_sans_str: str):
     """add a list of extra SANs that are accepted by the kube-apiserver"""
+    unclean_extra_sans = extra_sans_str.split(",")
+    extra_sans = []
+    for san in unclean_extra_sans:
+        san = san.replace(" ", "")
+        san = san.replace("%UNIT_PUBLIC_ADDRESS%", ops_helpers.get_unit_public_address())
 
-    if not extra_sans_str:
-        LOG.debug("No extra SANs will be configured")
+        if san:
+            extra_sans.append(san)
+
+    if not extra_sans:
         return
 
-    if "%UNIT_PUBLIC_ADDRESS%" in extra_sans_str:
-        extra_sans_str = extra_sans_str.replace(
-            "%UNIT_PUBLIC_ADDRESS%", ops_helpers.get_unit_public_address()
-        )
-
-    extra_sans = extra_sans_str.split(",")
-
-    entries = ["[ alt_names ]"]
-    for idx, san in enumerate(extra_sans):
-        prefix = "IP"
-        try:
-            ipaddress.ip_address(san)
-        except ValueError:
-            prefix = "DNS"
-
-        entries.append(f"{prefix}.{idx + 1000} = {san}")
-
-    path = snap_data_dir() / "certs" / "csr.conf.template"
-    csr_conf = path.read_text() if path.exists() else ""
-    new_csr_conf = util.ensure_block(
-        csr_conf, "\n".join(entries), "# {mark} managed by microk8s charm"
-    )
-
-    if util.ensure_file(path, new_csr_conf, 0o600, 0, 0):
-        LOG.info("Update kube-apiserver certificate with extra SANs %s", extra_sans)
-        util.ensure_call(["microk8s", "refresh-certs", "-e", "server.crt"])
+    LOG.info("Ensure extra SANs %s", extra_sans)
+    apply_launch_configuration({"extraSANs": extra_sans})
