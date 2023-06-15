@@ -162,3 +162,22 @@ def configure_extra_sans(extra_sans_str: str):
 
     LOG.info("Configure extra SANs %s", extra_sans)
     apply_launch_configuration({"extraSANs": extra_sans})
+
+
+def configure_hostpath_storage(enable: bool):
+    """configure hostpath-storage on the cluster"""
+    p = util.ensure_call(["microk8s", "status", "-a", "hostpath-storage"], capture_output=True)
+    stdout = p.stdout.decode().strip()
+
+    storage_enabled = stdout == "enabled"
+
+    if enable == storage_enabled:
+        LOG.debug("Hostpath storage is already %s", stdout)
+        return
+
+    if enable:
+        LOG.info("Enable hostpath-storage")
+        util.ensure_call(["microk8s", "enable", "hostpath-storage"])
+    else:
+        LOG.info("Disable hostpath storage")
+        util.ensure_call(["microk8s", "disable", "hostpath-storage"], input=b"n")

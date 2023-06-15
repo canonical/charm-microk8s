@@ -188,8 +188,8 @@ def test_microk8s_disable_cert_reissue(
 @pytest.mark.parametrize(
     "config_str, extra_sans",
     [
-        ("", None),
-        (" ", None),
+        ("", []),
+        (" ", []),
         ("1.1.1.1,k8s.local", ["1.1.1.1", "k8s.local"]),
         ("1.1.1.1,k8s.local,%UNIT_PUBLIC_ADDRESS%", ["1.1.1.1", "k8s.local", "2.2.2.2"]),
         ("1.1.1.1, 2.2.2.2", ["1.1.1.1", "2.2.2.2"]),
@@ -222,3 +222,26 @@ def test_microk8s_apply_launch_configuration(ensure_call: mock.MagicMock):
             "SNAP_DATA": "/var/snap/microk8s/current",
         },
     )
+
+
+@pytest.mark.parametrize(
+    "status, enable, expect_calls",
+    [
+        ("enabled", True, []),
+        ("disabled", False, []),
+        ("enabled", False, [mock.call(["microk8s", "disable", "hostpath-storage"], input=b"n")]),
+        ("disabled", True, [mock.call(["microk8s", "enable", "hostpath-storage"])]),
+    ],
+)
+@mock.patch("util.ensure_call")
+def test_microk8s_configure_hostpath_storage(
+    ensure_call: mock.MagicMock, status: str, enable: bool, expect_calls: list
+):
+    ensure_call.return_value.stdout = status.encode()
+
+    microk8s.configure_hostpath_storage(enable)
+
+    assert ensure_call.mock_calls == [
+        mock.call(["microk8s", "status", "-a", "hostpath-storage"], capture_output=True),
+        *expect_calls,
+    ]

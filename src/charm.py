@@ -220,6 +220,9 @@ class MicroK8sCharm(CharmBase):
             self._state.joined = True
 
         if self.config["role"] != "worker":
+            if self.unit.is_leader():
+                microk8s.configure_hostpath_storage(self.config["hostpath_storage"])
+
             if not self.config["automatic_certificate_reissue"]:
                 microk8s.disable_cert_reissue()
 

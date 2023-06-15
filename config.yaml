@@ -117,3 +117,7 @@ options:
           "cert_file": "'"$(base64 -w 0 < ~/my.custom.cert.pem)"'",
           "key_file": "'"$(base64 -w 0 < ~/my.custom.key.pem)"'",
       }]'
+  hostpath_storage:
+    description: Allow hostpath storage provisioner on the cluster
+    default: false
+    type: boolean

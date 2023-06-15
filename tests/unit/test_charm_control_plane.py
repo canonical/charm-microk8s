@@ -24,7 +24,9 @@ def test_install(e: Environment, is_leader: bool):
 
     if not is_leader:
         assert isinstance(e.harness.charm.unit.status, ops.model.WaitingStatus)
+        e.microk8s.configure_hostpath_storage.assert_not_called()
     else:
+        e.microk8s.configure_hostpath_storage.assert_called()
         e.microk8s.disable_cert_reissue.assert_not_called()
         assert e.harness.charm.unit.status == ops.model.ActiveStatus("fakestatus")
         assert e.harness.charm._state.joined

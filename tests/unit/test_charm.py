@@ -190,3 +190,32 @@ def test_config_containerd_custom_registries(e: Environment, role: str, has_join
     e.harness.update_config({"containerd_custom_registries": "fakeval"})
     e.containerd.parse_registries.assert_called_once_with("fakeval")
     assert e.harness.charm.unit.status.__class__ == BlockedStatus
+
+
+@pytest.mark.parametrize("role", ["", "control-plane"])
+@pytest.mark.parametrize("is_leader", [False, True])
+@pytest.mark.parametrize("has_joined", [False, True])
+def test_config_hostpath_storage(e: Environment, role: str, is_leader: bool, has_joined: bool):
+    e.microk8s.get_unit_status.return_value = ops.model.ActiveStatus("fakestatus")
+
+    e.harness.update_config({"role": role})
+    e.harness.set_leader(is_leader)
+    e.harness.begin_with_initial_hooks()
+
+    e.harness.charm._state.joined = has_joined
+    e.microk8s.configure_hostpath_storage.reset_mock()
+
+    # only the leader control plane unit enables
+    e.harness.update_config({"hostpath_storage": True})
+    if has_joined and is_leader and role != "worker":
+        e.microk8s.configure_hostpath_storage.assert_called_once_with(True)
+    else:
+        e.microk8s.configure_hostpath_storage.assert_not_called()
+
+    # only the leader control plane unit disables
+    e.microk8s.configure_hostpath_storage.reset_mock()
+    e.harness.update_config({"hostpath_storage": False})
+    if has_joined and is_leader and role != "worker":
+        e.microk8s.configure_hostpath_storage.assert_called_once_with(False)
+    else:
+        e.microk8s.configure_hostpath_storage.assert_not_called()
