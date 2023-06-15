@@ -95,7 +95,7 @@ STATUS_MESSAGES = {
 }
 
 
-@mock.patch("subprocess.check_output")
+@mock.patch("util.ensure_call")
 @pytest.mark.parametrize(
     "message, expect_status",
     [
@@ -104,12 +104,11 @@ STATUS_MESSAGES = {
         ("INVALID_STATUS", MaintenanceStatus("waiting for node")),
     ],
 )
-def test_microk8s_get_unit_status(check_output: mock.MagicMock, message: str, expect_status):
-    check_output.return_value = STATUS_MESSAGES[message].encode()
+def test_microk8s_get_unit_status(ensure_call: mock.MagicMock, message: str, expect_status):
+    ensure_call.return_value.stdout = STATUS_MESSAGES[message].encode()
 
     status = microk8s.get_unit_status("node-1")
-
-    check_output.assert_called_once_with(
+    ensure_call.assert_called_once_with(
         [
             "/snap/microk8s/current/kubectl",
             "--kubeconfig=/var/snap/microk8s/current/credentials/kubelet.config",
@@ -118,7 +117,8 @@ def test_microk8s_get_unit_status(check_output: mock.MagicMock, message: str, ex
             "node-1",
             "-o",
             "jsonpath={.status.conditions[?(@.type=='Ready')]}",
-        ]
+        ],
+        capture_output=True,
     )
     assert status == expect_status
 

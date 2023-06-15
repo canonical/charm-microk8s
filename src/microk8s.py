@@ -81,7 +81,7 @@ def get_unit_status(hostname: str):
     """Retrieve node Ready condition from Kubernetes and convert to Juju unit status."""
     try:
         # use the kubectl binary with the kubelet config directly
-        output = subprocess.check_output(
+        output = util.ensure_call(
             [
                 f"{snap_dir()}/kubectl",
                 f"--kubeconfig={snap_data_dir()}/credentials/kubelet.config",
@@ -90,8 +90,9 @@ def get_unit_status(hostname: str):
                 hostname,
                 "-o",
                 "jsonpath={.status.conditions[?(@.type=='Ready')]}",
-            ]
-        )
+            ],
+            capture_output=True,
+        ).stdout
         node_ready_condition = json.loads(output)
         if node_ready_condition["status"] == "False":
             LOG.warning("node %s is not ready: %s", hostname, node_ready_condition)
