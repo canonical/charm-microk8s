@@ -136,10 +136,10 @@ def set_containerd_proxy_options(http_proxy: str, https_proxy: str, no_proxy: st
 
 def disable_cert_reissue():
     """disable automatic cert reissue. this must never be done on nodes that have not yet joined"""
-    LOG.info("Disable automatic certificate reissue")
 
     path = snap_data_dir() / "var" / "lock" / "no-cert-reissue"
     if not path.exists():
+        LOG.info("Disable automatic certificate reissue")
         util.ensure_file(path, "", 0o600, 0, 0)
 
 
