@@ -17,9 +17,9 @@ def test_install(e: Environment, is_leader: bool):
     e.harness.set_leader(is_leader)
     e.harness.begin_with_initial_hooks()
 
-    e.util.install_required_packages.assert_called_once()
+    e.util.install_required_packages.assert_called_once_with()
     e.microk8s.install.assert_called_once_with()
-    e.microk8s.wait_ready.assert_called_once()
+    e.microk8s.wait_ready.assert_called_once_with()
     e.microk8s.disable_cert_reissue.assert_not_called()
 
     if not is_leader:
@@ -32,8 +32,6 @@ def test_install(e: Environment, is_leader: bool):
         assert e.harness.charm._state.joined
 
     assert e.harness.charm.model.unit.opened_ports() == {
-        ops.model.OpenedPort(protocol="tcp", port=80),
-        ops.model.OpenedPort(protocol="tcp", port=443),
         ops.model.OpenedPort(protocol="tcp", port=16443),
     }
 
@@ -52,7 +50,7 @@ def test_leader_peer_relation(e: Environment):
     e.harness.add_relation_unit(rel_id, f"{e.harness.charm.app.name}/1")
     e.harness.update_relation_data(rel_id, f"{e.harness.charm.app.name}/1", {"hostname": "f-1"})
 
-    e.microk8s.add_node.assert_called_once()
+    e.microk8s.add_node.assert_called_once_with()
     relation_data = e.harness.get_relation_data(rel_id, e.harness.charm.app)
     assert relation_data["join_url"] == "10.10.10.10:25000/01010101010101010101010101010101"
     assert e.harness.charm._state.hostnames[f"{e.harness.charm.app.name}/1"] == "f-1"
@@ -74,9 +72,10 @@ def test_leader_peer_relation_leave(e: Environment):
     rel = e.harness.charm.model.get_relation("peer")
     e.harness.add_relation_unit(rel.id, f"{e.harness.charm.app.name}/1")
     e.harness.update_relation_data(rel.id, f"{e.harness.charm.app.name}/1", {"hostname": "f-1"})
+    e.microk8s.get_unit_status.return_value = ops.model.WaitingStatus("waiting for node")
 
     # NOTE(neoaggelos): mock self departed event
-    e.harness.charm.on["peer"].relation_departed.emit(
+    e.harness.charm.on.peer_relation_departed.emit(
         relation=rel,
         app=e.harness.charm.app,
         unit=e.harness.charm.unit,
@@ -101,7 +100,7 @@ def test_leader_microk8s_provides_relation(e: Environment):
     e.harness.add_relation_unit(rel_id, "microk8s-worker/0")
     e.harness.update_relation_data(rel_id, "microk8s-worker/0", {"hostname": "f-1"})
 
-    e.microk8s.add_node.assert_called_once()
+    e.microk8s.add_node.assert_called_once_with()
     relation_data = e.harness.get_relation_data(rel_id, e.harness.charm.app)
     relation_data = e.harness.get_relation_data(rel_id, e.harness.charm.app)
     assert relation_data["join_url"] == "10.10.10.10:25000/01010101010101010101010101010101"
@@ -109,6 +108,7 @@ def test_leader_microk8s_provides_relation(e: Environment):
 
     e.harness.remove_relation_unit(rel_id, "microk8s-worker/0")
     e.microk8s.remove_node.assert_called_once_with("f-1")
+    assert e.harness.charm.unit.status == ops.model.ActiveStatus("fakestatus")
 
 
 def test_follower_peer_relation(e: Environment):
@@ -173,7 +173,6 @@ def test_follower_retrieve_join_url(e: Environment):
     e.microk8s.join.assert_called_once_with("fakejoinurl", False)
     e.microk8s.wait_ready.assert_called_once_with()
     e.microk8s.get_unit_status.assert_called_once_with("fakehostname")
-    e.microk8s.disable_cert_reissue.assert_called_once()
 
     assert e.harness.charm.unit.status == ops.model.ActiveStatus("fakestatus")
     assert e.harness.charm._state.joined
@@ -212,6 +211,8 @@ def test_follower_become_leader_remove_departing_nodes(e: Environment, become_le
     else:
         e.microk8s.remove_node.assert_not_called()
 
+    assert e.harness.charm.unit.status == ops.model.ActiveStatus("fakestatus")
+
 
 @pytest.mark.parametrize("become_leader", [True, False])
 def test_follower_become_leader_remove_already_departed_nodes(e: Environment, become_leader: bool):
@@ -238,3 +239,5 @@ def test_follower_become_leader_remove_already_departed_nodes(e: Environment, be
         assert sorted(e.microk8s.remove_node.mock_calls) == [mock.call("f-1"), mock.call("f-2")]
     else:
         e.microk8s.remove_node.assert_not_called()
+
+    assert e.harness.charm.unit.status == ops.model.ActiveStatus("fakestatus")

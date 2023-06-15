@@ -27,7 +27,7 @@ def test_install_required_packages(run: mock.MagicMock, uname: mock.MagicMock):
 @mock.patch("util.run")
 def test_install_required_packages_exceptions(run: mock.MagicMock, uname: mock.MagicMock):
     uname.side_effect = OSError("fake exception")
-    run.side_effect = subprocess.CalledProcessError(-1, "fake exception")
+    run.side_effect = subprocess.CalledProcessError(1, "fake exception")
 
     util.install_required_packages()
 
@@ -108,7 +108,7 @@ def test_ensure_block(name: str, text: str, block: str, mark: str, expected: lis
 @mock.patch("subprocess.run")
 def test_ensure_call(run: mock.MagicMock, sleep: mock.MagicMock):
     # first time raises exception, second time succeeds
-    run.side_effect = (subprocess.CalledProcessError(-1, "cmd"), "retval")
+    run.side_effect = (subprocess.CalledProcessError(1, "cmd"), "retval")
 
     r = util.ensure_call(["echo"], env={"KEY": "VALUE"})
     assert r == "retval"

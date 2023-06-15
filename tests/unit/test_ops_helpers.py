@@ -17,6 +17,6 @@ def test_get_unit_public_address(check_output: mock.MagicMock):
 
 @mock.patch("subprocess.check_output")
 def test_get_unit_public_address_exception(check_output: mock.MagicMock):
-    check_output.side_effect = subprocess.CalledProcessError(-1, "fakecmd")
+    check_output.side_effect = subprocess.CalledProcessError(1, "fakecmd")
 
     assert ops_helpers.get_unit_public_address() == "127.0.0.1"

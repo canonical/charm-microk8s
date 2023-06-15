@@ -45,7 +45,9 @@ def upgrade():
 def wait_ready(timeout: int = 30):
     """`microk8s status --wait-ready`"""
     LOG.info("Wait for MicroK8s to become ready")
-    util.ensure_call(["microk8s", "status", "--wait-ready", f"--timeout={timeout}"])
+    util.ensure_call(
+        ["microk8s", "status", "--wait-ready", f"--timeout={timeout}"], capture_output=True
+    )
 
 
 def uninstall():

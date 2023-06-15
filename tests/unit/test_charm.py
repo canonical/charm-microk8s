@@ -2,6 +2,7 @@
 # Copyright 2023 Canonical, Ltd.
 #
 
+import subprocess
 from unittest import mock
 
 import ops
@@ -61,9 +62,16 @@ def test_block_on_role_change(e: Environment):
 
 def test_remove(e: Environment):
     e.harness.begin_with_initial_hooks()
-    e.harness.charm._on_remove(None)
 
-    e.microk8s.uninstall.assert_called_once()
+    # remove uninstalls
+    e.harness.charm.on.remove.emit()
+    e.microk8s.uninstall.assert_called_once_with()
+
+    # exceptions in uninstall are ignored
+    e.microk8s.uninstall.reset_mock()
+    e.microk8s.uninstall.side_effect = subprocess.CalledProcessError(1, "fake exception")
+    e.harness.charm.on.remove.emit()
+    e.microk8s.uninstall.assert_called_once_with()
 
 
 def test_update_status(e: Environment):
@@ -72,11 +80,11 @@ def test_update_status(e: Environment):
 
     e.microk8s.get_unit_status.assert_not_called()
 
-    e.harness.charm._on_update_status(None)
+    e.harness.charm.on.update_status.emit()
     e.microk8s.get_unit_status.assert_not_called()
 
     e.harness.charm._state.joined = True
-    e.harness.charm._on_update_status(None)
+    e.harness.charm.on.update_status.emit()
     e.microk8s.get_unit_status.assert_called_once_with(e.gethostname.return_value)
     assert e.harness.charm.unit.status == ops.model.ActiveStatus("fakestatus2")
 
@@ -88,7 +96,7 @@ def test_update_status(e: Environment):
         ops.model.WaitingStatus("s"),
         ops.model.ActiveStatus("fakestatus3"),
     ]
-    e.harness.charm._on_update_status(None)
+    e.harness.charm.on.update_status.emit()
 
     assert e.microk8s.get_unit_status.mock_calls == [mock.call(e.gethostname.return_value)] * 2
     assert e.harness.charm.unit.status == ops.model.ActiveStatus("fakestatus3")
@@ -143,7 +151,7 @@ def test_charm_upgrade(e: Environment, role: str):
 
     e.harness.charm.on.upgrade_charm.emit()
 
-    e.microk8s.upgrade.assert_called_once()
+    e.microk8s.upgrade.assert_called_once_with()
 
 
 @pytest.mark.parametrize("role", ["", "control-plane"])

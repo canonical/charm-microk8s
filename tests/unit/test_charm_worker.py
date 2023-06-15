@@ -12,14 +12,11 @@ def test_install(e: Environment):
     e.harness.update_config({"role": "worker"})
     e.harness.begin_with_initial_hooks()
 
-    e.util.install_required_packages.assert_called_once()
+    e.util.install_required_packages.assert_called_once_with()
     e.microk8s.install.assert_called_once_with()
-    e.microk8s.wait_ready.assert_called_once()
+    e.microk8s.wait_ready.assert_called_once_with()
 
-    assert e.harness.charm.model.unit.opened_ports() == {
-        ops.model.OpenedPort(protocol="tcp", port=80),
-        ops.model.OpenedPort(protocol="tcp", port=443),
-    }
+    assert not e.harness.charm.model.unit.opened_ports()
 
     assert isinstance(e.harness.charm.model.unit.status, ops.model.WaitingStatus)
 
@@ -48,9 +45,15 @@ def test_microk8s_provides_relation(e: Environment, is_leader: bool):
     assert e.harness.get_relation_data(rel_id, e.harness.charm.unit)["hostname"] == "fakehostname"
 
     e.harness.remove_relation(rel_id)
-    e.microk8s.uninstall.assert_called_once()
+    e.microk8s.uninstall.assert_called_once_with()
 
     assert isinstance(unit.status, ops.model.WaitingStatus)
+
+    # after joining, ensure microk8s is installed
+    e.microk8s.install.reset_mock()
+    rel_id = e.harness.add_relation("microk8s", "microk8s-cp")
+    e.harness.add_relation_unit(rel_id, "microk8s-cp/0")
+    e.microk8s.install.assert_called_once_with()
 
 
 def test_microk8s_provides_invalid_relation(e: Environment):

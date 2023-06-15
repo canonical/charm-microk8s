@@ -36,7 +36,9 @@ def test_microk8s_uninstall(ensure_call: mock.MagicMock):
 @mock.patch("util.ensure_call")
 def test_microk8s_wait_ready(ensure_call: mock.MagicMock):
     microk8s.wait_ready(timeout=5)
-    ensure_call.assert_called_once_with(["microk8s", "status", "--wait-ready", "--timeout=5"])
+    ensure_call.assert_called_once_with(
+        ["microk8s", "status", "--wait-ready", "--timeout=5"], capture_output=True
+    )
 
 
 @mock.patch("util.ensure_call")
