@@ -207,10 +207,7 @@ def test_microk8s_configure_extra_sans(
 
     # no change when empty
     microk8s.configure_extra_sans(config_str)
-    if extra_sans is None:
-        apply_launch_configuration.assert_not_called()
-    else:
-        apply_launch_configuration.assert_called_once_with({"extraSANs": extra_sans})
+    apply_launch_configuration.assert_called_once_with({"extraSANs": extra_sans})
 
 
 @mock.patch("util.ensure_call")
@@ -218,10 +215,10 @@ def test_microk8s_apply_launch_configuration(ensure_call: mock.MagicMock):
     microk8s.apply_launch_configuration({"key": "value"})
 
     ensure_call.assert_called_once_with(
-        [Path("/snap/microk8s/current/bin/cluster-agent"), "init", "--config-file", "-"],
+        ["/snap/microk8s/current/bin/cluster-agent", "init", "--config-file", "-"],
         input=b'{"version": "0.1.0", "key": "value"}',
         env={
-            "SNAP": Path("/snap/microk8s/current"),
-            "SNAP_DATA": Path("/var/snap/microk8s/current"),
+            "SNAP": "/snap/microk8s/current",
+            "SNAP_DATA": "/var/snap/microk8s/current",
         },
     )

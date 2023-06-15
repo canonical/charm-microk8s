@@ -143,9 +143,9 @@ def disable_cert_reissue():
 def apply_launch_configuration(config: dict):
     """apply a launch configuration on the local node"""
     util.ensure_call(
-        [snap_dir() / "bin" / "cluster-agent", "init", "--config-file", "-"],
+        [(snap_dir() / "bin" / "cluster-agent").as_posix(), "init", "--config-file", "-"],
         input=json.dumps({"version": "0.1.0", **config}).encode(),
-        env={"SNAP": snap_dir(), "SNAP_DATA": snap_data_dir()},
+        env={"SNAP": snap_dir().as_posix(), "SNAP_DATA": snap_data_dir().as_posix()},
     )
 
 
@@ -160,8 +160,5 @@ def configure_extra_sans(extra_sans_str: str):
         if san:
             extra_sans.append(san)
 
-    if not extra_sans:
-        return
-
-    LOG.info("Ensure extra SANs %s", extra_sans)
+    LOG.info("Configure extra SANs %s", extra_sans)
     apply_launch_configuration({"extraSANs": extra_sans})
