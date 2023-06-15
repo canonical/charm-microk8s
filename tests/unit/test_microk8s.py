@@ -185,29 +185,60 @@ def test_microk8s_disable_cert_reissue(
     assert (tmp_path / "var" / "lock" / "no-cert-reissue").exists()
 
 
-@pytest.mark.parametrize(
-    "config_str, extra_sans",
-    [
-        ("", []),
-        (" ", []),
-        ("1.1.1.1,k8s.local", ["1.1.1.1", "k8s.local"]),
-        ("1.1.1.1,k8s.local,%UNIT_PUBLIC_ADDRESS%", ["1.1.1.1", "k8s.local", "2.2.2.2"]),
-        ("1.1.1.1, 2.2.2.2", ["1.1.1.1", "2.2.2.2"]),
-    ],
-)
-@mock.patch("microk8s.apply_launch_configuration", autospec=True)
+@mock.patch("microk8s.snap_data_dir", autospec=True)
+@mock.patch("util.ensure_file", autospec=True)
+@mock.patch("util.ensure_block", autospec=True)
+@mock.patch("util.ensure_call", autospec=True)
 @mock.patch("ops_helpers.get_unit_public_address", autospec=True)
+@pytest.mark.parametrize("changed", (True, False))
 def test_microk8s_configure_extra_sans(
     get_unit_public_address: mock.MagicMock,
-    apply_launch_configuration: mock.MagicMock,
-    config_str: str,
-    extra_sans: list,
+    ensure_call: mock.MagicMock,
+    ensure_block: mock.MagicMock,
+    ensure_file: mock.MagicMock,
+    snap_data_dir: mock.MagicMock,
+    changed: bool,
+    tmp_path: Path,
 ):
+    ensure_file.return_value = changed
+    snap_data_dir.return_value = tmp_path
     get_unit_public_address.return_value = "2.2.2.2"
 
     # no change when empty
-    microk8s.configure_extra_sans(config_str)
-    apply_launch_configuration.assert_called_once_with({"extraSANs": extra_sans})
+    microk8s.configure_extra_sans([])
+    ensure_file.assert_not_called()
+    ensure_block.assert_not_called()
+    ensure_call.assert_not_called()
+    get_unit_public_address.assert_not_called()
+
+    # change config and restart service if something changed
+    microk8s.configure_extra_sans("1.1.1.1,k8s.local")
+
+    get_unit_public_address.assert_not_called()
+    ensure_block.assert_called_once_with(
+        "",
+        "[ alt_names ]\nIP.1000 = 1.1.1.1\nDNS.1001 = k8s.local",
+        "# {mark} managed by microk8s charm",
+    )
+    ensure_file.assert_called_once_with(
+        tmp_path / "certs" / "csr.conf.template", ensure_block.return_value, 0o600, 0, 0
+    )
+    if changed:
+        ensure_call.assert_called_once_with(["microk8s", "refresh-certs", "-e", "server.crt"])
+    else:
+        ensure_call.assert_not_called()
+
+    ensure_block.reset_mock()
+
+    # change config and pass unit public address
+    microk8s.configure_extra_sans("1.1.1.1,k8s.local,%UNIT_PUBLIC_ADDRESS%")
+
+    get_unit_public_address.assert_called_once_with()
+    ensure_block.assert_called_once_with(
+        "",
+        "[ alt_names ]\nIP.1000 = 1.1.1.1\nDNS.1001 = k8s.local\nIP.1002 = 2.2.2.2",
+        "# {mark} managed by microk8s charm",
+    )
 
 
 @mock.patch("util.ensure_call")
