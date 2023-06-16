@@ -198,7 +198,7 @@ def test_config_containerd_custom_registries(e: Environment, role: str, has_join
     assert e.harness.charm.unit.status.__class__ == BlockedStatus
 
 
-@pytest.mark.parametrize("role", ["", "control-plane"])
+@pytest.mark.parametrize("role", ["", "control-plane", "worker"])
 @pytest.mark.parametrize("is_leader", [False, True])
 @pytest.mark.parametrize("has_joined", [False, True])
 def test_config_hostpath_storage(e: Environment, role: str, is_leader: bool, has_joined: bool):

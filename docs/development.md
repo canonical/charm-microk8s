@@ -129,10 +129,7 @@ MicroK8sCharm/StoredStateData[_state]: |
   hostnames: {microk8s-worker/0: juju-77cee6-default-3, microk8s-worker/1: juju-77cee6-default-4,
     microk8s-worker/2: juju-77cee6-default-5, microk8s/0: juju-77cee6-default-0, microk8s/4: juju-77cee6-default-7}
   installed: true
-  join_url: 172.16.101.66:25000/30f2e36da1219be11b349a29e164aec5
   joined: true
-  leaving: false
-  remove_nodes: []
   role: control-plane
 StoredStateData[_stored]: |
   {event_count: 81}
