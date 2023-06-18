@@ -22,7 +22,7 @@ def test_install(e: Environment):
 
 
 @pytest.mark.parametrize("is_leader", [True, False])
-def test_microk8s_provides_relation(e: Environment, is_leader: bool):
+def test_control_plane_relation(e: Environment, is_leader: bool):
     e.microk8s.get_unit_status.return_value = ops.model.ActiveStatus("fakestatus")
     e.gethostname.return_value = "fakehostname"
 
@@ -34,7 +34,7 @@ def test_microk8s_provides_relation(e: Environment, is_leader: bool):
 
     e.microk8s.wait_ready.reset_mock()
 
-    rel_id = e.harness.add_relation("microk8s", "microk8s-cp")
+    rel_id = e.harness.add_relation("control-plane", "microk8s-cp")
     e.harness.add_relation_unit(rel_id, "microk8s-cp/0")
     e.harness.update_relation_data(rel_id, "microk8s-cp", {"join_url": "fakejoinurl"})
 
@@ -51,12 +51,12 @@ def test_microk8s_provides_relation(e: Environment, is_leader: bool):
 
     # after joining, ensure microk8s is installed
     e.microk8s.install.reset_mock()
-    rel_id = e.harness.add_relation("microk8s", "microk8s-cp")
+    rel_id = e.harness.add_relation("control-plane", "microk8s-cp")
     e.harness.add_relation_unit(rel_id, "microk8s-cp/0")
     e.microk8s.install.assert_called_once_with()
 
 
-def test_microk8s_provides_invalid_relation(e: Environment):
+def test_control_plane_relation_invalid(e: Environment):
     e.microk8s.get_unit_status.return_value = ops.model.ActiveStatus("fakestatus")
     e.gethostname.return_value = "fakehostname"
 
@@ -64,7 +64,7 @@ def test_microk8s_provides_invalid_relation(e: Environment):
     e.harness.begin_with_initial_hooks()
     assert isinstance(e.harness.charm.model.unit.status, ops.model.WaitingStatus)
 
-    rel_id = e.harness.add_relation("microk8s", "microk8s")
+    rel_id = e.harness.add_relation("control-plane", "microk8s")
     e.harness.add_relation_unit(rel_id, "microk8s/0")
     e.harness.update_relation_data(rel_id, "microk8s", {"not_a_join_url": "fakejoinurl"})
 
@@ -81,7 +81,7 @@ def test_microk8s_provides_invalid_relation(e: Environment):
 
 
 @pytest.mark.parametrize("is_leader", [True, False])
-def test_microk8s_provides_relation_departed(e: Environment, is_leader: bool):
+def test_control_plane_relation_departed(e: Environment, is_leader: bool):
     e.microk8s.get_unit_status.return_value = ops.model.ActiveStatus("fakestatus")
     e.gethostname.return_value = "fakehostname"
 
@@ -94,7 +94,7 @@ def test_microk8s_provides_relation_departed(e: Environment, is_leader: bool):
     unit = e.harness.charm.model.unit
     assert isinstance(unit.status, ops.model.WaitingStatus)
 
-    rel_id = e.harness.add_relation("microk8s", "microk8s-cp")
+    rel_id = e.harness.add_relation("control-plane", "microk8s-cp")
     e.harness.add_relation_unit(rel_id, "microk8s-cp/0")
     e.harness.add_relation_unit(rel_id, "microk8s-cp/1")
     e.harness.update_relation_data(rel_id, "microk8s-cp", {"join_url": "fakejoinurl"})

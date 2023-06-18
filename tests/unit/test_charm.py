@@ -195,6 +195,7 @@ def test_config_containerd_custom_registries(e: Environment, role: str, has_join
 
     e.harness.update_config({"containerd_custom_registries": "fakeval"})
     e.containerd.parse_registries.assert_called_once_with("fakeval")
+    e.containerd.ensure_registry_configs.assert_not_called()
     assert e.harness.charm.unit.status.__class__ == BlockedStatus
 
 

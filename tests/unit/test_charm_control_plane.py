@@ -86,7 +86,7 @@ def test_leader_peer_relation_leave(e: Environment):
     assert relation_data["remove_nodes"] == '["fakehostname"]'
 
 
-def test_leader_microk8s_provides_relation(e: Environment):
+def test_leader_control_plane_relation(e: Environment):
     e.microk8s.add_node.return_value = "01010101010101010101010101010101"
     e.microk8s.get_unit_status.return_value = ops.model.ActiveStatus("fakestatus")
     e.gethostname.return_value = "fakehostname"
@@ -96,7 +96,7 @@ def test_leader_microk8s_provides_relation(e: Environment):
     e.harness.set_leader(True)
     e.harness.begin_with_initial_hooks()
 
-    rel_id = e.harness.add_relation("microk8s-provides", "microk8s-worker")
+    rel_id = e.harness.add_relation("workers", "microk8s-worker")
     e.harness.add_relation_unit(rel_id, "microk8s-worker/0")
     e.harness.update_relation_data(rel_id, "microk8s-worker/0", {"hostname": "f-1"})
 
@@ -133,7 +133,7 @@ def test_follower_peer_relation(e: Environment):
     e.microk8s.remove_node.assert_not_called()
 
 
-def test_follower_microk8s_provides_relation(e: Environment):
+def test_follower_control_plane_relation(e: Environment):
     e.microk8s.get_unit_status.return_value = ops.model.ActiveStatus("fakestatus")
     e.gethostname.return_value = "fakehostname"
     e.harness.update_config({"role": "control-plane"})
@@ -141,7 +141,7 @@ def test_follower_microk8s_provides_relation(e: Environment):
     e.harness.begin_with_initial_hooks()
     e.harness.set_leader(False)
 
-    rel_id = e.harness.add_relation("microk8s-provides", "microk8s-worker")
+    rel_id = e.harness.add_relation("workers", "microk8s-worker")
     e.harness.add_relation_unit(rel_id, "microk8s-worker/0")
     e.harness.update_relation_data(rel_id, "microk8s-worker/0", {"hostname": "f-1"})
 
@@ -193,7 +193,7 @@ def test_follower_become_leader_remove_departing_nodes(e: Environment, become_le
     e.harness.update_relation_data(prel_id, f"{e.harness.charm.app.name}/1", {"hostname": "f-2"})
     e.harness.update_relation_data(prel_id, e.harness.charm.app.name, {"join_url": "fakejoinurl"})
 
-    rel_id = e.harness.add_relation("microk8s-provides", "microk8s-worker")
+    rel_id = e.harness.add_relation("workers", "microk8s-worker")
     e.harness.add_relation_unit(rel_id, "microk8s-worker/0")
     e.harness.add_relation_unit(rel_id, "microk8s-worker/1")
     e.harness.update_relation_data(rel_id, "microk8s-worker/0", {"hostname": "f-1"})

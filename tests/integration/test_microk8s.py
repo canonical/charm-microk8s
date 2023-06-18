@@ -78,7 +78,7 @@ async def test_deploy(e: OpsTest, series: str, cp_units: int, worker_units: int)
         )
 
         await e.model.add_relation(
-            f"{application_name}:microk8s-provides", f"{application_name}-worker:microk8s"
+            f"{application_name}:workers", f"{application_name}-worker:control-plane"
         )
 
     await e.model.wait_for_idle([a.name for a in apps], timeout=60 * 60)
