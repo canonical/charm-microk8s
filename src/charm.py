@@ -21,10 +21,12 @@ from ops.charm import (
     RelationJoinedEvent,
     RemoveEvent,
     UpdateStatusEvent,
+    UpgradeCharmEvent,
 )
 from ops.framework import StoredState
 from ops.model import ActiveStatus, BlockedStatus, MaintenanceStatus, WaitingStatus
 
+import containerd
 import microk8s
 import util
 
@@ -53,52 +55,166 @@ class MicroK8sCharm(CharmBase):
             role=self.config["role"],
             installed=False,
             joined=False,
-            leaving=False,
-            join_url="",
             hostnames={},
-            hostname=socket.gethostname(),
         )
 
         if self.config["role"] == "worker":
-            self.framework.observe(self.on.remove, self._on_remove)
-            self.framework.observe(self.on.install, self._on_install)
-            self.framework.observe(self.on.install, self._worker_open_ports)
-            self.framework.observe(self.on.config_changed, self._on_config_changed)
-            self.framework.observe(self.on.update_status, self._on_update_status)
-            self.framework.observe(self.on.microk8s_relation_joined, self._announce_hostname)
-            self.framework.observe(self.on.microk8s_relation_joined, self._retrieve_join_url)
-            self.framework.observe(self.on.microk8s_relation_changed, self._retrieve_join_url)
-            self.framework.observe(self.on.microk8s_relation_broken, self._on_relation_broken)
+            self.framework.observe(self.on.remove, self.on_remove)
+            self.framework.observe(self.on.upgrade_charm, self.on_upgrade)
+            self.framework.observe(self.on.install, self.on_install)
+            self.framework.observe(self.on.update_status, self.update_status)
+            self.framework.observe(self.on.config_changed, self.config_ensure_role)
+            self.framework.observe(self.on.config_changed, self.on_install)
+            self.framework.observe(self.on.config_changed, self.config_containerd_proxy)
+            self.framework.observe(self.on.config_changed, self.config_containerd_registries)
+            self.framework.observe(self.on.config_changed, self.update_status)
+            self.framework.observe(self.on.control_plane_relation_joined, self.on_install)
+            self.framework.observe(self.on.control_plane_relation_joined, self.announce_hostname)
+            self.framework.observe(self.on.control_plane_relation_changed, self.join_cluster)
+            self.framework.observe(self.on.control_plane_relation_changed, self.update_status)
+            self.framework.observe(self.on.control_plane_relation_broken, self.leave_cluster)
+            self.framework.observe(self.on.control_plane_relation_broken, self.update_status)
         else:
-            self.framework.observe(self.on.remove, self._on_remove)
-            self.framework.observe(self.on.install, self._on_install)
-            self.framework.observe(self.on.install, self._on_bootstrap_node)
-            self.framework.observe(self.on.install, self._control_plane_open_ports)
-            self.framework.observe(self.on.config_changed, self._on_config_changed)
-            self.framework.observe(self.on.update_status, self._on_update_status)
-            self.framework.observe(self.on.peer_relation_joined, self._add_token)
-            self.framework.observe(self.on.peer_relation_joined, self._announce_hostname)
-            self.framework.observe(self.on.peer_relation_joined, self._record_hostnames)
-            self.framework.observe(self.on.peer_relation_joined, self._retrieve_join_url)
-            self.framework.observe(self.on.peer_relation_changed, self._record_hostnames)
-            self.framework.observe(self.on.peer_relation_changed, self._retrieve_join_url)
-            self.framework.observe(self.on.peer_relation_departed, self._on_relation_departed)
-            self.framework.observe(self.on.leader_elected, self._on_config_changed)
-            self.framework.observe(self.on.microk8s_provides_relation_joined, self._add_token)
-            self.framework.observe(
-                self.on.microk8s_provides_relation_changed, self._record_hostnames
-            )
-            self.framework.observe(
-                self.on.microk8s_provides_relation_departed, self._on_relation_departed
+            self.framework.observe(self.on.remove, self.on_remove)
+            self.framework.observe(self.on.upgrade_charm, self.on_upgrade)
+            self.framework.observe(self.on.install, self.on_install)
+            self.framework.observe(self.on.install, self.bootstrap_cluster)
+            self.framework.observe(self.on.install, self.open_ports)
+            self.framework.observe(self.on.update_status, self.update_status)
+            self.framework.observe(self.on.config_changed, self.config_ensure_role)
+            self.framework.observe(self.on.config_changed, self.on_install)
+            self.framework.observe(self.on.config_changed, self.config_containerd_proxy)
+            self.framework.observe(self.on.config_changed, self.config_containerd_registries)
+            self.framework.observe(self.on.config_changed, self.config_hostpath_storage)
+            self.framework.observe(self.on.config_changed, self.config_certificate_reissue)
+            self.framework.observe(self.on.config_changed, self.config_extra_sans)
+            self.framework.observe(self.on.config_changed, self.update_status)
+            self.framework.observe(self.on.peer_relation_joined, self.add_node)
+            self.framework.observe(self.on.peer_relation_joined, self.announce_hostname)
+            self.framework.observe(self.on.peer_relation_joined, self.record_hostnames)
+            self.framework.observe(self.on.peer_relation_joined, self.join_cluster)
+            self.framework.observe(self.on.peer_relation_joined, self.config_extra_sans)
+            self.framework.observe(self.on.peer_relation_joined, self.update_status)
+            self.framework.observe(self.on.peer_relation_changed, self.record_hostnames)
+            self.framework.observe(self.on.peer_relation_changed, self.join_cluster)
+            self.framework.observe(self.on.peer_relation_changed, self.config_extra_sans)
+            self.framework.observe(self.on.peer_relation_changed, self.update_status)
+            self.framework.observe(self.on.peer_relation_departed, self.on_relation_departed)
+            self.framework.observe(self.on.peer_relation_departed, self.remove_departed_nodes)
+            self.framework.observe(self.on.peer_relation_departed, self.update_status)
+            self.framework.observe(self.on.leader_elected, self.remove_departed_nodes)
+            self.framework.observe(self.on.leader_elected, self.update_status)
+            self.framework.observe(self.on.workers_relation_joined, self.add_node)
+            self.framework.observe(self.on.workers_relation_changed, self.record_hostnames)
+            self.framework.observe(self.on.workers_relation_departed, self.on_relation_departed)
+            self.framework.observe(self.on.workers_relation_departed, self.remove_departed_nodes)
+            self.framework.observe(self.on.workers_relation_departed, self.update_status)
+
+    def on_remove(self, _: RemoveEvent):
+        try:
+            microk8s.uninstall()
+        except subprocess.CalledProcessError:
+            LOG.exception("failed to remove microk8s")
+
+    def on_upgrade(self, _: UpgradeCharmEvent):
+        # TODO(neoaggelos): Figure out an orchestrated upgrade strategy
+        microk8s.upgrade()
+
+    def on_install(self, _: InstallEvent):
+        if self._state.installed:
+            return
+
+        self.unit.status = MaintenanceStatus("installing required packages")
+        util.install_required_packages()
+
+        self.unit.status = MaintenanceStatus("installing MicroK8s")
+        microk8s.install()
+        try:
+            microk8s.wait_ready()
+        except subprocess.CalledProcessError:
+            LOG.exception("timed out waiting for node to come up")
+
+        self._state.installed = True
+        self._state.joined = False
+
+    def config_ensure_role(self, _: ConfigChangedEvent):
+        if self.config["role"] != self._state.role:
+            msg = f"role cannot change from '{self._state.role}' after deployment"
+            self.unit.status = BlockedStatus(msg)
+        else:
+            self.unit.status = MaintenanceStatus("maintenance")
+
+    def config_containerd_proxy(self, _: ConfigChangedEvent):
+        if isinstance(self.unit.status, BlockedStatus):
+            return
+
+        microk8s.set_containerd_proxy_options(
+            self.config["containerd_http_proxy"],
+            self.config["containerd_https_proxy"],
+            self.config["containerd_no_proxy"],
+        )
+
+    def config_containerd_registries(self, _: ConfigChangedEvent):
+        if isinstance(self.unit.status, BlockedStatus):
+            return
+
+        try:
+            registries = containerd.parse_registries(self.config["containerd_custom_registries"])
+            if registries:
+                self.unit.status = MaintenanceStatus("configure containerd registries")
+                containerd.ensure_registry_configs(registries)
+        except (ValueError, subprocess.CalledProcessError, OSError):
+            LOG.exception("failed to configure containerd registries")
+            self.unit.status = BlockedStatus(
+                "failed to apply containerd_custom_registries, check logs for details"
             )
 
-    def _record_hostnames(self, event: Union[RelationChangedEvent, RelationJoinedEvent]):
+    def config_hostpath_storage(self, _: ConfigChangedEvent):
+        if isinstance(self.unit.status, BlockedStatus):
+            return
+
+        if self._state.joined and self.unit.is_leader():
+            microk8s.configure_hostpath_storage(self.config["hostpath_storage"])
+
+    def config_certificate_reissue(self, _: ConfigChangedEvent):
+        if isinstance(self.unit.status, BlockedStatus):
+            return
+
+        if self._state.joined and not self.config["automatic_certificate_reissue"]:
+            self.unit.status = MaintenanceStatus("disabling automatic certificate reissue")
+            microk8s.disable_cert_reissue()
+
+    def config_extra_sans(self, _: ConfigChangedEvent):
+        if isinstance(self.unit.status, BlockedStatus):
+            return
+
+        if self._state.joined:
+            self.unit.status = MaintenanceStatus("configuring extra SANs")
+            microk8s.configure_extra_sans(self.config["extra_sans"])
+
+    def update_status(self, _: Union[UpdateStatusEvent, ConfigChangedEvent]):
+        if isinstance(self.unit.status, BlockedStatus):
+            return
+
+        if not self._state.joined:
+            self.unit.status = WaitingStatus("waiting for control plane")
+            return
+
+        self.unit.status = microk8s.get_unit_status(socket.gethostname())
+        while not isinstance(self.unit.status, ActiveStatus):
+            time.sleep(2)
+            self.unit.status = microk8s.get_unit_status(socket.gethostname())
+
+    def record_hostnames(self, event: Union[RelationChangedEvent, RelationJoinedEvent]):
         for unit in event.relation.units:
             hostname = event.relation.data[unit].get("hostname")
             if hostname is not None:
                 self._state.hostnames[unit.name] = hostname
 
-    def _on_relation_departed(self, event: RelationDepartedEvent):
+    def on_relation_departed(self, event: RelationDepartedEvent):
+        if event.departing_unit == self.unit:
+            self._state.joined = False
+
         remove_hostname = self._state.hostnames.pop(event.departing_unit.name, None)
         if not self.unit.is_leader():
             return
@@ -108,65 +224,14 @@ class MicroK8sCharm(CharmBase):
             remove_nodes.append(remove_hostname)
             self._set_peer_data("remove_nodes", remove_nodes)
 
-        self._on_config_changed(None)
-
-    def _worker_open_ports(self, _: InstallEvent):
-        self.unit.open_port("tcp", 80)
-        self.unit.open_port("tcp", 443)
-
-    def _control_plane_open_ports(self, _: InstallEvent):
-        self.unit.open_port("tcp", 80)
-        self.unit.open_port("tcp", 443)
-        self.unit.open_port("tcp", 16443)
-
-    def _on_remove(self, _: RemoveEvent):
-        try:
-            microk8s.uninstall()
-        except subprocess.CalledProcessError:
-            LOG.exception("failed to remove microk8s")
-
-    def _announce_hostname(self, event: Union[RelationJoinedEvent, RelationChangedEvent]):
-        self._state.hostname = socket.gethostname()
-        self._state.hostnames[self.unit.name] = self._state.hostname
-        event.relation.data[self.unit]["hostname"] = self._state.hostname
-
-    def _on_install(self, _: InstallEvent):
-        if self._state.installed:
-            return
-
-        self.unit.status = MaintenanceStatus("installing required packages")
-        util.install_required_packages()
-
-        self.unit.status = MaintenanceStatus("installing MicroK8s")
-        microk8s.install(self.config["channel"])
-        try:
-            microk8s.wait_ready()
-        except subprocess.CalledProcessError:
-            LOG.exception("timed out waiting for node to come up")
-
-        self._state.installed = True
-        self._state.joined = False
-
-    def _on_bootstrap_node(self, _: InstallEvent):
-        if not self._state.join_url and self.unit.is_leader():
-            self._state.joined = True
-
-    def _on_config_changed(self, _: Union[ConfigChangedEvent, LeaderElectedEvent]):
-        if self.config["role"] != self._state.role:
-            msg = f"role cannot change from '{self._state.role}' after deployment"
-            self.unit.status = BlockedStatus(msg)
-            return
-
-        if not self._state.installed:
-            self._on_install(None)
-
+    def remove_departed_nodes(self, _: Union[RelationDepartedEvent, LeaderElectedEvent]):
         if self._state.joined and self.unit.is_leader():
             remove_nodes = self._get_peer_data("remove_nodes", [])
 
             new_remove_nodes = []
             for hostname in set(remove_nodes):
                 # skip self, someone else will remove us when they become leader
-                if hostname == self._state.hostname:
+                if hostname == socket.gethostname():
                     new_remove_nodes.append(hostname)
                     continue
 
@@ -179,60 +244,49 @@ class MicroK8sCharm(CharmBase):
 
             self._set_peer_data("remove_nodes", new_remove_nodes)
 
-        if self._state.joined and self._state.leaving:
-            self.unit.status = MaintenanceStatus("leaving cluster")
-            microk8s.uninstall()
+    def open_ports(self, _: InstallEvent):
+        self.unit.open_port("tcp", 16443)
 
-            self._state.installed = False
-            self._state.joined = False
-            self._state.leaving = False
-            self._state.join_url = ""
+    def announce_hostname(self, event: Union[RelationJoinedEvent, RelationChangedEvent]):
+        hostname = socket.gethostname()
+        self._state.hostnames[self.unit.name] = hostname
+        event.relation.data[self.unit]["hostname"] = hostname
 
-        if not self._state.joined:
-            if not self._state.join_url:
-                self.unit.status = WaitingStatus("waiting for control plane relation")
-                return
-
-            self.unit.status = MaintenanceStatus("joining cluster")
-            microk8s.join(self._state.join_url, self.config["role"] == "worker")
+    def bootstrap_cluster(self, _: InstallEvent):
+        # FIXME(neoaggelos): possible race condition if leadership changes during bootstrap
+        if self.unit.is_leader():
             self._state.joined = True
 
-        while self.unit.status.__class__ not in [ActiveStatus]:
-            self.unit.status = microk8s.get_unit_status(socket.gethostname())
-            time.sleep(5)
-
-    def _on_update_status(self, _: UpdateStatusEvent):
-        if self._state.joined:
-            self.unit.status = microk8s.get_unit_status(socket.gethostname())
-
-    def _retrieve_join_url(self, event: Union[RelationChangedEvent, RelationJoinedEvent]):
-        # TODO(neoaggelos): corner case where the leader in the control plane peer relation changes
-        # before other nodes have time to join. deployment might fail in this case.
+    def join_cluster(self, event: Union[RelationJoinedEvent, RelationChangedEvent]):
         if self._state.joined or (self.config["role"] != "worker" and self.unit.is_leader()):
             return
 
-        LOG.info("Looking for join_url from relation %s", event.relation.name)
-
         join_url = event.relation.data[event.app].get("join_url")
         if not join_url:
-            LOG.info("No join_url set yet")
+            LOG.info("join URL not yet available")
             return
 
-        self._state.join_url = join_url
-        self._on_config_changed(None)
+        self.unit.status = MaintenanceStatus("joining cluster")
+        microk8s.join(join_url, self.config["role"] == "worker")
+        microk8s.wait_ready()
+        self._state.joined = True
 
-    def _on_relation_broken(self, _: RelationBrokenEvent):
-        self._state.leaving = True
-        LOG.info("Leaving the cluster")
-        self._on_config_changed(None)
+    def leave_cluster(self, _: RelationBrokenEvent):
+        if not self._state.joined:
+            return
 
-    def _add_token(self, event: RelationJoinedEvent):
+        LOG.info("leaving cluster")
+        self.unit.status = MaintenanceStatus("leaving cluster")
+        microk8s.uninstall()
+
+        self._state.installed = False
+        self._state.joined = False
+
+    def add_node(self, event: RelationJoinedEvent):
         if not self.unit.is_leader():
             return
 
         token = microk8s.add_node()
-
-        LOG.info("Generated join token for new node")
         event.relation.data[self.app]["join_url"] = "{}:25000/{}".format(
             self.model.get_binding(event.relation).network.ingress_address, token
         )

@@ -20,8 +20,6 @@ The control plane nodes will automatically form a 3-node cluster. The worker nod
 | all        | `role`      | `""`, `"control-plane"` or `"worker"`          | set to `config["role"]` when the charm is deployed, to prevent the role from changing afterwards                            |
 | all        | `installed` | `true` or `false`                              | set to `true` after MicroK8s is installed                                                                                   |
 | all        | `joined`    | `true` or `false`                              | set to `true` after joining the cluster successfully                                                                        |
-| all        | `leaving`   | `true` or `false`                              | set to `true` if leaving the cluster (relation broken)                                                                      |
-| all        | `join_url`  | `"$IP_ADDRESS:25000/$TOKEN"`                   | for units other than the bootstrap control plane node, store the URL that is used to join the cluster                       |
 | all        | `hostnames` | `{"microk8s/0": "juju-roasted-beef42-0", ...}` | mapping of unit names to hostnames. recorded by all control plane nodes and used to remove departing nodes from the cluster |
 
 ### Relations
@@ -68,16 +66,21 @@ charm-microk8s:                     # Root directory
   - architecture.md                 # Document architecture decisions for the charm
   - development.md                  # Getting started with developing the charm and running tests
 - src:
+  - charm_config.py                 # Channel-specific charm configuration
   - charm.py                        # Main charm source code and entry point
+  - containerd.py                   # Implement containerd functionality
   - microk8s.py                     # Implement microk8s functionality
+  - ops_helpers.py                  # Helpers and utilities not available yet in ops framework
   - util.py                         # Implement helpers and utilities
 - tests:
   - unit:
     - conftest.py                   # Shared test fixtures
-    - test_charm.py                 # Unit tests for src/charm.py
     - test_charm_control_plane.py   # Unit tests for src/charm.py (control plane specific)
     - test_charm_worker.py          # Unit tests for src/charm.py (worker specific)
+    - test_charm.py                 # Unit tests for src/charm.py
+    - test_containerd.py            # Unit tests for src/containerd.py
     - test_microk8s.py              # Unit tests for src/microk8s.py
+    - test_ops_helpers.py           # Unit tests for src/util.py
     - test_util.py                  # Unit tests for src/util.py
   - integration:
     - config.py                     # Integration tests configuration file

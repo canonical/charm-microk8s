@@ -1,6 +1,6 @@
-# This file configures Charmcraft.
-# See https://juju.is/docs/sdk/charmcraft-config for guidance.
-
+##
+## Copyright 2023 Canonical, Ltd.
+##
 type: charm
 bases:
   - build-on:

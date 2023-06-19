@@ -1,16 +1,7 @@
+##
+## Copyright 2023 Canonical, Ltd.
+##
 options:
-  channel:
-    description: |
-      Specify MicroK8s version to install. This is the channel that will be passed to the "snap
-      install microk8s" command. See also https://microk8s.io/docs/setting-snap-channel
-
-      Examples:
-      - ""                  # install latest version
-      - "1.27/stable"       # install MicroK8s 1.27 from the stable branch
-      - "1.27/edge"         # install MicroK8s 1.27 from the edge branch (getting all latest fixes)
-      - "1.27-strict"       # install MicroK8s 1.27 with strict confinement
-    default: ""
-    type: string
   role:
     description: |
       Role for MicroK8s deployment, one of "", "control-plane" or "worker".
@@ -25,3 +16,108 @@ options:
       to go into error state until the change is reverted.
     default: ""
     type: string
+  containerd_http_proxy:
+    description: |
+      Set an HTTP proxy to be used by containerd to pull images from image registries. This is
+      useful when deploying the charm on a constrained environment.
+
+      Example: "http://squid.internal:3128"
+    default: ""
+    type: string
+  containerd_https_proxy:
+    description: |
+      Set an HTTPS proxy to be used by containerd to pull images from image registries. This is
+      useful when deploying the charm on a constrained environment.
+
+      Example: "http://squid.internal:3128"
+    default: ""
+    type: string
+  containerd_no_proxy:
+    description: |
+      When configuring an HTTP/HTTPS proxy for containerd, specify the list of IP ranges to exclude.
+
+      Example: "127.0.0.1,10.0.0.0/8,192.168.0.0/16,172.16.0.0/12"
+    default: ""
+    type: string
+  automatic_certificate_reissue:
+    description: |
+      By default, MicroK8s will automatically regenerate server certificates when the IP address
+      of the host machine changes. This is problematic in scenarios where a bridge is configured
+      on the host and IP addresses on the bridge are changed frequently.
+
+      Set this flag to false if that is the case to prevent MicroK8s from continuously restarting
+      and affecting the service.
+
+      This option is ignored and does not have any effect on multi-node clusters.
+    default: true
+    type: boolean
+  extra_sans:
+    description: |
+      Comma-separated list of extra Subject Alternate Names that will be added to the kube-apiserver
+      certificates. This is useful in cases where the MicroK8s control plane is made accessible over
+      a floating IP or with DNS round-robin load-balancing.
+
+      The list may contain valid IP addresses or hostnames. If %UNIT_PUBLIC_ADDRESS% is in the list,
+      it will be replaced by Juju with the public address of the unit (e.g. the OpenStack floating
+      IP).
+
+      Note that the charm will not configure any DNS records or virtual IPs, these have to be setup
+      by the administrator separately.
+
+      Examples:
+
+      - ""                        # do nothing
+      - "10.10.10.10"             # add '10.10.10.10' as a SAN
+      - "k8s-1.lan"               # add 'k8s-1.lan' as a SAN
+      - "10.10.10.10,k8s-1.lan"   # add two SANs
+      - "%UNIT_PUBLIC_ADDRESS%"   # add the public unit address as a SAN
+    default: "%UNIT_PUBLIC_ADDRESS%"
+    type: string
+  containerd_custom_registries:
+    type: string
+    default: "[]"
+    description: |
+      Registry endpoints and credentials. Setting this config allows containerd
+      to pull images from registries where auth is required.
+
+      The value for this config must be a JSON array of credential objects, like this:
+        e.g.: [{"url": "https://registry.example.com", "host": "my.registry:port", "username": "user", "password": "pass"}]
+
+      Credential Object Parameters:
+      url: REQUIRED str
+        the URL to the registry, include the port if not it isn't implied from the schema.
+          e.g: "url": "https://my.registry:8443"
+          e.g: "url": "http://my.registry"
+
+      host: OPTIONAL str - defaults to auto-generated from the url
+        could be registry host address or a name
+          e.g.: myregistry.io:9000, 10.10.10.10:5432
+          e.g.: myregistry.io, myregistry
+        Note: It will be derived from `url` if not provided.
+          e.g.: "url": "http://10.10.10.10:8000" --> "host": "10.10.10.10:8000"
+
+      username: OPTIONAL str - default ''
+      password: OPTIONAL str - default ''
+        Used by containerd for basic authentication to the registry.
+
+      ca_file: OPTIONAL str - default ''
+      cert_file: OPTIONAL str - default ''
+      key_file: OPTIONAL str - default ''
+        For ssl/tls communication these should be a base64 encoded file
+        e.g.:  "ca_file": "'"$(base64 -w 0 < my.custom.registry.pem)"'"
+
+      insecure_skip_verify: OPTIONAL bool - default false
+        For situatations where the registry has self-signed or expired certs and a quick work-around is necessary.
+        e.g.: "insecure_skip_verify": true
+
+      example config)
+      juju config containerd custom_registries='[{
+          "url": "https://registry.example.com",
+          "ca_file": "'"$(base64 -w 0 < ~/my.custom.ca.pem)"'",
+          "cert_file": "'"$(base64 -w 0 < ~/my.custom.cert.pem)"'",
+          "key_file": "'"$(base64 -w 0 < ~/my.custom.key.pem)"'",
+      }]'
+  hostpath_storage:
+    description: Allow hostpath storage provisioner on the cluster
+    default: false
+    type: boolean

@@ -30,24 +30,21 @@ jobs:
           path: ./microk8s.charm
 
   test:
-    name: Test
+    name: Test - ${{ matrix.control_plane}}cp${{ matrix.workers}}w - ${{ matrix.series }} - juju ${{ matrix.juju }}
     runs-on: ubuntu-latest
     needs: build
     strategy:
-      fail-fast: true
+      # fail-fast: true
       matrix:
-        include:
-          - { control_plane: 3, workers: 0, channel: '', series: '', juju: '2.9' }
-          - { control_plane: 3, workers: 0, channel: '', series: '', juju: '3.1' }
-        control_plane: [1]
+        control_plane: [1, 3]
         workers: [1]
-        channel: [1.27, 1.26, 1.25]
         series: [focal, jammy]
         juju: [2.9, 3.1]
-
     steps:
       - name: Checking out repo
         uses: actions/checkout@v3.5.2
+      # - name: Setup tmate session
+      #   uses: mxschmitt/action-tmate@v3
       - name: Configure pytest-operator
         uses: charmed-kubernetes/actions-operator@main
         with:
@@ -67,7 +64,6 @@ jobs:
       - name: Run integration tests
         run: |
           juju add-model testing
-          export MK8S_SNAP_CHANNELS='${{ matrix.channel }}'
           export MK8S_SERIES='${{ matrix.series }}'
           export MK8S_CLUSTER_SIZES='[[${{ matrix.control_plane }}, ${{ matrix.workers }}]]'
           export MK8S_CHARM=./build/microk8s.charm
@@ -84,5 +80,5 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v3.1.2
         with:
-          name: logs-${{ matrix.channel }}-${{ matrix.series }}-juju${{ matrix.juju }}-${{ matrix.control_plane }}c${{ matrix.workers }}w
+          name: logs - ${{ matrix.control_plane}}cp${{ matrix.workers}}w - ${{ matrix.series }} - juju ${{ matrix.juju }}
           path: artifacts/

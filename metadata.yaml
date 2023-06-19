@@ -1,3 +1,6 @@
+##
+## Copyright 2023 Canonical, Ltd.
+##
 name: microk8s
 
 display-name: MicroK8s
@@ -20,12 +23,12 @@ peers:
     interface: microk8s-peer
 
 provides:
-  microk8s-provides:
+  workers:
     interface: microk8s-info
     scope: global
 
 requires:
-  microk8s:
+  control-plane:
     interface: microk8s-info
     scope: global
     limit: 1

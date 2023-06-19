@@ -15,13 +15,6 @@ MK8S_CHARM = os.getenv("MK8S_CHARM", "build")
 #   - ''                        <-- when installing from local charm, set to empty
 MK8S_CHARM_CHANNEL = os.getenv("MK8S_CHARM_CHANNEL", "")
 
-# MK8S_SNAP_CHANNELS is a space-separated list of MicroK8s versions (snap channels) to test.
-# A separate test is run for each snap channel.
-#   - '1.27 1.26 1.25'          <-- test 1.27, 1.26 and 1.25 MicroK8s channels
-#   - '1.27-strict'             <-- test 1.27-strict MicroK8s channel
-#   - ''                        <-- test the default MicroK8s channel
-MK8S_SNAP_CHANNELS = os.getenv("MK8S_SNAP_CHANNELS", "").split(" ")
-
 # MK8S_CLUSTER_SIZES is the cluster size to deploy. It is a list of lists of how many
 # control plane and how many worker nodes to deploy.
 # A separate test is run for each cluster size.
