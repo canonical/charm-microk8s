@@ -3,6 +3,7 @@
 #
 import logging
 from contextlib import asynccontextmanager
+from typing import Tuple
 
 import config
 import pytest_asyncio
@@ -40,6 +41,25 @@ async def e(ops_test: OpsTest):
     yield ops_test
 
 
+async def run_command(unit: Unit, command: str) -> Tuple[int, str]:
+    """
+    execute a command on the specified unit. Returns the exit code and the stdout. Handles
+    differences between Juju 2.9 and 3.1
+    """
+    action: Action = await unit.run(command)
+
+    output = await unit.model.get_action_output(action.entity_id)
+
+    if "return-code" in output and "stdout" in output:
+        # Juju 3+
+        return output["return-code"], output["stdout"]
+    elif "Code" in output and "Stdout" in output:
+        # Juju 2.9
+        return int(output["Code"]), output["Stdout"]
+
+    raise ValueError(f"unknown action output {output}")
+
+
 @asynccontextmanager
 async def microk8s_kubernetes_cloud_and_model(ops_test: OpsTest, microk8s_application: str):
     """
@@ -58,14 +78,10 @@ async def microk8s_kubernetes_cloud_and_model(ops_test: OpsTest, microk8s_applic
 
     await ops_test.model.wait_for_idle([microk8s_application])
 
-    unit: Unit = app.units[0]
-    action: Action = await unit.run("microk8s config")
+    rc, kubeconfig = await run_command(app.units[0], "microk8s config")
+    if rc != 0:
+        raise Exception(f"failed to retrieve microk8s config {rc, kubeconfig}")
 
-    result = await ops_test.model.get_action_output(action.entity_id)
-    if result["Code"] != "0":
-        raise Exception(f"failed to retrieve microk8s config, result was {result}")
-
-    kubeconfig = result["Stdout"]
     model_name = f"k8s-{ops_test._generate_model_name()}"
 
     try:

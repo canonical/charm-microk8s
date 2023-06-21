@@ -7,8 +7,7 @@ import logging
 
 import config
 import pytest
-from conftest import microk8s_kubernetes_cloud_and_model
-from juju.action import Action
+from conftest import microk8s_kubernetes_cloud_and_model, run_command
 from juju.unit import Unit
 from pytest_operator.plugin import OpsTest
 
@@ -46,17 +45,14 @@ async def test_metallb(e: OpsTest):
         with e.model_context("main"):
             LOG.info("Deploy a test LoadBalancer service")
             u: Unit = e.model.applications["microk8s"].units[0]
+
             await u.run("microk8s kubectl delete service nginx")
             await u.run("microk8s kubectl create deploy nginx --replicas 3 --image nginx")
             await u.run("microk8s kubectl expose deploy nginx --port 80 --type LoadBalancer")
 
-            result = {}
-            while "42.42.42.42" not in (result.get("Stdout") or ""):
-                action: Action = await u.run("microk8s kubectl get svc nginx --no-headers")
-                result = await e.model.get_action_output(action.entity_id)
-
-                # NOTE(neoaggelos/2023-06-21):
-                # result == {"Code": "0", "Stdout": "output from command"}
-                LOG.info("Attempt to access load balancer service %s", result)
+            stdout = ""
+            while "42.42.42.42" not in stdout:
+                rc, stdout = await run_command(u, "microk8s kubectl get svc nginx --no-headers")
+                LOG.info("Attempt to access load balancer service %s", (rc, stdout))
 
             LOG.info("LoadBalancer successfully got assigned IP")
