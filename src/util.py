@@ -28,7 +28,7 @@ def install_required_packages():
     try:
         packages.append(f"linux-modules-extra-{os.uname().release}")
     except OSError:
-        LOG.exception("could not retrieve kernel version, will not install extra modules")
+        LOG.warning("unknown kernel version, will not install extra modules", exc_info=1)
 
     LOG.info("Installing required packages %s", packages)
 
@@ -37,7 +37,7 @@ def install_required_packages():
             LOG.info("Installing package %s", package)
             run(["apt-get", "install", "--yes", package])
         except subprocess.CalledProcessError:
-            LOG.exception("failed to install package %s, charm may misbehave", package)
+            LOG.warning("failed to install package %s, charm may misbehave", package, exc_info=1)
 
 
 def ensure_file(
@@ -91,7 +91,7 @@ def _ensure_func(
         try:
             return f(*args, **kwargs)
         except retry_on:
-            LOG.exception("action not successful (try %d of %d)", idx + 1, max_retries)
+            LOG.warning("action not successful (try %d of %d)", idx + 1, max_retries, exc_info=1)
             time.sleep(backoff)
 
     # last time run unprotected and raise any exception
@@ -99,5 +99,5 @@ def _ensure_func(
 
 
 def ensure_call(*args, **kwargs) -> subprocess.CompletedProcess:
-    """repeatedly run a command until it succeeds. any args are passed to subprocess.check_call"""
+    """repeatedly run a command until it succeeds. any args are passed to subprocess.run"""
     return _ensure_func(run, args, kwargs, subprocess.CalledProcessError)

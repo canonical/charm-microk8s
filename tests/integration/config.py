@@ -43,3 +43,11 @@ MK8S_PROXY = os.getenv("MK8S_PROXY")
 #   - '10.0.0.0/8,127.0.0.1'    <-- set these to the 'NO_PROXY' variable
 #   - ''                        <-- do not configure proxy
 MK8S_NO_PROXY = os.getenv("MK8S_NO_PROXY")
+
+# MK8S_METALLB_SPEAKER_CHARM is the metallb-speaker charm for the MetalLB integration tests.
+#   - 'ch:metallb-speaker'      <-- install charm 'metallb-speaker' from CharmHub
+MK8S_METALLB_SPEAKER_CHARM = os.getenv("MK8S_METALLB_SPEAKER_CHARM", "ch:metallb-speaker")
+
+# MK8S_METALLB_CONTROLLER_CHARM is the metallb-controller charm for the MetalLB integration tests.
+#   - 'ch:metallb-controller'   <-- install charm 'metallb-controller' from CharmHub
+MK8S_METALLB_CONTROLLER_CHARM = os.getenv("MK8S_METALLB_CONTROLLER_CHARM", "ch:metallb-controller")

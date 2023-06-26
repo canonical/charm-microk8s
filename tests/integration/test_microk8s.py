@@ -4,48 +4,18 @@
 #
 
 import logging
-from pathlib import Path
 
 import config
 import pytest
-import pytest_asyncio
-import yaml
 from pytest_operator.plugin import OpsTest
 
 LOG = logging.getLogger(__name__)
-
-METADATA = yaml.safe_load(Path("./metadata.yaml").read_text())
-APP_NAME = METADATA["name"]
-
-
-@pytest_asyncio.fixture(scope="module")
-async def e(ops_test: OpsTest):
-    """fixture to setup environment and configuration settings on the testing model."""
-
-    if config.MK8S_CHARM == "build":
-        config.MK8S_CHARM = await ops_test.build_charm(".")
-
-    model_config = {"logging-config": "<root>=INFO;unit=DEBUG"}
-    if config.MK8S_PROXY is not None:
-        model_config.update(
-            {
-                "http-proxy": config.MK8S_PROXY,
-                "https-proxy": config.MK8S_PROXY,
-                "ftp-proxy": config.MK8S_PROXY,
-            }
-        )
-    if config.MK8S_NO_PROXY is not None:
-        model_config.update({"no-proxy": config.MK8S_NO_PROXY})
-
-    await ops_test.model.set_config(model_config)
-
-    yield ops_test
 
 
 @pytest.mark.abort_on_fail
 @pytest.mark.parametrize("cp_units, worker_units", config.MK8S_CLUSTER_SIZES)
 @pytest.mark.parametrize("series", config.MK8S_SERIES)
-async def test_deploy(e: OpsTest, series: str, cp_units: int, worker_units: int):
+async def test_microk8s_cluster(e: OpsTest, series: str, cp_units: int, worker_units: int):
     """Deploy a cluster and wait for units to come up"""
 
     charm_config = {}
