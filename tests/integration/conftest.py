@@ -41,21 +41,21 @@ async def e(ops_test: OpsTest):
     yield ops_test
 
 
-async def run_command(unit: Unit, command: str) -> Tuple[int, str]:
+async def run_unit(unit: Unit, command: str) -> Tuple[int, str, str]:
     """
-    execute a command on the specified unit. Returns the exit code and the stdout. Handles
+    execute a command on the specified unit. Returns the exit code, stdout and stderr. Handles
     differences between Juju 2.9 and 3.1
     """
     action: Action = await unit.run(command)
 
     output = await unit.model.get_action_output(action.entity_id)
 
-    if "return-code" in output and "stdout" in output:
-        # Juju 3+
-        return output["return-code"], output["stdout"]
-    elif "Code" in output and "Stdout" in output:
+    if "return-code" in output:
+        # Juju 3.1
+        return output["return-code"], output.get("stdout") or "", output.get("stderr") or ""
+    elif "Code" in output:
         # Juju 2.9
-        return int(output["Code"]), output["Stdout"]
+        return int(output["Code"]), output.get("Stdout") or "", output.get("Stderr") or ""
 
     raise ValueError(f"unknown action output {output}")
 
@@ -69,6 +69,8 @@ async def microk8s_kubernetes_cloud_and_model(ops_test: OpsTest, microk8s_applic
     async with microk8s_kubernetes_cloud_and_model(ops_test, "microk8s") as k8s_model:
         with ops_test.model_context(k8s_model):
             ops_test.deploy( <kubernetes things> )
+
+        ops_test.deploy( <main model things> )
     ```
     """
     app: Application = ops_test.model.applications[microk8s_application]
@@ -78,14 +80,14 @@ async def microk8s_kubernetes_cloud_and_model(ops_test: OpsTest, microk8s_applic
 
     await ops_test.model.wait_for_idle([microk8s_application])
 
-    rc, kubeconfig = await run_command(app.units[0], "microk8s config")
+    rc, kubeconfig, _ = await run_unit(app.units[0], "microk8s config")
     if rc != 0:
         raise Exception(f"failed to retrieve microk8s config {rc, kubeconfig}")
 
     model_name = f"k8s-{ops_test._generate_model_name()}"
 
     try:
-        LOG.info("Bootstrap cloud 'k8s-cloud' on controller '%s'", ops_test.controller_name)
+        LOG.info("Add cloud %s on controller %s", JUJU_CLOUD_NAME, ops_test.controller_name)
         await ops_test.juju(
             "add-k8s",
             JUJU_CLOUD_NAME,
@@ -95,22 +97,20 @@ async def microk8s_kubernetes_cloud_and_model(ops_test: OpsTest, microk8s_applic
             stdin=kubeconfig.encode(),
         )
 
-        LOG.info("Create model 'k8s-model' on cloud 'k8s-cloud'")
         await ops_test.track_model(
             "k8s-model",
             model_name=model_name,
             cloud_name=JUJU_CLOUD_NAME,
             credential_name=JUJU_CLOUD_NAME,
-            keep=True,
         )
-        LOG.info("Created model 'k8s-model' on cloud 'k8s-cloud'")
 
         yield "k8s-model"
 
     finally:
-        LOG.info("Destroy model 'k8s-model'")
+        await ops_test.forget_model("k8s-model")
+        LOG.info("Destroy model %s", model_name)
         res = await ops_test.juju(
-            "destroy-model", model_name, "--force", "--destroy-storage", "--yes"
+            "destroy-model", model_name, "--force", "--destroy-storage", "--yes", "--no-prompt"
         )
         LOG.info("%s", res)
         LOG.info("Delete cloud 'k8s-cloud' on controller '%s'", ops_test.controller_name)

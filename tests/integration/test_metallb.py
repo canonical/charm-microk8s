@@ -7,7 +7,7 @@ import logging
 
 import config
 import pytest
-from conftest import microk8s_kubernetes_cloud_and_model, run_command
+from conftest import microk8s_kubernetes_cloud_and_model, run_unit
 from juju.unit import Unit
 from pytest_operator.plugin import OpsTest
 
@@ -42,17 +42,16 @@ async def test_metallb(e: OpsTest):
             )
             await e.model.wait_for_idle(["metallb-speaker", "metallb-controller"])
 
-        with e.model_context("main"):
-            LOG.info("Deploy a test LoadBalancer service")
-            u: Unit = e.model.applications["microk8s"].units[0]
+        LOG.info("Create a test LoadBalancer service")
+        u: Unit = e.model.applications["microk8s"].units[0]
 
-            await u.run("microk8s kubectl delete service nginx")
-            await u.run("microk8s kubectl create deploy nginx --replicas 3 --image nginx")
-            await u.run("microk8s kubectl expose deploy nginx --port 80 --type LoadBalancer")
+        await run_unit(u, "microk8s kubectl delete service nginx")
+        await run_unit(u, "microk8s kubectl create deploy nginx --replicas 3 --image nginx")
+        await run_unit(u, "microk8s kubectl expose deploy nginx --port 80 --type LoadBalancer")
 
-            stdout = ""
-            while "42.42.42.42" not in stdout:
-                rc, stdout = await run_command(u, "microk8s kubectl get svc nginx --no-headers")
-                LOG.info("Attempt to access load balancer service %s", (rc, stdout))
+        stdout = ""
+        while "42.42.42.42" not in stdout:
+            rc, stdout, stderr = await run_unit(u, "microk8s kubectl get svc nginx")
+            LOG.info("Check LoadBalancer service %s", (rc, stdout, stderr))
 
-            LOG.info("LoadBalancer successfully got assigned IP")
+        LOG.info("LoadBalancer successfully got ExternalIP address")
