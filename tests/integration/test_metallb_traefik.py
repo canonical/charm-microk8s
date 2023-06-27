@@ -64,7 +64,7 @@ async def test_metallb_traefik(e: OpsTest):
             rc, stdout, stderr = await run_unit(u, f"microk8s kubectl get svc traefik -n {ns}")
             LOG.info("Check LoadBalancer service %s on %s", (rc, stdout, stderr), ns)
 
-        # Make sure hello-kubecon is avaiable from ingress
+        # Make sure hello-kubecon is available from ingress
         while "Hello, Kubecon" not in stdout:
             rc, stdout, stderr = await run_unit(u, f"curl http://42.42.42.42:80/{ns}-hello-kubecon {ns}")
             LOG.info("Check LoadBalancer service %s on %s", (rc, stdout, stderr), ns)
