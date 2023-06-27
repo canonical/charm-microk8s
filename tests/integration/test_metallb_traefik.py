@@ -27,9 +27,13 @@ async def test_metallb_traefik(e: OpsTest):
         )
         await e.model.wait_for_idle(["microk8s"])
 
+    u: Unit = e.model.applications["microk8s"].units[0]
+    ns = ""
+
     # bootstrap a juju cloud on the deployed microk8s
     async with microk8s_kubernetes_cloud_and_model(e, "microk8s") as k8s_model:
-        with e.model_context(k8s_model) as ns:
+        with e.model_context(k8s_model) as model:
+            ns = model.info.name
             LOG.info("Deploy MetalLB")
             await e.model.deploy(
                 config.MK8S_METALLB_SPEAKER_CHARM,
@@ -53,19 +57,14 @@ async def test_metallb_traefik(e: OpsTest):
                 application_name="hello-kubecon",
             )
             await e.model.wait_for_idle(["traefik", "hello-kubecon"])
+            await e.model.relate("traefik", "hello-kubecon")
 
-            u: Unit = e.model.applications["microk8s"].units[0]
-            stdout = ""
-            while "42.42.42.42" not in stdout:
-                rc, stdout, stderr = await run_unit(u, f"microk8s kubectl get svc traefik-k8s -n {ns}")
-                LOG.info("Check LoadBalancer service %s", (rc, stdout, stderr))
+        stdout = ""
+        while "42.42.42.42" not in stdout:
+            rc, stdout, stderr = await run_unit(u, f"microk8s kubectl get svc traefik -n {ns}")
+            LOG.info("Check LoadBalancer service %s on %s", (rc, stdout, stderr), ns)
 
-            LOG.info("LoadBalancer successfully got ExternalIP address")
-
-        #
-        #
-        #LOG.info("Create a test LoadBalancer service")
-        #
-        #await run_unit(u, "microk8s kubectl delete service nginx")
-        #await run_unit(u, "microk8s kubectl create deploy nginx --replicas 3 --image nginx")
-        #await run_unit(u, "microk8s kubectl expose deploy nginx --port 80 --type LoadBalancer")
+        # Make sure hello-kubecon is avaiable from ingress
+        while "Hello, Kubecon" not in stdout:
+            rc, stdout, stderr = await run_unit(u, f"curl http://42.42.42.42:80/{ns}-hello-kubecon {ns}")
+            LOG.info("Check LoadBalancer service %s on %s", (rc, stdout, stderr), ns)
