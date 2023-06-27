@@ -51,3 +51,11 @@ MK8S_METALLB_SPEAKER_CHARM = os.getenv("MK8S_METALLB_SPEAKER_CHARM", "ch:metallb
 # MK8S_METALLB_CONTROLLER_CHARM is the metallb-controller charm for the MetalLB integration tests.
 #   - 'ch:metallb-controller'   <-- install charm 'metallb-controller' from CharmHub
 MK8S_METALLB_CONTROLLER_CHARM = os.getenv("MK8S_METALLB_CONTROLLER_CHARM", "ch:metallb-controller")
+
+# MK8S_TRAEFIK_K8S_CHARM is the traefik-k8s ingress charm for the respective integration tests.
+#   - 'ch:traefik-k8s'          <-- install charm 'traefik-k8s' from CharmHub
+MK8S_TRAEFIK_K8S_CHARM = os.getenv("MK8S_TRAEFIK_K8S_CHARM", "ch:traefik-k8s")
+
+# MK8S_HELLO_KUBECON_CHARM is the hello-kubecon charm for the ingress integration tests.
+#   - 'ch:hello-kubecon'        <-- install charm 'hello-kubecon' from CharmHub
+MK8S_HELLO_KUBECON_CHARM = os.getenv("MK8S_HELLO_KUBECON_CHARM", "ch:hello-kubecon")
