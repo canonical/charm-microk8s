@@ -66,5 +66,7 @@ async def test_metallb_traefik(e: OpsTest):
 
         # Make sure hello-kubecon is available from ingress
         while "Hello, Kubecon" not in stdout:
-            rc, stdout, stderr = await run_unit(u, f"curl http://42.42.42.42:80/{ns}-hello-kubecon {ns}")
+            rc, stdout, stderr = await run_unit(
+                u, f"curl http://42.42.42.42:80/{ns}-hello-kubecon {ns}"
+            )
             LOG.info("Check LoadBalancer service %s on %s", (rc, stdout, stderr), ns)

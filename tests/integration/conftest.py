@@ -87,7 +87,12 @@ async def microk8s_kubernetes_cloud_and_model(ops_test: OpsTest, microk8s_applic
     model_name = f"k8s-{ops_test._generate_model_name()}"
 
     try:
-        LOG.info("Add cloud %s on controller %s and model name %s", JUJU_CLOUD_NAME, ops_test.controller_name, model_name)
+        LOG.info(
+            "Add cloud %s on controller %s and model name %s",
+            JUJU_CLOUD_NAME,
+            ops_test.controller_name,
+            model_name,
+        )
         await ops_test.juju(
             "add-k8s",
             JUJU_CLOUD_NAME,
