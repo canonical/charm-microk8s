@@ -36,9 +36,9 @@ def test_registry_host(snap_data_dir: mock.MagicMock, config: dict, expected_hos
 @mock.patch("os.chown")
 @mock.patch("os.chmod")
 def test_registry_certificates(
-    chmod: mock.MagicMock, chown: mock.MagicMock, snap_data_dir: mock.MagicMock
+    chmod: mock.MagicMock, chown: mock.MagicMock, snap_data_dir: mock.MagicMock, tmp_path: Path
 ):
-    snap_data_dir.return_value = Path("snap_data")
+    snap_data_dir.return_value = tmp_path
     r = containerd.Registry(
         url="https://fakeurl",
         ca_file="dGVzdDA=",
