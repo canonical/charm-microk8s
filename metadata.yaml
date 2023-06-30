@@ -11,8 +11,16 @@ description: |
   MicroK8s is a small, fast, secure, single node Kubernetes that installs on just about any Linux box. Use it for offline development, prototyping, testing, or use it on a VM as a small, cheap, reliable K8s for CI/CD. It's also a great K8s for appliances - develop your IoT apps for k8s and deploy them to MicroK8s on your boxes.
 
 maintainers:
-  - Angelos Kolaitis <angelos.kolaitis@canonical.com>
-  - Kostantinos Tsakalozos <kos.tsakalozos@canonical.com>
+  - The MicroK8s team <microk8s@canonical.com>
+
+docs: https://discourse.charmhub.io/t/charmed-microk8s-documentation/10993
+source:
+  - https://github.com/canonical/charm-microk8s
+  - https://github.com/canonical/microk8s
+issues:
+  - https://github.com/canonical/charm-microk8s/issues
+  - https://github.com/canonical/microk8s/issues
+website: https://microk8s.io
 
 series:
   - focal
