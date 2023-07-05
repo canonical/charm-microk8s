@@ -128,7 +128,7 @@ def set_containerd_proxy_options(http_proxy: str, https_proxy: str, no_proxy: st
     path = snap_data_dir() / "args" / "containerd-env"
     containerd_env = path.read_text() if path.exists() else ""
     new_containerd_env = util.ensure_block(
-        containerd_env, "\n".join(proxy_config), "{mark} managed by microk8s charm"
+        containerd_env, "\n".join(proxy_config), "# {mark} managed by microk8s charm"
     )
 
     if util.ensure_file(path, new_containerd_env, 0o600, 0, 0):
