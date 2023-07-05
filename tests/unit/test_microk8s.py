@@ -158,7 +158,7 @@ def test_microk8s_set_containerd_proxy_options(
     ensure_block.assert_called_once_with(
         containerd_env_contents,
         "http_proxy=fake1\nhttps_proxy=fake2\nno_proxy=no-proxy",
-        "{mark} managed by microk8s charm",
+        "# {mark} managed by microk8s charm",
     )
     ensure_file.assert_called_once_with(
         tmp_path / "args" / "containerd-env", ensure_block.return_value, 0o600, 0, 0
