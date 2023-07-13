@@ -28,12 +28,10 @@ async def test_metallb_traefik(e: OpsTest):
         await e.model.wait_for_idle(["microk8s"])
 
     u: Unit = e.model.applications["microk8s"].units[0]
-    ns = ""
 
     # bootstrap a juju cloud on the deployed microk8s
-    async with microk8s_kubernetes_cloud_and_model(e, "microk8s") as k8s_model:
-        with e.model_context(k8s_model) as model:
-            ns = model.info.name
+    async with microk8s_kubernetes_cloud_and_model(e, "microk8s") as (k8s_model, ns):
+        with e.model_context(k8s_model):
             LOG.info("Deploy MetalLB")
             await e.model.deploy(
                 config.MK8S_METALLB_SPEAKER_CHARM,

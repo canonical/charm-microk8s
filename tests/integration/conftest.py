@@ -104,7 +104,7 @@ async def microk8s_kubernetes_cloud_and_model(ops_test: OpsTest, microk8s_applic
             credential_name=JUJU_CLOUD_NAME,
         )
 
-        yield "k8s-model"
+        yield ("k8s-model", model_name)
 
     finally:
         await ops_test.forget_model("k8s-model")
