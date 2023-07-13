@@ -1,4 +1,6 @@
-ops < 2.4.0
+ops < 2.5.0
+pyyaml == 6.0
 tomli == 2.0.1
 tomli-w == 1.0.0
 pydantic == 1.10.9
+cosl == 0.0.5

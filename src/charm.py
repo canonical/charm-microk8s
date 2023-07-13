@@ -27,6 +27,8 @@ from ops.framework import StoredState
 from ops.model import ActiveStatus, BlockedStatus, MaintenanceStatus, WaitingStatus
 
 import containerd
+import cos_agent
+import metrics
 import microk8s
 import util
 
@@ -59,15 +61,20 @@ class MicroK8sCharm(CharmBase):
         )
 
         if self.config["role"] == "worker":
+            # lifecycle
             self.framework.observe(self.on.remove, self.on_remove)
             self.framework.observe(self.on.upgrade_charm, self.on_upgrade)
             self.framework.observe(self.on.install, self.on_install)
             self.framework.observe(self.on.update_status, self.update_status)
+
+            # configuration
             self.framework.observe(self.on.config_changed, self.config_ensure_role)
             self.framework.observe(self.on.config_changed, self.on_install)
             self.framework.observe(self.on.config_changed, self.config_containerd_proxy)
             self.framework.observe(self.on.config_changed, self.config_containerd_registries)
             self.framework.observe(self.on.config_changed, self.update_status)
+
+            # clustering
             self.framework.observe(self.on.control_plane_relation_joined, self.on_install)
             self.framework.observe(self.on.control_plane_relation_joined, self.announce_hostname)
             self.framework.observe(self.on.control_plane_relation_changed, self.join_cluster)
@@ -75,12 +82,18 @@ class MicroK8sCharm(CharmBase):
             self.framework.observe(self.on.control_plane_relation_broken, self.leave_cluster)
             self.framework.observe(self.on.control_plane_relation_broken, self.update_status)
         else:
+            # lifecycle
             self.framework.observe(self.on.remove, self.on_remove)
             self.framework.observe(self.on.upgrade_charm, self.on_upgrade)
             self.framework.observe(self.on.install, self.on_install)
             self.framework.observe(self.on.install, self.bootstrap_cluster)
             self.framework.observe(self.on.install, self.open_ports)
+            self.framework.observe(self.on.leader_elected, self.remove_departed_nodes)
+            self.framework.observe(self.on.leader_elected, self.update_status)
             self.framework.observe(self.on.update_status, self.update_status)
+            self.framework.observe(self.on.update_status, self.update_scrape_token)
+
+            # configuration
             self.framework.observe(self.on.config_changed, self.config_ensure_role)
             self.framework.observe(self.on.config_changed, self.on_install)
             self.framework.observe(self.on.config_changed, self.config_containerd_proxy)
@@ -90,6 +103,8 @@ class MicroK8sCharm(CharmBase):
             self.framework.observe(self.on.config_changed, self.config_extra_sans)
             self.framework.observe(self.on.config_changed, self.config_rbac)
             self.framework.observe(self.on.config_changed, self.update_status)
+
+            # clustering
             self.framework.observe(self.on.peer_relation_joined, self.add_node)
             self.framework.observe(self.on.peer_relation_joined, self.announce_hostname)
             self.framework.observe(self.on.peer_relation_joined, self.record_hostnames)
@@ -103,13 +118,26 @@ class MicroK8sCharm(CharmBase):
             self.framework.observe(self.on.peer_relation_departed, self.on_relation_departed)
             self.framework.observe(self.on.peer_relation_departed, self.remove_departed_nodes)
             self.framework.observe(self.on.peer_relation_departed, self.update_status)
-            self.framework.observe(self.on.leader_elected, self.remove_departed_nodes)
-            self.framework.observe(self.on.leader_elected, self.update_status)
             self.framework.observe(self.on.workers_relation_joined, self.add_node)
+            self.framework.observe(self.on.workers_relation_joined, self.update_scrape_token)
             self.framework.observe(self.on.workers_relation_changed, self.record_hostnames)
             self.framework.observe(self.on.workers_relation_departed, self.on_relation_departed)
             self.framework.observe(self.on.workers_relation_departed, self.remove_departed_nodes)
             self.framework.observe(self.on.workers_relation_departed, self.update_status)
+
+            # observability
+            self.framework.observe(
+                self.on.cos_agent_relation_joined, self.apply_observability_resources
+            )
+            self.framework.observe(self.on.cos_agent_relation_joined, self.update_scrape_token)
+            self._cos = cos_agent.Provider(
+                self,
+                relation_name="cos-agent",
+                metrics_endpoints=self._build_scrape_jobs,
+                metrics_rules_dir="src/prometheus_alert_rules",
+                dashboard_dirs=["src/grafana_dashboards"],
+                refresh_events=[self.on.peer_relation_changed, self.on.upgrade_charm],
+            )
 
     def on_remove(self, _: RemoveEvent):
         try:
@@ -301,6 +329,44 @@ class MicroK8sCharm(CharmBase):
         event.relation.data[self.app]["join_url"] = "{}:25000/{}".format(
             self.model.get_binding(event.relation).network.ingress_address, token
         )
+
+    def apply_observability_resources(self, _: RelationJoinedEvent):
+        if isinstance(self.unit.status, BlockedStatus):
+            return
+
+        if self._state.joined and self.unit.is_leader():
+            metrics.apply_required_resources()
+
+    def update_scrape_token(self, _: Any):
+        if not self.unit.is_leader() or not self.model.relations["cos-agent"]:
+            return
+
+        try:
+            token = metrics.get_bearer_token()
+        except subprocess.CalledProcessError:
+            LOG.exception("failed to retrieve authentication token for observability")
+            return
+
+        for relation in self.model.relations["peer"]:
+            relation.data[self.app]["metrics_token"] = token
+        for relation in self.model.relations["workers"]:
+            relation.data[self.app]["metrics_token"] = token
+
+    def _build_scrape_jobs(self) -> list:
+        if not self._state.joined:
+            return []
+
+        is_control_plane = self.config["role"] != "worker"
+        control_relation_name = "peer" if is_control_plane else "control-plane"
+        relation = self.model.get_relation(control_relation_name)
+
+        try:
+            token = relation.data[relation.app]["metrics_token"]
+        except (KeyError, AttributeError):
+            LOG.debug("metrics token not yet available")
+            return []
+
+        return metrics.build_scrape_jobs(token, is_control_plane, socket.gethostname())
 
 
 if __name__ == "__main__":  # pragma: nocover

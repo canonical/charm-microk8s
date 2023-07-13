@@ -1,12 +1,16 @@
 #
 # Copyright 2023 Canonical, Ltd.
 #
+import logging
+import subprocess
 from unittest import mock
 
 import ops
 import ops.testing
 import pytest
 from conftest import Environment
+
+LOG = logging.getLogger(__name__)
 
 
 @pytest.mark.parametrize("is_leader", [True, False])
@@ -27,7 +31,6 @@ def test_install(e: Environment, is_leader: bool):
         e.microk8s.configure_hostpath_storage.assert_not_called()
     else:
         e.microk8s.configure_hostpath_storage.assert_called()
-        e.microk8s.disable_cert_reissue.assert_not_called()
         assert e.harness.charm.unit.status == ops.model.ActiveStatus("fakestatus")
         assert e.harness.charm._state.joined
 
@@ -241,3 +244,124 @@ def test_follower_become_leader_remove_already_departed_nodes(e: Environment, be
         e.microk8s.remove_node.assert_not_called()
 
     assert e.harness.charm.unit.status == ops.model.ActiveStatus("fakestatus")
+
+
+@pytest.mark.parametrize("role", ["", "control-plane"])
+@pytest.mark.parametrize("is_leader", [False, True])
+@pytest.mark.parametrize("has_joined", [False, True])
+def test_build_scrape_jobs(e: Environment, role: str, is_leader: bool, has_joined: bool):
+    e.gethostname.return_value = "fakehostname"
+    e.metrics.get_bearer_token.return_value = "faketoken"
+    e.microk8s.get_unit_status.return_value = ops.model.ActiveStatus("fakestatus")
+
+    e.harness.update_config({"role": role})
+    e.harness.set_leader(is_leader)
+    e.harness.begin_with_initial_hooks()
+
+    e.harness.charm._state.joined = has_joined
+
+    # no token yet, assert empty jobs
+    result = e.harness.charm._build_scrape_jobs()
+    assert not result
+    e.metrics.build_scrape_jobs.assert_not_called()
+
+    # metrics token from relation
+    rel_id = e.harness.model.get_relation("peer").id
+    e.harness.update_relation_data(rel_id, e.harness.charm.app.name, {"metrics_token": "faketoken"})
+
+    # we now have a token, regenerate jobs
+    result = e.harness.charm._build_scrape_jobs()
+    if not has_joined:
+        assert not result
+        e.metrics.build_scrape_jobs.assert_not_called()
+    else:
+        e.metrics.build_scrape_jobs.assert_called_once_with("faketoken", True, "fakehostname")
+        assert result == e.metrics.build_scrape_jobs.return_value
+
+
+@pytest.mark.parametrize("is_leader", (True, False))
+def test_cos_agent_relation(e: Environment, is_leader: bool):
+    e.microk8s.get_unit_status.return_value = ops.model.ActiveStatus("fakestatus")
+    e.gethostname.return_value = "fakehostname"
+    e.metrics.build_scrape_jobs.return_value = [{"job_name": "fakejob"}]
+    e.metrics.get_bearer_token.return_value = "faketoken"
+
+    e.harness.add_network("10.10.10.10")
+    e.harness.update_config({"role": "control-plane"})
+    e.harness.set_leader(True)
+    e.harness.begin_with_initial_hooks()
+
+    e.harness.set_leader(is_leader)
+
+    e.metrics.apply_required_resources.assert_not_called()
+    e.metrics.get_bearer_token.assert_not_called()
+    e.metrics.build_scrape_jobs.assert_not_called()
+
+    worker_rel_id = e.harness.add_relation("workers", "microk8s-worker")
+    e.harness.add_relation_unit(worker_rel_id, "microk8s-worker/0")
+
+    metrics_rel_id = e.harness.add_relation("cos-agent", "grafana-agent")
+    e.harness.add_relation_unit(metrics_rel_id, "grafana-agent/0")
+    peer_rel_id = e.harness.model.get_relation("peer").id
+    peer_data = e.harness.get_relation_data(peer_rel_id, e.harness.charm.app.name)
+    metrics_data = e.harness.get_relation_data(metrics_rel_id, e.harness.charm.app.name)
+    workers_data = e.harness.get_relation_data(worker_rel_id, e.harness.charm.app.name)
+
+    e.cos_agent.Provider.assert_called_once_with(
+        e.harness.charm,
+        relation_name="cos-agent",
+        metrics_endpoints=e.harness.charm._build_scrape_jobs,
+        metrics_rules_dir="src/prometheus_alert_rules",
+        dashboard_dirs=["src/grafana_dashboards"],
+        refresh_events=mock.ANY,
+    )
+    # assert refresh_events using their names
+    called_with_refresh_events = e.cos_agent.Provider.mock_calls[0].kwargs["refresh_events"]
+    assert {evt.event_kind for evt in called_with_refresh_events} == {
+        "peer_relation_changed",
+        "upgrade_charm",
+    }
+
+    if is_leader:
+        e.metrics.apply_required_resources.assert_called_once_with()
+        e.metrics.get_bearer_token.assert_called_once_with()
+
+        assert peer_data["metrics_token"] == "faketoken"
+        assert workers_data["metrics_token"] == "faketoken"
+    else:
+        e.metrics.apply_required_resources.assert_not_called()
+        e.metrics.get_bearer_token.assert_not_called()
+
+        assert metrics_data == {}
+        assert workers_data == {}
+        assert "metrics_token" not in peer_data
+
+    e.metrics.apply_required_resources.reset_mock()
+    e.metrics.get_bearer_token.reset_mock()
+    e.metrics.build_scrape_jobs.reset_mock()
+
+    e.metrics.get_bearer_token.return_value = "faketoken2"
+
+    # assert metrics token is updated on update_status
+    e.harness.charm.on.update_status.emit()
+    e.metrics.apply_required_resources.assert_not_called()
+    if is_leader:
+        e.metrics.get_bearer_token.assert_called_once_with()
+        assert peer_data["metrics_token"] == "faketoken2"
+        assert workers_data["metrics_token"] == "faketoken2"
+    else:
+        e.metrics.get_bearer_token.assert_not_called()
+
+    e.metrics.get_bearer_token.reset_mock()
+    e.metrics.get_bearer_token.return_value = "faketoken3"
+    e.metrics.get_bearer_token.side_effect = subprocess.CalledProcessError(1, "fakeerror")
+
+    # assert metrics token is updated on update_status
+    e.harness.charm.on.update_status.emit()
+    e.metrics.apply_required_resources.assert_not_called()
+    if is_leader:
+        e.metrics.get_bearer_token.assert_called_once_with()
+        assert peer_data["metrics_token"] == "faketoken2"
+        assert workers_data["metrics_token"] == "faketoken2"
+    else:
+        e.metrics.get_bearer_token.assert_not_called()
