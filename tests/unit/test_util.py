@@ -151,3 +151,8 @@ def test_ensure_func(sleep: mock.MagicMock):
 
     assert m.mock_calls == [mock.call(*args, **kwargs)] * 3
     assert sleep.mock_calls == [mock.call(20)] * 2
+
+
+def test_charm_dir():
+    assert (util.charm_dir() / "metadata.yaml").exists()
+    assert (util.charm_dir() / "src" / "charm.py").exists()

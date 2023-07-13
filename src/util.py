@@ -101,3 +101,8 @@ def _ensure_func(
 def ensure_call(*args, **kwargs) -> subprocess.CompletedProcess:
     """repeatedly run a command until it succeeds. any args are passed to subprocess.run"""
     return _ensure_func(run, args, kwargs, subprocess.CalledProcessError)
+
+
+def charm_dir() -> Path:
+    """return top-level directory of the charm source code"""
+    return Path(__file__).absolute().parent.parent
