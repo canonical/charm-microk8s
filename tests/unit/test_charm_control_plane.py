@@ -1,7 +1,6 @@
 #
 # Copyright 2023 Canonical, Ltd.
 #
-import logging
 import subprocess
 from unittest import mock
 
@@ -9,8 +8,6 @@ import ops
 import ops.testing
 import pytest
 from conftest import Environment
-
-LOG = logging.getLogger(__name__)
 
 
 @pytest.mark.parametrize("is_leader", [True, False])

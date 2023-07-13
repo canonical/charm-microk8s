@@ -8,7 +8,6 @@ import pytest
 from pytest_operator.plugin import OpsTest
 
 
-
 @pytest.mark.abort_on_fail
 async def test_observability_metrics(e: OpsTest):
     await e.model.deploy(
@@ -19,9 +18,11 @@ async def test_observability_metrics(e: OpsTest):
     )
     await e.model.wait_for_idle(["microk8s"])
 
-    await e.model.deploy(config.GRAFANA_AGENT_CHARM, application_name="grafana-agent")
-    await e.model.wait_for_idle(["grafana-agent"])
-
+    await e.model.deploy(
+        config.MK8S_GRAFANA_AGENT_CHARM,
+        channel=config.MK8S_GRAFANA_AGENT_CHANNEL,
+        application_name="grafana-agent",
+    )
     await e.model.relate("microk8s", "grafana-agent")
 
     # TODO(neoaggelos): enable tests after required issues are fixed

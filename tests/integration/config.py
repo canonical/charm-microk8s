@@ -63,3 +63,7 @@ MK8S_HELLO_KUBECON_CHARM = os.getenv("MK8S_HELLO_KUBECON_CHARM", "ch:hello-kubec
 # MK8S_GRAFANA_AGENT_CHARM is the grafana-agent charm for the observability integration tests.
 #   - 'ch:grafana-agent'       <-- install charm 'grafana-agent' from CharmHub
 MK8S_GRAFANA_AGENT_CHARM = os.getenv("MK8S_GRAFANA_AGENT_CHARM", "ch:grafana-agent")
+
+# MK8S_GRAFANA_AGENT_CHANNEL is the CharmHub channel to use for the grafana-agent charm.
+#   - 'edge'                   <-- install charm from 'edge' channel
+MK8S_GRAFANA_AGENT_CHANNEL = os.getenv("MK8S_GRAFANA_AGENT_CHANNEL", "edge")
