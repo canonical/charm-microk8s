@@ -248,7 +248,7 @@ def test_follower_become_leader_remove_already_departed_nodes(e: Environment, be
 @pytest.mark.parametrize("has_joined", [False, True])
 def test_build_scrape_configs(e: Environment, role: str, is_leader: bool, has_joined: bool):
     e.gethostname.return_value = "fakehostname"
-    e.metrics.get_bearer_token.return_value = "faketoken"
+    e.metrics.get_tls_auth.return_value = ("fakecrt", "fakekey")
     e.microk8s.get_unit_status.return_value = ops.model.ActiveStatus("fakestatus")
 
     e.harness.update_config({"role": role})
@@ -264,7 +264,9 @@ def test_build_scrape_configs(e: Environment, role: str, is_leader: bool, has_jo
 
     # metrics token from relation
     rel_id = e.harness.model.get_relation("peer").id
-    e.harness.update_relation_data(rel_id, e.harness.charm.app.name, {"metrics_token": "faketoken"})
+    e.harness.update_relation_data(
+        rel_id, e.harness.charm.app.name, {"metrics_crt": "fakecrt", "metrics_key": "fakekey"}
+    )
 
     # we now have a token, regenerate jobs
     result = e.harness.charm._build_scrape_configs()
@@ -272,7 +274,9 @@ def test_build_scrape_configs(e: Environment, role: str, is_leader: bool, has_jo
         assert not result
         e.metrics.build_scrape_jobs.assert_not_called()
     else:
-        e.metrics.build_scrape_jobs.assert_called_once_with("faketoken", True, "fakehostname")
+        e.metrics.build_scrape_jobs.assert_called_once_with(
+            "fakecrt", "fakekey", True, "fakehostname"
+        )
         assert result == e.metrics.build_scrape_jobs.return_value
 
 
@@ -281,7 +285,7 @@ def test_cos_agent_relation(e: Environment, is_leader: bool):
     e.microk8s.get_unit_status.return_value = ops.model.ActiveStatus("fakestatus")
     e.gethostname.return_value = "fakehostname"
     e.metrics.build_scrape_jobs.return_value = [{"job_name": "fakejob"}]
-    e.metrics.get_bearer_token.return_value = "faketoken"
+    e.metrics.get_tls_auth.return_value = ("fakecrt", "fakekey")
 
     e.harness.add_network("10.10.10.10")
     e.harness.update_config({"role": "control-plane"})
@@ -291,7 +295,7 @@ def test_cos_agent_relation(e: Environment, is_leader: bool):
     e.harness.set_leader(is_leader)
 
     e.metrics.apply_required_resources.assert_not_called()
-    e.metrics.get_bearer_token.assert_not_called()
+    e.metrics.get_tls_auth.assert_not_called()
     e.metrics.build_scrape_jobs.assert_not_called()
 
     worker_rel_id = e.harness.add_relation("workers", "microk8s-worker")
@@ -321,44 +325,48 @@ def test_cos_agent_relation(e: Environment, is_leader: bool):
 
     if is_leader:
         e.metrics.apply_required_resources.assert_called_once_with()
-        e.metrics.get_bearer_token.assert_called_once_with()
+        e.metrics.get_tls_auth.assert_called_once_with()
 
-        assert peer_data["metrics_token"] == "faketoken"
-        assert workers_data["metrics_token"] == "faketoken"
+        for data in (peer_data, workers_data):
+            assert data["metrics_crt"] == "fakecrt"
+            assert data["metrics_key"] == "fakekey"
     else:
         e.metrics.apply_required_resources.assert_not_called()
-        e.metrics.get_bearer_token.assert_not_called()
+        e.metrics.get_tls_auth.assert_not_called()
 
         assert metrics_data == {}
         assert workers_data == {}
-        assert "metrics_token" not in peer_data
+        assert "metrics_crt" not in peer_data
+        assert "metrics_key" not in peer_data
 
     e.metrics.apply_required_resources.reset_mock()
-    e.metrics.get_bearer_token.reset_mock()
+    e.metrics.get_tls_auth.reset_mock()
     e.metrics.build_scrape_jobs.reset_mock()
 
-    e.metrics.get_bearer_token.return_value = "faketoken2"
+    e.metrics.get_tls_auth.return_value = ("fakecrt2", "fakekey2")
 
     # assert metrics token is updated on update_status
     e.harness.charm.on.update_status.emit()
     e.metrics.apply_required_resources.assert_not_called()
     if is_leader:
-        e.metrics.get_bearer_token.assert_called_once_with()
-        assert peer_data["metrics_token"] == "faketoken2"
-        assert workers_data["metrics_token"] == "faketoken2"
+        e.metrics.get_tls_auth.assert_called_once_with()
+        for data in (peer_data, workers_data):
+            assert data["metrics_crt"] == "fakecrt2"
+            assert data["metrics_key"] == "fakekey2"
     else:
-        e.metrics.get_bearer_token.assert_not_called()
+        e.metrics.get_tls_auth.assert_not_called()
 
-    e.metrics.get_bearer_token.reset_mock()
-    e.metrics.get_bearer_token.return_value = "faketoken3"
-    e.metrics.get_bearer_token.side_effect = subprocess.CalledProcessError(1, "fakeerror")
+    e.metrics.get_tls_auth.reset_mock()
+    e.metrics.get_tls_auth.return_value = ("fakecrt3", "fakekey3")
+    e.metrics.get_tls_auth.side_effect = subprocess.CalledProcessError(1, "fakeerror")
 
     # assert metrics token is updated on update_status
     e.harness.charm.on.update_status.emit()
     e.metrics.apply_required_resources.assert_not_called()
     if is_leader:
-        e.metrics.get_bearer_token.assert_called_once_with()
-        assert peer_data["metrics_token"] == "faketoken2"
-        assert workers_data["metrics_token"] == "faketoken2"
+        e.metrics.get_tls_auth.assert_called_once_with()
+        for data in (peer_data, workers_data):
+            assert data["metrics_crt"] == "fakecrt2"
+            assert data["metrics_key"] == "fakekey2"
     else:
-        e.metrics.get_bearer_token.assert_not_called()
+        e.metrics.get_tls_auth.assert_not_called()

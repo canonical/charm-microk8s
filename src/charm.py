@@ -91,7 +91,7 @@ class MicroK8sCharm(CharmBase):
             self.framework.observe(self.on.leader_elected, self.remove_departed_nodes)
             self.framework.observe(self.on.leader_elected, self.update_status)
             self.framework.observe(self.on.update_status, self.update_status)
-            self.framework.observe(self.on.update_status, self.update_scrape_token)
+            self.framework.observe(self.on.update_status, self.update_metrics_tls_auth)
 
             # configuration
             self.framework.observe(self.on.config_changed, self.config_ensure_role)
@@ -119,7 +119,7 @@ class MicroK8sCharm(CharmBase):
             self.framework.observe(self.on.peer_relation_departed, self.remove_departed_nodes)
             self.framework.observe(self.on.peer_relation_departed, self.update_status)
             self.framework.observe(self.on.workers_relation_joined, self.add_node)
-            self.framework.observe(self.on.workers_relation_joined, self.update_scrape_token)
+            self.framework.observe(self.on.workers_relation_joined, self.update_metrics_tls_auth)
             self.framework.observe(self.on.workers_relation_changed, self.record_hostnames)
             self.framework.observe(self.on.workers_relation_departed, self.on_relation_departed)
             self.framework.observe(self.on.workers_relation_departed, self.remove_departed_nodes)
@@ -129,7 +129,7 @@ class MicroK8sCharm(CharmBase):
             self.framework.observe(
                 self.on.cos_agent_relation_joined, self.apply_observability_resources
             )
-            self.framework.observe(self.on.cos_agent_relation_joined, self.update_scrape_token)
+            self.framework.observe(self.on.cos_agent_relation_joined, self.update_metrics_tls_auth)
             self._cos = COSAgentProvider(
                 self,
                 relation_name="cos-agent",
@@ -337,20 +337,19 @@ class MicroK8sCharm(CharmBase):
         if self._state.joined and self.unit.is_leader():
             metrics.apply_required_resources()
 
-    def update_scrape_token(self, _: Any):
+    def update_metrics_tls_auth(self, _: Any):
         if not self.unit.is_leader() or not self.model.relations["cos-agent"]:
             return
 
         try:
-            token = metrics.get_bearer_token()
+            crt, key = metrics.get_tls_auth()
         except subprocess.CalledProcessError:
-            LOG.exception("failed to retrieve authentication token for observability")
+            LOG.exception("failed to retrieve tls_auth for observability")
             return
 
-        for relation in self.model.relations["peer"]:
-            relation.data[self.app]["metrics_token"] = token
-        for relation in self.model.relations["workers"]:
-            relation.data[self.app]["metrics_token"] = token
+        for relation in self.model.relations["peer"] + self.model.relations["workers"]:
+            relation.data[self.app]["metrics_crt"] = crt
+            relation.data[self.app]["metrics_key"] = key
 
     def _build_scrape_configs(self) -> list:
         if not self._state.joined:
@@ -361,12 +360,13 @@ class MicroK8sCharm(CharmBase):
         relation = self.model.get_relation(control_relation_name)
 
         try:
-            token = relation.data[relation.app]["metrics_token"]
+            crt = relation.data[relation.app]["metrics_crt"]
+            key = relation.data[relation.app]["metrics_key"]
         except (KeyError, AttributeError):
             LOG.debug("metrics token not yet available")
             return []
 
-        return metrics.build_scrape_jobs(token, is_control_plane, socket.gethostname())
+        return metrics.build_scrape_jobs(crt, key, is_control_plane, socket.gethostname())
 
 
 if __name__ == "__main__":  # pragma: nocover

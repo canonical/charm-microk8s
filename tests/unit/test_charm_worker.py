@@ -116,7 +116,6 @@ def test_control_plane_relation_departed(e: Environment, is_leader: bool):
 @pytest.mark.parametrize("has_joined", [False, True])
 def test_build_scrape_configs(e: Environment, role: str, is_leader: bool, has_joined: bool):
     e.gethostname.return_value = "fakehostname"
-    e.metrics.get_bearer_token.return_value = "faketoken"
     e.microk8s.get_unit_status.return_value = ops.model.ActiveStatus("fakestatus")
 
     e.harness.update_config({"role": role})
@@ -128,18 +127,24 @@ def test_build_scrape_configs(e: Environment, role: str, is_leader: bool, has_jo
     # no token yet, assert empty jobs
     result = e.harness.charm._build_scrape_configs()
     assert not result
+    e.metrics.get_tls_auth.assert_not_called()
     e.metrics.build_scrape_jobs.assert_not_called()
 
     # metrics token from relation
     rel_id = e.harness.add_relation("control-plane", "microk8s-cp")
     e.harness.add_relation_unit(rel_id, "microk8s-cp/0")
-    e.harness.update_relation_data(rel_id, "microk8s-cp", {"metrics_token": "faketoken"})
+    e.harness.update_relation_data(
+        rel_id, "microk8s-cp", {"metrics_crt": "fakecrt", "metrics_key": "fakekey"}
+    )
 
     # we now have a token, regenerate jobs
     result = e.harness.charm._build_scrape_configs()
+    e.metrics.get_tls_auth.assert_not_called()
     if not has_joined:
         assert not result
         e.metrics.build_scrape_jobs.assert_not_called()
     else:
-        e.metrics.build_scrape_jobs.assert_called_once_with("faketoken", False, "fakehostname")
+        e.metrics.build_scrape_jobs.assert_called_once_with(
+            "fakecrt", "fakekey", False, "fakehostname"
+        )
         assert result == e.metrics.build_scrape_jobs.return_value
