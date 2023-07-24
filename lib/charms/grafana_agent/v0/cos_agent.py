@@ -443,8 +443,17 @@ class COSAgentProvider(Object):
     @property
     def _metrics_alert_rules(self) -> Dict:
         """Use (for now) the prometheus_scrape AlertRules to initialize this."""
+
+        # NOTE(neoaggelos): Hack until 
         alert_rules = AlertRules(
-            query_type="promql", topology=JujuTopology.from_charm(self._charm)
+            query_type="promql",
+            topology=JujuTopology.from_dict(
+                {
+                    "model": self._charm.model.name,
+                    "model_uuid": self._charm.model.uuid,
+                    "application": self._charm.app.name,
+                }
+            ),
         )
         alert_rules.add_path(self._metrics_rules, recursive=self._recursive)
         return alert_rules.as_dict()
