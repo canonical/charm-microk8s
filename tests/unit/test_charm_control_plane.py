@@ -246,7 +246,7 @@ def test_follower_become_leader_remove_already_departed_nodes(e: Environment, be
 @pytest.mark.parametrize("role", ["", "control-plane"])
 @pytest.mark.parametrize("is_leader", [False, True])
 @pytest.mark.parametrize("has_joined", [False, True])
-def test_build_scrape_jobs(e: Environment, role: str, is_leader: bool, has_joined: bool):
+def test_build_scrape_configs(e: Environment, role: str, is_leader: bool, has_joined: bool):
     e.gethostname.return_value = "fakehostname"
     e.metrics.get_bearer_token.return_value = "faketoken"
     e.microk8s.get_unit_status.return_value = ops.model.ActiveStatus("fakestatus")
@@ -258,7 +258,7 @@ def test_build_scrape_jobs(e: Environment, role: str, is_leader: bool, has_joine
     e.harness.charm._state.joined = has_joined
 
     # no token yet, assert empty jobs
-    result = e.harness.charm._build_scrape_jobs()
+    result = e.harness.charm._build_scrape_configs()
     assert not result
     e.metrics.build_scrape_jobs.assert_not_called()
 
@@ -267,7 +267,7 @@ def test_build_scrape_jobs(e: Environment, role: str, is_leader: bool, has_joine
     e.harness.update_relation_data(rel_id, e.harness.charm.app.name, {"metrics_token": "faketoken"})
 
     # we now have a token, regenerate jobs
-    result = e.harness.charm._build_scrape_jobs()
+    result = e.harness.charm._build_scrape_configs()
     if not has_joined:
         assert not result
         e.metrics.build_scrape_jobs.assert_not_called()
@@ -304,16 +304,16 @@ def test_cos_agent_relation(e: Environment, is_leader: bool):
     metrics_data = e.harness.get_relation_data(metrics_rel_id, e.harness.charm.app.name)
     workers_data = e.harness.get_relation_data(worker_rel_id, e.harness.charm.app.name)
 
-    e.cos_agent.Provider.assert_called_once_with(
+    e.COSAgentProvider.assert_called_once_with(
         e.harness.charm,
         relation_name="cos-agent",
-        metrics_endpoints=e.harness.charm._build_scrape_jobs,
+        scrape_configs=e.harness.charm._build_scrape_configs,
         metrics_rules_dir="src/prometheus_alert_rules",
         dashboard_dirs=["src/grafana_dashboards"],
         refresh_events=mock.ANY,
     )
     # assert refresh_events using their names
-    called_with_refresh_events = e.cos_agent.Provider.mock_calls[0].kwargs["refresh_events"]
+    called_with_refresh_events = e.COSAgentProvider.mock_calls[0].kwargs["refresh_events"]
     assert {evt.event_kind for evt in called_with_refresh_events} == {
         "peer_relation_changed",
         "upgrade_charm",

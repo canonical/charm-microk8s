@@ -10,6 +10,7 @@ import subprocess
 import time
 from typing import Any, Union
 
+from charms.grafana_agent.v0.cos_agent import COSAgentProvider
 from ops import CharmBase, main
 from ops.charm import (
     ConfigChangedEvent,
@@ -27,7 +28,6 @@ from ops.framework import StoredState
 from ops.model import ActiveStatus, BlockedStatus, MaintenanceStatus, WaitingStatus
 
 import containerd
-import cos_agent
 import metrics
 import microk8s
 import util
@@ -130,10 +130,10 @@ class MicroK8sCharm(CharmBase):
                 self.on.cos_agent_relation_joined, self.apply_observability_resources
             )
             self.framework.observe(self.on.cos_agent_relation_joined, self.update_scrape_token)
-            self._cos = cos_agent.Provider(
+            self._cos = COSAgentProvider(
                 self,
                 relation_name="cos-agent",
-                metrics_endpoints=self._build_scrape_jobs,
+                scrape_configs=self._build_scrape_configs,
                 metrics_rules_dir="src/prometheus_alert_rules",
                 dashboard_dirs=["src/grafana_dashboards"],
                 refresh_events=[self.on.peer_relation_changed, self.on.upgrade_charm],
@@ -352,7 +352,7 @@ class MicroK8sCharm(CharmBase):
         for relation in self.model.relations["workers"]:
             relation.data[self.app]["metrics_token"] = token
 
-    def _build_scrape_jobs(self) -> list:
+    def _build_scrape_configs(self) -> list:
         if not self._state.joined:
             return []
 
