@@ -34,9 +34,6 @@ provides:
   workers:
     interface: microk8s-info
     scope: global
-  microk8s-addons:
-    interface: microk8s-addons
-    scope: container
 
 requires:
   control-plane:

@@ -175,7 +175,7 @@ class MicroK8sCharm(CharmBase):
             return
 
         if self._state.joined:
-            LOG.info("Ensure RBAC mode is %s", self.config["rbac"])
+            self.unit.status = MaintenanceStatus("configuring RBAC")
             microk8s.wait_ready()
             microk8s.configure_rbac(self.config["rbac"])
 

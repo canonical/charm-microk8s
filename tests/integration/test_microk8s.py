@@ -42,7 +42,6 @@ async def test_microk8s_cluster(e: OpsTest, series: str, cp_units: int, worker_u
 
     # When rbac is not enabled, we can't query for `system:node` cluster    role
     rc, stdout, stderr = await run_unit(u, "microk8s kubectl get clusterrole system:node")
-    LOG.info("RBAC output %s", (rc, stdout, stderr))
     assert rc == 1
 
     await e.model.wait_for_idle([application_name], timeout=60 * 60)
@@ -55,13 +54,9 @@ async def test_microk8s_cluster(e: OpsTest, series: str, cp_units: int, worker_u
     await e.model.wait_for_idle([application_name], timeout=60 * 60)
 
     rc, stdout, stderr = await run_unit(u, "microk8s status -w")
-    LOG.info("MicroK8s status output %s", (rc, stdout, stderr))
 
     rc, stdout, stderr = await run_unit(u, "microk8s kubectl get clusterrole system:node")
-    LOG.info("RBAC output %s", (rc, stdout, stderr))
     assert rc == 0
-
-    await e.model.wait_for_idle([application_name], timeout=60 * 60)
 
     if worker_units > 0:
         apps.append(
