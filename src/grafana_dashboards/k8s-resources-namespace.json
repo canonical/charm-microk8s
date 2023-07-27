@@ -403,21 +403,24 @@
                             "format": "time_series",
                             "intervalFactor": 2,
                             "legendFormat": "{{pod}}",
-                            "legendLink": null
+                            "legendLink": null,
+                            "step": 10
                         },
                         {
                             "expr": "scalar(kube_resourcequota{cluster=\"$cluster\", namespace=\"$namespace\", type=\"hard\",resource=\"requests.cpu\"})",
                             "format": "time_series",
                             "intervalFactor": 2,
                             "legendFormat": "quota - requests",
-                            "legendLink": null
+                            "legendLink": null,
+                            "step": 10
                         },
                         {
                             "expr": "scalar(kube_resourcequota{cluster=\"$cluster\", namespace=\"$namespace\", type=\"hard\",resource=\"limits.cpu\"})",
                             "format": "time_series",
                             "intervalFactor": 2,
                             "legendFormat": "quota - limits",
-                            "legendLink": null
+                            "legendLink": null,
+                            "step": 10
                         }
                     ],
                     "thresholds": [],
@@ -617,7 +620,8 @@
                             "instant": true,
                             "intervalFactor": 2,
                             "legendFormat": "",
-                            "refId": "A"
+                            "refId": "A",
+                            "step": 10
                         },
                         {
                             "expr": "sum(cluster:namespace:pod_cpu:active:kube_pod_container_resource_requests{cluster=\"$cluster\", namespace=\"$namespace\"}) by (pod)",
@@ -625,7 +629,8 @@
                             "instant": true,
                             "intervalFactor": 2,
                             "legendFormat": "",
-                            "refId": "B"
+                            "refId": "B",
+                            "step": 10
                         },
                         {
                             "expr": "sum(node_namespace_pod_container:container_cpu_usage_seconds_total:sum_irate{cluster=\"$cluster\", namespace=\"$namespace\"}) by (pod) / sum(cluster:namespace:pod_cpu:active:kube_pod_container_resource_requests{cluster=\"$cluster\", namespace=\"$namespace\"}) by (pod)",
@@ -633,7 +638,8 @@
                             "instant": true,
                             "intervalFactor": 2,
                             "legendFormat": "",
-                            "refId": "C"
+                            "refId": "C",
+                            "step": 10
                         },
                         {
                             "expr": "sum(cluster:namespace:pod_cpu:active:kube_pod_container_resource_limits{cluster=\"$cluster\", namespace=\"$namespace\"}) by (pod)",
@@ -641,7 +647,8 @@
                             "instant": true,
                             "intervalFactor": 2,
                             "legendFormat": "",
-                            "refId": "D"
+                            "refId": "D",
+                            "step": 10
                         },
                         {
                             "expr": "sum(node_namespace_pod_container:container_cpu_usage_seconds_total:sum_irate{cluster=\"$cluster\", namespace=\"$namespace\"}) by (pod) / sum(cluster:namespace:pod_cpu:active:kube_pod_container_resource_limits{cluster=\"$cluster\", namespace=\"$namespace\"}) by (pod)",
@@ -649,7 +656,8 @@
                             "instant": true,
                             "intervalFactor": 2,
                             "legendFormat": "",
-                            "refId": "E"
+                            "refId": "E",
+                            "step": 10
                         }
                     ],
                     "thresholds": [],
@@ -763,21 +771,24 @@
                             "format": "time_series",
                             "intervalFactor": 2,
                             "legendFormat": "{{pod}}",
-                            "legendLink": null
+                            "legendLink": null,
+                            "step": 10
                         },
                         {
                             "expr": "scalar(kube_resourcequota{cluster=\"$cluster\", namespace=\"$namespace\", type=\"hard\",resource=\"requests.memory\"})",
                             "format": "time_series",
                             "intervalFactor": 2,
                             "legendFormat": "quota - requests",
-                            "legendLink": null
+                            "legendLink": null,
+                            "step": 10
                         },
                         {
                             "expr": "scalar(kube_resourcequota{cluster=\"$cluster\", namespace=\"$namespace\", type=\"hard\",resource=\"limits.memory\"})",
                             "format": "time_series",
                             "intervalFactor": 2,
                             "legendFormat": "quota - limits",
-                            "legendLink": null
+                            "legendLink": null,
+                            "step": 10
                         }
                     ],
                     "thresholds": [],
@@ -1022,7 +1033,8 @@
                             "instant": true,
                             "intervalFactor": 2,
                             "legendFormat": "",
-                            "refId": "A"
+                            "refId": "A",
+                            "step": 10
                         },
                         {
                             "expr": "sum(cluster:namespace:pod_memory:active:kube_pod_container_resource_requests{cluster=\"$cluster\", namespace=\"$namespace\"}) by (pod)",
@@ -1030,7 +1042,8 @@
                             "instant": true,
                             "intervalFactor": 2,
                             "legendFormat": "",
-                            "refId": "B"
+                            "refId": "B",
+                            "step": 10
                         },
                         {
                             "expr": "sum(container_memory_working_set_bytes{job=\"kubelet\", metrics_path=\"/metrics/cadvisor\", cluster=\"$cluster\", namespace=\"$namespace\",container!=\"\", image!=\"\"}) by (pod) / sum(cluster:namespace:pod_memory:active:kube_pod_container_resource_requests{cluster=\"$cluster\", namespace=\"$namespace\"}) by (pod)",
@@ -1038,7 +1051,8 @@
                             "instant": true,
                             "intervalFactor": 2,
                             "legendFormat": "",
-                            "refId": "C"
+                            "refId": "C",
+                            "step": 10
                         },
                         {
                             "expr": "sum(cluster:namespace:pod_memory:active:kube_pod_container_resource_limits{cluster=\"$cluster\", namespace=\"$namespace\"}) by (pod)",
@@ -1046,7 +1060,8 @@
                             "instant": true,
                             "intervalFactor": 2,
                             "legendFormat": "",
-                            "refId": "D"
+                            "refId": "D",
+                            "step": 10
                         },
                         {
                             "expr": "sum(container_memory_working_set_bytes{job=\"kubelet\", metrics_path=\"/metrics/cadvisor\", cluster=\"$cluster\", namespace=\"$namespace\",container!=\"\", image!=\"\"}) by (pod) / sum(cluster:namespace:pod_memory:active:kube_pod_container_resource_limits{cluster=\"$cluster\", namespace=\"$namespace\"}) by (pod)",
@@ -1054,7 +1069,8 @@
                             "instant": true,
                             "intervalFactor": 2,
                             "legendFormat": "",
-                            "refId": "E"
+                            "refId": "E",
+                            "step": 10
                         },
                         {
                             "expr": "sum(container_memory_rss{job=\"kubelet\", metrics_path=\"/metrics/cadvisor\", cluster=\"$cluster\", namespace=\"$namespace\",container!=\"\"}) by (pod)",
@@ -1062,7 +1078,8 @@
                             "instant": true,
                             "intervalFactor": 2,
                             "legendFormat": "",
-                            "refId": "F"
+                            "refId": "F",
+                            "step": 10
                         },
                         {
                             "expr": "sum(container_memory_cache{job=\"kubelet\", metrics_path=\"/metrics/cadvisor\", cluster=\"$cluster\", namespace=\"$namespace\",container!=\"\"}) by (pod)",
@@ -1070,7 +1087,8 @@
                             "instant": true,
                             "intervalFactor": 2,
                             "legendFormat": "",
-                            "refId": "G"
+                            "refId": "G",
+                            "step": 10
                         },
                         {
                             "expr": "sum(container_memory_swap{job=\"kubelet\", metrics_path=\"/metrics/cadvisor\", cluster=\"$cluster\", namespace=\"$namespace\",container!=\"\"}) by (pod)",
@@ -1078,7 +1096,8 @@
                             "instant": true,
                             "intervalFactor": 2,
                             "legendFormat": "",
-                            "refId": "H"
+                            "refId": "H",
+                            "step": 10
                         }
                     ],
                     "thresholds": [],
@@ -1294,7 +1313,8 @@
                             "instant": true,
                             "intervalFactor": 2,
                             "legendFormat": "",
-                            "refId": "A"
+                            "refId": "A",
+                            "step": 10
                         },
                         {
                             "expr": "sum(irate(container_network_transmit_bytes_total{job=\"kubelet\", metrics_path=\"/metrics/cadvisor\", cluster=\"$cluster\", namespace=\"$namespace\"}[$__rate_interval])) by (pod)",
@@ -1302,7 +1322,8 @@
                             "instant": true,
                             "intervalFactor": 2,
                             "legendFormat": "",
-                            "refId": "B"
+                            "refId": "B",
+                            "step": 10
                         },
                         {
                             "expr": "sum(irate(container_network_receive_packets_total{job=\"kubelet\", metrics_path=\"/metrics/cadvisor\", cluster=\"$cluster\", namespace=\"$namespace\"}[$__rate_interval])) by (pod)",
@@ -1310,7 +1331,8 @@
                             "instant": true,
                             "intervalFactor": 2,
                             "legendFormat": "",
-                            "refId": "C"
+                            "refId": "C",
+                            "step": 10
                         },
                         {
                             "expr": "sum(irate(container_network_transmit_packets_total{job=\"kubelet\", metrics_path=\"/metrics/cadvisor\", cluster=\"$cluster\", namespace=\"$namespace\"}[$__rate_interval])) by (pod)",
@@ -1318,7 +1340,8 @@
                             "instant": true,
                             "intervalFactor": 2,
                             "legendFormat": "",
-                            "refId": "D"
+                            "refId": "D",
+                            "step": 10
                         },
                         {
                             "expr": "sum(irate(container_network_receive_packets_dropped_total{job=\"kubelet\", metrics_path=\"/metrics/cadvisor\", cluster=\"$cluster\", namespace=\"$namespace\"}[$__rate_interval])) by (pod)",
@@ -1326,7 +1349,8 @@
                             "instant": true,
                             "intervalFactor": 2,
                             "legendFormat": "",
-                            "refId": "E"
+                            "refId": "E",
+                            "step": 10
                         },
                         {
                             "expr": "sum(irate(container_network_transmit_packets_dropped_total{job=\"kubelet\", metrics_path=\"/metrics/cadvisor\", cluster=\"$cluster\", namespace=\"$namespace\"}[$__rate_interval])) by (pod)",
@@ -1334,7 +1358,8 @@
                             "instant": true,
                             "intervalFactor": 2,
                             "legendFormat": "",
-                            "refId": "F"
+                            "refId": "F",
+                            "step": 10
                         }
                     ],
                     "thresholds": [],
@@ -1425,7 +1450,8 @@
                             "format": "time_series",
                             "intervalFactor": 2,
                             "legendFormat": "{{pod}}",
-                            "legendLink": null
+                            "legendLink": null,
+                            "step": 10
                         }
                     ],
                     "thresholds": [],
@@ -1503,7 +1529,8 @@
                             "format": "time_series",
                             "intervalFactor": 2,
                             "legendFormat": "{{pod}}",
-                            "legendLink": null
+                            "legendLink": null,
+                            "step": 10
                         }
                     ],
                     "thresholds": [],
@@ -1593,7 +1620,8 @@
                             "format": "time_series",
                             "intervalFactor": 2,
                             "legendFormat": "{{pod}}",
-                            "legendLink": null
+                            "legendLink": null,
+                            "step": 10
                         }
                     ],
                     "thresholds": [],
@@ -1671,7 +1699,8 @@
                             "format": "time_series",
                             "intervalFactor": 2,
                             "legendFormat": "{{pod}}",
-                            "legendLink": null
+                            "legendLink": null,
+                            "step": 10
                         }
                     ],
                     "thresholds": [],
@@ -1761,7 +1790,8 @@
                             "format": "time_series",
                             "intervalFactor": 2,
                             "legendFormat": "{{pod}}",
-                            "legendLink": null
+                            "legendLink": null,
+                            "step": 10
                         }
                     ],
                     "thresholds": [],
@@ -1839,7 +1869,8 @@
                             "format": "time_series",
                             "intervalFactor": 2,
                             "legendFormat": "{{pod}}",
-                            "legendLink": null
+                            "legendLink": null,
+                            "step": 10
                         }
                     ],
                     "thresholds": [],
@@ -1930,7 +1961,8 @@
                             "format": "time_series",
                             "intervalFactor": 2,
                             "legendFormat": "{{pod}}",
-                            "legendLink": null
+                            "legendLink": null,
+                            "step": 10
                         }
                     ],
                     "thresholds": [],
@@ -2008,7 +2040,8 @@
                             "format": "time_series",
                             "intervalFactor": 2,
                             "legendFormat": "{{pod}}",
-                            "legendLink": null
+                            "legendLink": null,
+                            "step": 10
                         }
                     ],
                     "thresholds": [],
@@ -2227,7 +2260,8 @@
                             "instant": true,
                             "intervalFactor": 2,
                             "legendFormat": "",
-                            "refId": "A"
+                            "refId": "A",
+                            "step": 10
                         },
                         {
                             "expr": "sum by(pod) (rate(container_fs_writes_total{job=\"kubelet\", metrics_path=\"/metrics/cadvisor\", device=~\"(/dev/)?(mmcblk.p.+|nvme.+|rbd.+|sd.+|vd.+|xvd.+|dm-.+|md.+|dasd.+)\", container!=\"\", cluster=\"$cluster\", namespace=\"$namespace\"}[$__rate_interval]))",
@@ -2235,7 +2269,8 @@
                             "instant": true,
                             "intervalFactor": 2,
                             "legendFormat": "",
-                            "refId": "B"
+                            "refId": "B",
+                            "step": 10
                         },
                         {
                             "expr": "sum by(pod) (rate(container_fs_reads_total{job=\"kubelet\", metrics_path=\"/metrics/cadvisor\", device=~\"(/dev/)?(mmcblk.p.+|nvme.+|rbd.+|sd.+|vd.+|xvd.+|dm-.+|md.+|dasd.+)\", container!=\"\", cluster=\"$cluster\", namespace=\"$namespace\"}[$__rate_interval]) + rate(container_fs_writes_total{job=\"kubelet\", metrics_path=\"/metrics/cadvisor\", device=~\"(/dev/)?(mmcblk.p.+|nvme.+|rbd.+|sd.+|vd.+|xvd.+|dm-.+|md.+|dasd.+)\", container!=\"\", cluster=\"$cluster\", namespace=\"$namespace\"}[$__rate_interval]))",
@@ -2243,7 +2278,8 @@
                             "instant": true,
                             "intervalFactor": 2,
                             "legendFormat": "",
-                            "refId": "C"
+                            "refId": "C",
+                            "step": 10
                         },
                         {
                             "expr": "sum by(pod) (rate(container_fs_reads_bytes_total{job=\"kubelet\", metrics_path=\"/metrics/cadvisor\", device=~\"(/dev/)?(mmcblk.p.+|nvme.+|rbd.+|sd.+|vd.+|xvd.+|dm-.+|md.+|dasd.+)\", container!=\"\", cluster=\"$cluster\", namespace=\"$namespace\"}[$__rate_interval]))",
@@ -2251,7 +2287,8 @@
                             "instant": true,
                             "intervalFactor": 2,
                             "legendFormat": "",
-                            "refId": "D"
+                            "refId": "D",
+                            "step": 10
                         },
                         {
                             "expr": "sum by(pod) (rate(container_fs_writes_bytes_total{job=\"kubelet\", metrics_path=\"/metrics/cadvisor\", device=~\"(/dev/)?(mmcblk.p.+|nvme.+|rbd.+|sd.+|vd.+|xvd.+|dm-.+|md.+|dasd.+)\", container!=\"\", cluster=\"$cluster\", namespace=\"$namespace\"}[$__rate_interval]))",
@@ -2259,7 +2296,8 @@
                             "instant": true,
                             "intervalFactor": 2,
                             "legendFormat": "",
-                            "refId": "E"
+                            "refId": "E",
+                            "step": 10
                         },
                         {
                             "expr": "sum by(pod) (rate(container_fs_reads_bytes_total{job=\"kubelet\", metrics_path=\"/metrics/cadvisor\", device=~\"(/dev/)?(mmcblk.p.+|nvme.+|rbd.+|sd.+|vd.+|xvd.+|dm-.+|md.+|dasd.+)\", container!=\"\", cluster=\"$cluster\", namespace=\"$namespace\"}[$__rate_interval]) + rate(container_fs_writes_bytes_total{job=\"kubelet\", metrics_path=\"/metrics/cadvisor\", device=~\"(/dev/)?(mmcblk.p.+|nvme.+|rbd.+|sd.+|vd.+|xvd.+|dm-.+|md.+|dasd.+)\", container!=\"\", cluster=\"$cluster\", namespace=\"$namespace\"}[$__rate_interval]))",
@@ -2267,7 +2305,8 @@
                             "instant": true,
                             "intervalFactor": 2,
                             "legendFormat": "",
-                            "refId": "F"
+                            "refId": "F",
+                            "step": 10
                         }
                     ],
                     "thresholds": [],
@@ -2330,7 +2369,7 @@
                     "value": ""
                 },
                 "datasource": "$prometheusds",
-                "hide": 0,
+                "hide": 2,
                 "includeAll": false,
                 "label": null,
                 "multi": false,

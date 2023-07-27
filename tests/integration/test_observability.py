@@ -25,14 +25,6 @@ async def test_observability_metrics(e: OpsTest):
     )
     await e.model.relate("microk8s", "grafana-agent")
 
-    # TODO(neoaggelos): enable tests after required issues are fixed
-    # - https://github.com/simskij/grafana-agent/issues/22
-    # - https://github.com/canonical/grafana-agent-k8s-operator/issues/190
-    # - https://github.com/canonical/grafana-agent-k8s-operator/pull/223
-    # - https://github.com/canonical/grafana-agent-k8s-operator/pull/222
-    # - https://github.com/canonical/grafana-agent-k8s-operator/pull/220
-    # - https://github.com/canonical/grafana-agent-k8s-operator/pull/219
-    # await e.model.wait_for_idle(["microk8s", "grafana-agent"])
-
-    # For now, just ensure that microk8s does not fail
     await e.model.wait_for_idle(["microk8s"])
+
+    # TODO: add tests that grafana-agent picks up the required jobs

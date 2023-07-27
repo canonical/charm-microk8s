@@ -52,7 +52,8 @@
                             "format": "time_series",
                             "intervalFactor": 2,
                             "legendFormat": "{{pod}}",
-                            "legendLink": null
+                            "legendLink": null,
+                            "step": 10
                         }
                     ],
                     "thresholds": [],
@@ -252,7 +253,8 @@
                             "instant": true,
                             "intervalFactor": 2,
                             "legendFormat": "",
-                            "refId": "A"
+                            "refId": "A",
+                            "step": 10
                         },
                         {
                             "expr": "sum(\n    kube_pod_container_resource_requests{job=\"kube-state-metrics\", cluster=\"$cluster\", namespace=\"$namespace\", resource=\"cpu\"}\n  * on(namespace,pod)\n    group_left(workload, workload_type) namespace_workload_pod:kube_pod_owner:relabel{cluster=\"$cluster\", namespace=\"$namespace\", workload=\"$workload\", workload_type=\"$type\"}\n) by (pod)\n",
@@ -260,7 +262,8 @@
                             "instant": true,
                             "intervalFactor": 2,
                             "legendFormat": "",
-                            "refId": "B"
+                            "refId": "B",
+                            "step": 10
                         },
                         {
                             "expr": "sum(\n    node_namespace_pod_container:container_cpu_usage_seconds_total:sum_irate{cluster=\"$cluster\", namespace=\"$namespace\"}\n  * on(namespace,pod)\n    group_left(workload, workload_type) namespace_workload_pod:kube_pod_owner:relabel{cluster=\"$cluster\", namespace=\"$namespace\", workload=\"$workload\", workload_type=\"$type\"}\n) by (pod)\n/sum(\n    kube_pod_container_resource_requests{job=\"kube-state-metrics\", cluster=\"$cluster\", namespace=\"$namespace\", resource=\"cpu\"}\n  * on(namespace,pod)\n    group_left(workload, workload_type) namespace_workload_pod:kube_pod_owner:relabel{cluster=\"$cluster\", namespace=\"$namespace\", workload=\"$workload\", workload_type=\"$type\"}\n) by (pod)\n",
@@ -268,7 +271,8 @@
                             "instant": true,
                             "intervalFactor": 2,
                             "legendFormat": "",
-                            "refId": "C"
+                            "refId": "C",
+                            "step": 10
                         },
                         {
                             "expr": "sum(\n    kube_pod_container_resource_limits{job=\"kube-state-metrics\", cluster=\"$cluster\", namespace=\"$namespace\", resource=\"cpu\"}\n  * on(namespace,pod)\n    group_left(workload, workload_type) namespace_workload_pod:kube_pod_owner:relabel{cluster=\"$cluster\", namespace=\"$namespace\", workload=\"$workload\", workload_type=\"$type\"}\n) by (pod)\n",
@@ -276,7 +280,8 @@
                             "instant": true,
                             "intervalFactor": 2,
                             "legendFormat": "",
-                            "refId": "D"
+                            "refId": "D",
+                            "step": 10
                         },
                         {
                             "expr": "sum(\n    node_namespace_pod_container:container_cpu_usage_seconds_total:sum_irate{cluster=\"$cluster\", namespace=\"$namespace\"}\n  * on(namespace,pod)\n    group_left(workload, workload_type) namespace_workload_pod:kube_pod_owner:relabel{cluster=\"$cluster\", namespace=\"$namespace\", workload=\"$workload\", workload_type=\"$type\"}\n) by (pod)\n/sum(\n    kube_pod_container_resource_limits{job=\"kube-state-metrics\", cluster=\"$cluster\", namespace=\"$namespace\", resource=\"cpu\"}\n  * on(namespace,pod)\n    group_left(workload, workload_type) namespace_workload_pod:kube_pod_owner:relabel{cluster=\"$cluster\", namespace=\"$namespace\", workload=\"$workload\", workload_type=\"$type\"}\n) by (pod)\n",
@@ -284,7 +289,8 @@
                             "instant": true,
                             "intervalFactor": 2,
                             "legendFormat": "",
-                            "refId": "E"
+                            "refId": "E",
+                            "step": 10
                         }
                     ],
                     "thresholds": [],
@@ -375,7 +381,8 @@
                             "format": "time_series",
                             "intervalFactor": 2,
                             "legendFormat": "{{pod}}",
-                            "legendLink": null
+                            "legendLink": null,
+                            "step": 10
                         }
                     ],
                     "thresholds": [],
@@ -575,7 +582,8 @@
                             "instant": true,
                             "intervalFactor": 2,
                             "legendFormat": "",
-                            "refId": "A"
+                            "refId": "A",
+                            "step": 10
                         },
                         {
                             "expr": "sum(\n    kube_pod_container_resource_requests{job=\"kube-state-metrics\", cluster=\"$cluster\", namespace=\"$namespace\", resource=\"memory\"}\n  * on(namespace,pod)\n    group_left(workload, workload_type) namespace_workload_pod:kube_pod_owner:relabel{cluster=\"$cluster\", namespace=\"$namespace\", workload=\"$workload\", workload_type=\"$type\"}\n) by (pod)\n",
@@ -583,7 +591,8 @@
                             "instant": true,
                             "intervalFactor": 2,
                             "legendFormat": "",
-                            "refId": "B"
+                            "refId": "B",
+                            "step": 10
                         },
                         {
                             "expr": "sum(\n    container_memory_working_set_bytes{cluster=\"$cluster\", namespace=\"$namespace\", container!=\"\", image!=\"\"}\n  * on(namespace,pod)\n    group_left(workload, workload_type) namespace_workload_pod:kube_pod_owner:relabel{cluster=\"$cluster\", namespace=\"$namespace\", workload=\"$workload\", workload_type=\"$type\"}\n) by (pod)\n/sum(\n    kube_pod_container_resource_requests{job=\"kube-state-metrics\", cluster=\"$cluster\", namespace=\"$namespace\", resource=\"memory\"}\n  * on(namespace,pod)\n    group_left(workload, workload_type) namespace_workload_pod:kube_pod_owner:relabel{cluster=\"$cluster\", namespace=\"$namespace\", workload=\"$workload\", workload_type=\"$type\"}\n) by (pod)\n",
@@ -591,7 +600,8 @@
                             "instant": true,
                             "intervalFactor": 2,
                             "legendFormat": "",
-                            "refId": "C"
+                            "refId": "C",
+                            "step": 10
                         },
                         {
                             "expr": "sum(\n    kube_pod_container_resource_limits{job=\"kube-state-metrics\", cluster=\"$cluster\", namespace=\"$namespace\", resource=\"memory\"}\n  * on(namespace,pod)\n    group_left(workload, workload_type) namespace_workload_pod:kube_pod_owner:relabel{cluster=\"$cluster\", namespace=\"$namespace\", workload=\"$workload\", workload_type=\"$type\"}\n) by (pod)\n",
@@ -599,7 +609,8 @@
                             "instant": true,
                             "intervalFactor": 2,
                             "legendFormat": "",
-                            "refId": "D"
+                            "refId": "D",
+                            "step": 10
                         },
                         {
                             "expr": "sum(\n    container_memory_working_set_bytes{cluster=\"$cluster\", namespace=\"$namespace\", container!=\"\", image!=\"\"}\n  * on(namespace,pod)\n    group_left(workload, workload_type) namespace_workload_pod:kube_pod_owner:relabel{cluster=\"$cluster\", namespace=\"$namespace\", workload=\"$workload\", workload_type=\"$type\"}\n) by (pod)\n/sum(\n    kube_pod_container_resource_limits{job=\"kube-state-metrics\", cluster=\"$cluster\", namespace=\"$namespace\", resource=\"memory\"}\n  * on(namespace,pod)\n    group_left(workload, workload_type) namespace_workload_pod:kube_pod_owner:relabel{cluster=\"$cluster\", namespace=\"$namespace\", workload=\"$workload\", workload_type=\"$type\"}\n) by (pod)\n",
@@ -607,7 +618,8 @@
                             "instant": true,
                             "intervalFactor": 2,
                             "legendFormat": "",
-                            "refId": "E"
+                            "refId": "E",
+                            "step": 10
                         }
                     ],
                     "thresholds": [],
@@ -823,7 +835,8 @@
                             "instant": true,
                             "intervalFactor": 2,
                             "legendFormat": "",
-                            "refId": "A"
+                            "refId": "A",
+                            "step": 10
                         },
                         {
                             "expr": "(sum(irate(container_network_transmit_bytes_total{job=\"kubelet\", metrics_path=\"/metrics/cadvisor\", cluster=\"$cluster\", namespace=\"$namespace\"}[$__rate_interval])\n* on (namespace,pod)\ngroup_left(workload,workload_type) namespace_workload_pod:kube_pod_owner:relabel{cluster=\"$cluster\", namespace=\"$namespace\", workload=~\"$workload\", workload_type=\"$type\"}) by (pod))\n",
@@ -831,7 +844,8 @@
                             "instant": true,
                             "intervalFactor": 2,
                             "legendFormat": "",
-                            "refId": "B"
+                            "refId": "B",
+                            "step": 10
                         },
                         {
                             "expr": "(sum(irate(container_network_receive_packets_total{job=\"kubelet\", metrics_path=\"/metrics/cadvisor\", cluster=\"$cluster\", namespace=\"$namespace\"}[$__rate_interval])\n* on (namespace,pod)\ngroup_left(workload,workload_type) namespace_workload_pod:kube_pod_owner:relabel{cluster=\"$cluster\", namespace=\"$namespace\", workload=~\"$workload\", workload_type=\"$type\"}) by (pod))\n",
@@ -839,7 +853,8 @@
                             "instant": true,
                             "intervalFactor": 2,
                             "legendFormat": "",
-                            "refId": "C"
+                            "refId": "C",
+                            "step": 10
                         },
                         {
                             "expr": "(sum(irate(container_network_transmit_packets_total{job=\"kubelet\", metrics_path=\"/metrics/cadvisor\", cluster=\"$cluster\", namespace=\"$namespace\"}[$__rate_interval])\n* on (namespace,pod)\ngroup_left(workload,workload_type) namespace_workload_pod:kube_pod_owner:relabel{cluster=\"$cluster\", namespace=\"$namespace\", workload=~\"$workload\", workload_type=\"$type\"}) by (pod))\n",
@@ -847,7 +862,8 @@
                             "instant": true,
                             "intervalFactor": 2,
                             "legendFormat": "",
-                            "refId": "D"
+                            "refId": "D",
+                            "step": 10
                         },
                         {
                             "expr": "(sum(irate(container_network_receive_packets_dropped_total{job=\"kubelet\", metrics_path=\"/metrics/cadvisor\", cluster=\"$cluster\", namespace=\"$namespace\"}[$__rate_interval])\n* on (namespace,pod)\ngroup_left(workload,workload_type) namespace_workload_pod:kube_pod_owner:relabel{cluster=\"$cluster\", namespace=\"$namespace\", workload=~\"$workload\", workload_type=\"$type\"}) by (pod))\n",
@@ -855,7 +871,8 @@
                             "instant": true,
                             "intervalFactor": 2,
                             "legendFormat": "",
-                            "refId": "E"
+                            "refId": "E",
+                            "step": 10
                         },
                         {
                             "expr": "(sum(irate(container_network_transmit_packets_dropped_total{job=\"kubelet\", metrics_path=\"/metrics/cadvisor\", cluster=\"$cluster\", namespace=\"$namespace\"}[$__rate_interval])\n* on (namespace,pod)\ngroup_left(workload,workload_type) namespace_workload_pod:kube_pod_owner:relabel{cluster=\"$cluster\", namespace=\"$namespace\", workload=~\"$workload\", workload_type=\"$type\"}) by (pod))\n",
@@ -863,7 +880,8 @@
                             "instant": true,
                             "intervalFactor": 2,
                             "legendFormat": "",
-                            "refId": "F"
+                            "refId": "F",
+                            "step": 10
                         }
                     ],
                     "thresholds": [],
@@ -954,7 +972,8 @@
                             "format": "time_series",
                             "intervalFactor": 2,
                             "legendFormat": "{{pod}}",
-                            "legendLink": null
+                            "legendLink": null,
+                            "step": 10
                         }
                     ],
                     "thresholds": [],
@@ -1032,7 +1051,8 @@
                             "format": "time_series",
                             "intervalFactor": 2,
                             "legendFormat": "{{pod}}",
-                            "legendLink": null
+                            "legendLink": null,
+                            "step": 10
                         }
                     ],
                     "thresholds": [],
@@ -1122,7 +1142,8 @@
                             "format": "time_series",
                             "intervalFactor": 2,
                             "legendFormat": "{{pod}}",
-                            "legendLink": null
+                            "legendLink": null,
+                            "step": 10
                         }
                     ],
                     "thresholds": [],
@@ -1200,7 +1221,8 @@
                             "format": "time_series",
                             "intervalFactor": 2,
                             "legendFormat": "{{pod}}",
-                            "legendLink": null
+                            "legendLink": null,
+                            "step": 10
                         }
                     ],
                     "thresholds": [],
@@ -1290,7 +1312,8 @@
                             "format": "time_series",
                             "intervalFactor": 2,
                             "legendFormat": "{{pod}}",
-                            "legendLink": null
+                            "legendLink": null,
+                            "step": 10
                         }
                     ],
                     "thresholds": [],
@@ -1368,7 +1391,8 @@
                             "format": "time_series",
                             "intervalFactor": 2,
                             "legendFormat": "{{pod}}",
-                            "legendLink": null
+                            "legendLink": null,
+                            "step": 10
                         }
                     ],
                     "thresholds": [],
@@ -1458,7 +1482,8 @@
                             "format": "time_series",
                             "intervalFactor": 2,
                             "legendFormat": "{{pod}}",
-                            "legendLink": null
+                            "legendLink": null,
+                            "step": 10
                         }
                     ],
                     "thresholds": [],
@@ -1536,7 +1561,8 @@
                             "format": "time_series",
                             "intervalFactor": 2,
                             "legendFormat": "{{pod}}",
-                            "legendLink": null
+                            "legendLink": null,
+                            "step": 10
                         }
                     ],
                     "thresholds": [],
@@ -1598,7 +1624,7 @@
                     "value": ""
                 },
                 "datasource": "$prometheusds",
-                "hide": 0,
+                "hide": 2,
                 "includeAll": false,
                 "label": null,
                 "multi": false,

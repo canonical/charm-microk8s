@@ -65,10 +65,22 @@ charm-microk8s:                     # Root directory
 - docs:
   - architecture.md                 # Document architecture decisions for the charm
   - development.md                  # Getting started with developing the charm and running tests
+- lib:
+  - charms/grafana_agent/v0:
+    - cos_agent.py                  # Library for COS integration (updated by src/hack/update_libs.py)
 - src:
+  - deploy: [...]                   # Kubernetes manifests deployed by the charm
+  - grafana_dashboards: [...]       # Grafana Dashboards for COS integration (updated by src/hack/update_dashboards.py)
+  - hack:
+    - update_alert_rules.py         # Update 'src/prometheus alert rules' from upstream sources
+    - update_dashboards.py          # Update 'src/grafana_dashboards' from upstream sources
+    - update_kube_state_metrics.py  # Update 'src/deploy/kube-state-metrics.yaml' from upstream sources
+    - update_libs.py                # Update charmcraft libraries under 'lib' from upstream sources
+  - prometheus_alert_rules: [...]   # Prometheus Alert Rules for COS integration (updated by src/hack/update_alert_rules.py)
   - charm_config.py                 # Channel-specific charm configuration
   - charm.py                        # Main charm source code and entry point
   - containerd.py                   # Implement containerd functionality
+  - metrics.py                      # Implement observability related functionality
   - microk8s.py                     # Implement microk8s functionality
   - ops_helpers.py                  # Helpers and utilities not available yet in ops framework
   - util.py                         # Implement helpers and utilities
@@ -79,10 +91,14 @@ charm-microk8s:                     # Root directory
     - test_charm_worker.py          # Unit tests for src/charm.py (worker specific)
     - test_charm.py                 # Unit tests for src/charm.py
     - test_containerd.py            # Unit tests for src/containerd.py
+    - test_metrics.py               # Unit tests for src/metrics.py
     - test_microk8s.py              # Unit tests for src/microk8s.py
     - test_ops_helpers.py           # Unit tests for src/util.py
     - test_util.py                  # Unit tests for src/util.py
   - integration:
+    - conftest.py                   # Shared test fixtures for integration tests
     - config.py                     # Integration tests configuration file
-    - test_microk8s.py              # Integration tests
+    - test_microk8s.py              # Integration tests (clustering)
+    - test_metallb_traefik.py       # Integration tests (MetalLB and Traefik LoadBalancer)
+    - test_observability.py         # Integration tests (grafana-agent)
 ```

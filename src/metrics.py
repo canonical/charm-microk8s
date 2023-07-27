@@ -1,41 +1,7 @@
 #
 # Copyright 2023 Canonical, Ltd.
 #
-"""
-Requirements:
 
-NOTES:
-
-- a better way would be to authenticate with x509 certificates, but this is not currently supported
-  by the observability stack. Therefore, we stick to short-lived bearer tokens for authentication
-- the scrape jobs below are created as defined by the kube-prom-stack, so that all dashboards
-  from that project can work out of the box.
-- we are polling the metrics endpoints from the apiserver (16443) and kubelet (10250) only. this
-  works because the kube-scheduler, kube-controller-manager and kube-proxy are running in the same
-  process. it would be enough to poll them once, but the dashboards use `metric{job="kube-proxy"}`
-  to populate data.
-- a potential option would be to poll kubelets through the apiserver proxy url, e.g. instead of
-
-    target="$ip:10250", metrics_path="/metrics/cadvisor"
-
-  have:
-
-    target="$apiserver:16443", metrics_path="/api/v1/nodes/$hostname/proxy/metrics/cadvisor"
-
-  but that would require more relabel configs to not break the metrics
-
-END RESULT:
-
-We should have the following jobs for each component (on the right are required labels):
-
-- apiserver                     job="apiserver"
-- kube-controller-manager       job="kube-controller-manager"
-- kube-scheduler                job="kube-scheduler"
-- kube-proxy                    job="kube-proxy"
-- kubelet                       job="kubelet", metrics_path="/metrics", node="$nodename"
-- kubelet (cadvisor)            job="kubelet", metrics_path="/metrics/cadvisor", node="$nodename"
-- kubelet (probes)              job="kubelet", metrics_path="/metrics/probes", node="$nodename"
-"""
 
 import json
 import logging

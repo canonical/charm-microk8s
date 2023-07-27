@@ -444,7 +444,8 @@ class COSAgentProvider(Object):
     def _metrics_alert_rules(self) -> Dict:
         """Use (for now) the prometheus_scrape AlertRules to initialize this."""
 
-        # NOTE(neoaggelos): Hack until 
+        # NOTE(neoaggelos): Temporary hack to drop 'juju_charm' and 'juju_unit' until
+        # https://github.com/canonical/grafana-agent-k8s-operator/issues/190 is fixed
         alert_rules = AlertRules(
             query_type="promql",
             topology=JujuTopology.from_dict(

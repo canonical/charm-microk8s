@@ -396,7 +396,7 @@
                 "allValue": null,
                 "current": {},
                 "datasource": "$prometheusds",
-                "hide": 0,
+                "hide": 2,
                 "includeAll": false,
                 "label": "cluster",
                 "multi": false,

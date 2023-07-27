@@ -13,8 +13,11 @@ from urllib.request import urlopen
 
 import yaml
 
-SOURCE = "https://raw.githubusercontent.com/prometheus-operator/kube-prometheus/main/manifests/grafana-dashboardDefinitions.yaml"  # noqa
+# NOTE: pick a kube-prometheus version that supports the Kubernetes version we deploy
+VERSION = "v0.12.0"
+SOURCE = f"https://raw.githubusercontent.com/prometheus-operator/kube-prometheus/{VERSION}/manifests/grafana-dashboardDefinitions.yaml"  # noqa
 
+# COS handles node and monitoring components dashboards, so skip them
 DASHBOARDS = [
     # "alertmanager-overview.json",
     "apiserver.json",
