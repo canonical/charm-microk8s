@@ -74,6 +74,7 @@ async def test_microk8s_cluster(e: OpsTest, series: str, cp_units: int, worker_u
 
     # When rbac is enabled, we can get `system:node` clusterrole successfully
     rc, stdout, stderr = await run_unit(u, "microk8s kubectl get clusterrole system:node")
+    LOG.info("stdout: %s, stderr: %s", stdout, stderr)
     assert rc == 0
 
     await e.model.wait_for_idle([a.name for a in apps], timeout=60 * 60)
