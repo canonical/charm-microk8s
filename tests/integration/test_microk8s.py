@@ -70,7 +70,7 @@ async def test_microk8s_cluster(e: OpsTest, series: str, cp_units: int, worker_u
             f"{application_name}:workers", f"{application_name}-worker:control-plane"
         )
 
-        await e.model.wait_for_idle(f"{application_name}-worker", timeout=60 * 60)
+        await e.model.wait_for_idle([f"{application_name}-worker"], timeout=60 * 60)
 
     await e.model.wait_for_idle([application_name], timeout=60 * 60)
 
