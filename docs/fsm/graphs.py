@@ -101,7 +101,7 @@ r = graphviz.Digraph("microk8s relations", filename=DIR / "relations", format="p
 r.attr(rankdir="LR", size="20,30")
 
 r.attr("node", shape="none")
-r.node("", "Charm relations\tjuju relate microk8s:microk8s-provides microk8s-worker:microk8s")
+r.node("", "Charm relations\tjuju integrate microk8s:microk8s-provides microk8s-worker:microk8s")
 
 r.attr("node", shape="circle")
 r.node("cp", "microk8s\n\nrole=control-plane")

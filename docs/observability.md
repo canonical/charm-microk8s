@@ -13,7 +13,7 @@ juju deploy microk8s --channel edge --config hostpath_storage=true --constraints
 juju expose microk8s
 
 # Add MicroK8s as Kubernetes cloud to Juju
-juju run --unit microk8s/leader -- microk8s config | juju add-k8s k8s --controller "$(juju controller-config controller-name)"
+juju exec --unit microk8s/leader -- microk8s config | juju add-k8s k8s --controller "$(juju controller-config controller-name)"
 ```
 
 ### Deploy cos-lite
@@ -34,7 +34,7 @@ juju offer loki:logging loki
 juju offer grafana:grafana-dashboard grafana
 ```
 
-### Relate MicroK8s with COS
+### Integrate MicroK8s with COS
 
 ```bash
 # Switch to 'microk8s' model and configure cross-model relations
@@ -45,12 +45,12 @@ juju consume admin/observability.grafana grafana
 
 # Deploy grafana-agent and integrate grafana-agent with COS
 juju deploy grafana-agent --channel edge
-juju relate grafana-agent prometheus
-juju relate grafana-agent loki
-juju relate grafana-agent grafana
+juju integrate grafana-agent prometheus
+juju integrate grafana-agent loki
+juju integrate grafana-agent grafana
 
 # Integrate MicroK8s with grafana-agent
-juju relate microk8s grafana-agent
+juju integrate microk8s grafana-agent
 ```
 
 ### Access Grafana
@@ -58,18 +58,16 @@ juju relate microk8s grafana-agent
 Retrieve the admin password for Grafana using:
 
 ```bash
-juju run-action --wait -m observability grafana/0 get-admin-password
+juju run --wait -m observability grafana/0 get-admin-password
 ```
 
-Then, if LoadBalancer IP is not reachable from your host, use either `sshuttle` or `ssh`
+Then, if the LoadBalancer IP is not reachable from your host, create a local port forward:
 
 ```bash
-# Access Grafana at http://localhost:8000/observability-grafana/
 juju ssh -m microk8s microk8s/leader -L 8000:10.43.5.10:80
-
-# Access Grafana at http://10.43.5.10/observability-grafana/
-sshuttle -r $microk8snodeip 10.43.5.10/32
 ```
+
+Then, point your browser to http://localhost:8000/observability-grafana/ to access Grafana. For debugging purposes, you can also access Prometheus at http://localhost:8000/observability-prometheus-0/
 
 ## (Dev) Getting Started
 
@@ -89,9 +87,10 @@ The charm also automatically deploys [`kube-state-metrics`](https://github.com/k
 
 To update upstream manifests, use the scripts in `src/hack`.
 
-1. Check the latest upstream version of each component (and ensure that it is compatible with the MicroK8s version we deploy)
-2. Update the `VERSION` in each `update_*.py` script as needed.
-3. Update everything with the following:
+1. (Optional) Update component versions
+   - Check https://github.com/prometheus-operator/kube-prometheus and find a release that is compatible with the MicroK8s version we deploy, then update `VERSION` in `src/hack/update_alert_rules.py` and `src/hack/update_dashboards.py`.
+   - Check https://github.com/kubernetes/kube-state-metrics and find a release that is compatible with the MicroK8s version we deploy, then update `VERSION` in `src/hack/update_kube_state_metrics.py`
+2. Update vendored manifests from upstream sources
 
 ```bash
 python src/hack/update_alert_rules.py
