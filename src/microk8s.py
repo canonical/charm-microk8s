@@ -217,7 +217,7 @@ def configure_hostpath_storage(enable: bool):
 
 def configure_rbac(enable: bool):
     """enable or disable rbac"""
-    LOG.info("Enabling RBAC" if enable else "Disabling RBAC")
+    LOG.info("Ensure RBAC is %s", enable)
     apply_launch_configuration(
         {
             "extraKubeAPIServerArgs": {

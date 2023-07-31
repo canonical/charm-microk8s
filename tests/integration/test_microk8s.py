@@ -18,7 +18,7 @@ LOG = logging.getLogger(__name__)
 @pytest.mark.parametrize("cp_units, worker_units", config.MK8S_CLUSTER_SIZES)
 @pytest.mark.parametrize("series", config.MK8S_SERIES)
 async def test_microk8s_cluster(e: OpsTest, series: str, cp_units: int, worker_units: int):
-    """Deploy a cluster and wait for units to come up"""
+    """Deploy a cluster, configure RBAC, wait for units to come up"""
 
     charm_config = {}
     application_name = f"microk8s-{series or 'default'}-{cp_units}c{worker_units}w"
@@ -42,7 +42,7 @@ async def test_microk8s_cluster(e: OpsTest, series: str, cp_units: int, worker_u
 
     # When rbac is not enabled, we can't query for `system:node` cluster role
     rc, stdout, stderr = await run_unit(u, "microk8s kubectl get clusterrole system:node")
-    assert rc == 1
+    assert rc == 1, f"system:node should be missing with RBAC disabled {stdout=}, {stderr=}"
 
     await e.model.wait_for_idle([application_name], timeout=60 * 60)
 
@@ -76,8 +76,7 @@ async def test_microk8s_cluster(e: OpsTest, series: str, cp_units: int, worker_u
 
     # When rbac is enabled, we can get `system:node` clusterrole successfully
     rc, stdout, stderr = await run_unit(u, "microk8s kubectl get clusterrole system:node")
-    LOG.info("stdout: %s, stderr: %s", stdout, stderr)
-    assert rc == 0
+    assert rc == 0, f"system:node should be present with RBAC enabled {stdout=} {stderr=}"
 
     await e.model.wait_for_idle([a.name for a in apps], timeout=60 * 60)
     for a in apps:
