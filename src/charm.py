@@ -192,6 +192,7 @@ class MicroK8sCharm(CharmBase):
 
         if self._state.joined and not self.config["automatic_certificate_reissue"]:
             self.unit.status = MaintenanceStatus("disabling automatic certificate reissue")
+            microk8s.wait_ready()
             microk8s.disable_cert_reissue()
 
     def config_extra_sans(self, _: ConfigChangedEvent):
