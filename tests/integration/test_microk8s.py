@@ -3,15 +3,11 @@
 # Copyright 2023 Canonical, Ltd.
 #
 
-import logging
-
 import config
 import pytest
 from conftest import run_unit
 from juju.unit import Unit
 from pytest_operator.plugin import OpsTest
-
-LOG = logging.getLogger(__name__)
 
 
 @pytest.mark.abort_on_fail

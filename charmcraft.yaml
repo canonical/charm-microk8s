@@ -11,3 +11,9 @@ bases:
       channel: "20.04"
     - name: ubuntu
       channel: "22.04"
+
+parts:
+  charm:
+    charm-binary-python-packages:
+      - pydantic==1.10.9
+      - cosl==0.0.5

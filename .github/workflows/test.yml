@@ -1,4 +1,4 @@
-name: Integration tests
+name: Integration Tests
 
 on:
   push:
@@ -30,7 +30,7 @@ jobs:
           path: ./microk8s.charm
 
   test-cluster:
-    name: Test - ${{ matrix.control_plane}}cp${{ matrix.workers}}w - ${{ matrix.series }} - juju ${{ matrix.juju }}
+    name: Cluster - ${{ matrix.control_plane}}cp${{ matrix.workers}}w - ${{ matrix.series }} - juju ${{ matrix.juju }}
     runs-on: ubuntu-latest
     needs: build
     strategy:
@@ -80,11 +80,11 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v3.1.2
         with:
-          name: logs - ${{ matrix.control_plane}}cp${{ matrix.workers}}w - ${{ matrix.series }} - juju ${{ matrix.juju }}
+          name: Cluster - ${{ matrix.control_plane}}cp${{ matrix.workers}}w - ${{ matrix.series }} - juju ${{ matrix.juju }}
           path: artifacts/
 
-  test-integrations:
-    name: Integration tests - juju ${{ matrix.juju }}
+  test-traefik:
+    name: Traefik - juju ${{ matrix.juju }}
     runs-on: ubuntu-latest
     needs: build
     strategy:
@@ -118,7 +118,7 @@ jobs:
           export MK8S_SERIES='${{ matrix.series }}'
           export MK8S_CHARM=./build/microk8s.charm
           export MK8S_CHARM_CHANNEL=''
-          sg lxd -c 'tox -e integration-${{ matrix.juju }} -- --model testing -k test_metallb'
+          sg lxd -c 'tox -e integration-${{ matrix.juju }} -- --model testing -k test_metallb_traefik'
       - name: Retrieve artifacts
         if: always()
         run: |
@@ -130,5 +130,55 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v3.1.2
         with:
-          name: integrations - juju ${{ matrix.juju }}
+          name: Traefik - juju ${{ matrix.juju }}
+          path: artifacts/
+
+  test-cos:
+    name: Observability - juju ${{ matrix.juju }}
+    runs-on: ubuntu-latest
+    needs: build
+    strategy:
+      fail-fast: true
+      matrix:
+        juju: [2.9, 3.1]
+    steps:
+      - name: Checking out repo
+        uses: actions/checkout@v3.5.2
+      # - name: Setup tmate session
+      #   uses: mxschmitt/action-tmate@v3
+      - name: Configure pytest-operator
+        uses: charmed-kubernetes/actions-operator@main
+        with:
+          provider: lxd
+          lxd-channel: 5.0/stable
+          juju-channel: ${{ matrix.juju }}/stable
+      - name: Add user to lxd group
+        run: sudo usermod -a -G lxd $USER
+      - name: Fetch charm
+        uses: actions/download-artifact@v3.0.2
+        with:
+          name: microk8s.charm
+          path: build
+      - name: Install tox
+        run: |
+          pip3 install tox
+      - name: Run integration tests
+        run: |
+          juju add-model testing
+          export MK8S_SERIES='${{ matrix.series }}'
+          export MK8S_CHARM=./build/microk8s.charm
+          export MK8S_CHARM_CHANNEL=''
+          sg lxd -c 'tox -e integration-${{ matrix.juju }} -- --model testing -k test_observability'
+      - name: Retrieve artifacts
+        if: always()
+        run: |
+          mkdir artifacts
+          juju debug-log -m testing --replay > artifacts/juju.log
+          juju status -m testing --format yaml > artifacts/juju.yaml
+          cp pytest.log artifacts/pytest.log
+      - name: Upload artifacts
+        if: always()
+        uses: actions/upload-artifact@v3.1.2
+        with:
+          name: Observability - juju ${{ matrix.juju }}
           path: artifacts/
