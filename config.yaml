@@ -139,3 +139,9 @@ options:
       Disable certificate reissue.
     type: boolean
     default: False
+
+  kubelet_serialize_image_pulls:
+    description: >
+      Set to false to allow kubelet to pull OCI images in parallel
+    type: boolean
+    default: True
