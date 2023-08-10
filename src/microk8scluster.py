@@ -36,6 +36,7 @@ logger = logging.getLogger(__name__)
 CONTAINERD_ENV_SNAP_PATH = "/var/snap/microk8s/current/args/containerd-env"
 CSR_CONF_TEMPLATE_SNAP_PATH = "/var/snap/microk8s/current/certs/csr.conf.template"
 NO_CERT_REISSUE_LOCKFILE = "/var/snap/microk8s/current/var/lock/no-cert-reissue"
+KUBELET_ARGS_PATH = "/var/snap/microk8s/current/args/kubelet"
 
 
 class EventError(Exception):
@@ -145,6 +146,7 @@ class MicroK8sCluster(Object):
         self.framework.observe(charm.on.config_changed, self._refresh_channel)
         self.framework.observe(charm.on.config_changed, self._update_csr_conf)
         self.framework.observe(charm.on.config_changed, self._manage_cert_reissue_lock)
+        self.framework.observe(charm.on.config_changed, self._manage_kubelet_serialize_pulls)
 
         self.framework.observe(charm.on.start_action, self._microk8s_start)
         self.framework.observe(charm.on.stop_action, self._microk8s_stop)
@@ -263,6 +265,34 @@ class MicroK8sCluster(Object):
         with open(CONTAINERD_ENV_SNAP_PATH, "w") as env:
             env.write(configured)
         subprocess.check_call(["systemctl", "restart", "snap.microk8s.daemon-containerd.service"])
+
+    def _manage_kubelet_serialize_pulls(self, event):
+        try:
+            old_config = Path(KUBELET_ARGS_PATH).read_text()
+        except Exception:
+            # We could be racing install, or who knows what else, so just try again later.
+            event.defer()
+            return
+
+        # do nothing by default
+        if self.model.config["kubelet_serialize_image_pulls"] and "--serialize-image-pulls" not in old_config:
+            return
+
+        value = "true" if self.model.config["kubelet_serialize_image_pulls"] else "false"
+        subprocess.check_call(
+            [
+                "snap",
+                "run",
+                "--shell",
+                "microk8s",
+                "-c",
+                f". $SNAP/actions/common/utils.sh; refresh_opt_in_local_config serialize-image-pulls {value} kubelet",
+            ]
+        )
+        new_config = Path(KUBELET_ARGS_PATH).read_text()
+        if new_config != old_config:
+            logger.info("Restart kubelet to set --serialize-image-pulls=%s", value)
+            subprocess.check_call(["systemctl", "restart", "snap.microk8s.daemon-kubelite.service"])
 
     def _custom_registries(self, event):
         configured = self.model.config["custom_registries"]
