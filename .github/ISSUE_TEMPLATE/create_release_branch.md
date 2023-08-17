@@ -1,0 +1,75 @@
+---
+name: [Runbook] Create release branch
+about: Create a new branch for a new stable Kubernetes release
+---
+
+#### Summary
+
+Make sure to follow the steps below and ensure all actions are completed and signed-off by one team member.
+
+#### Information
+
+<!-- Replace with the version to create the branch for, e.g. 1.28 -->
+- **MicroK8s version**: 1.xx
+
+<!-- Set this to the name of the person responsible for running the release tasks, e.g. @neoaggelos -->
+- **Owner**:
+
+<!-- Set this to the name of the team-member that will sign-off the tasks -->
+- **Reviewer**:
+
+<!-- Link to PR to initialize the release branch (see below) -->
+- **PR**:
+
+#### Actions
+
+The steps are to be followed in-order, each task must be completed by the person specified in **bold**. Do not perform any steps unless all previous ones have been signed-off. The **Reviewer** closes the issue once all steps are complete.
+
+- [ ] **Owner**: Add the assignee and reviewer as assignees to the GitHub issue
+- [ ] **Owner**: Ensure that you are part of the ["microk8s developers" team](https://launchpad.net/~microk8s-dev)
+- [ ] **Owner**: Request a new `1.xx` CharmHub track for the `microk8s` charm.
+  - #### Email template
+
+    **To:** snap-store-admins AT canonical.com
+
+    **Cc:** k8s-crew AT canonical.com
+
+    **Subject:** [k8s-crew] Track request for MicroK8s charm
+
+    **Body:**
+
+    Hi admins, please open a new track `1.xx` for the `microk8s` charm.
+
+    Thank you,
+    $name
+- [ ] **Owner**: Create `release-1.xx` branch from latest `master`
+  - `git checkout master`
+  - `git pull`
+  - `git checkout -b release-1.xx`
+  - `git push origin release-1.xx`
+- [ ] **Reviewer**: Ensure `release-1.xx` branch is based on latest changes on master at the time of the release cut.
+- [ ] **Owner**: Create PR to initialize `release-1.xx` branch:
+  - [ ] Update branch from `master` to `release-1.xx` in [.github/workflows/cla-check.yml](../workflows/cla-check.yml)
+  - [ ] Update branch from `master` to `release-1.xx` in [.github/workflows/python.yml](../workflows/python.yml)
+  - [ ] Update branch from `master` to `release-1.xx` in [.github/workflows/test.yml](../workflows/test.yml)
+  - [ ] Update `cancel-in-progress` from `refs/heads/master` to `refs/heads/release-1.xx` in [.github/workflows/test.yml](../workflows/test.yml)
+  - [ ] Update `SNAP_CHANNEL` to `1.xx` in [src/charm_config.py](../../src/charm_config.py)
+  - [ ] Update `*_CHANNEL` in [tests/integration/config.py](../../tests/integration/config.py). Kubernetes charms should use `1.xx/edge`, others should use `edge` unless there has been a breaking change.
+  - [ ] `git commit -m 'Release 1.xx'`
+  - [ ] Create PR with the changes and request review from **Reviewer**. Make sure to update the issue `Information` section with a link to the PR.
+- [ ] **Reviewer**: Review and merge PR to initialize branch.
+- [ ] **Owner**: Create launchpad builders for `release-1.xx`
+  - [ ] Go to https://code.launchpad.net/~microk8s-dev/charm-microk8s/+git/charm-microk8s and do **Import now** to pick up all latest changes.
+  - [ ] Under **Branches**, select `release-1.xx`, then **Create charm recipe**
+  - [ ] Set **Charm recipe name** to `microk8s-1.xx`
+  - [ ] Enable **Automatically build when branch changes**
+  - [ ] Enable **Automatically upload to store**
+  - [ ] Set **Registered store name** to `microk8s`
+  - [ ] In **Store Channels**, set **Track** to `1.xx` and **Risk** to `edge`. Leave **Branch** empty
+  - [ ] Click **Create charm recipe** at the bottom of the page. You will be asked to authenticate with CharmHub so that LaunchPad can automatically push the charm on each build.
+- [ ] **Reviewer**: Ensure charm recipe for `release-1.xx` is created
+  - List of recipes https://code.launchpad.net/~microk8s-dev/charm-microk8s/+git/charm-microk8s/+charm-recipes
+
+#### After release
+
+**Owner** follows up with the **Reviewer** and team about things to improve around the process.
