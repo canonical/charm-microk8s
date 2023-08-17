@@ -34,25 +34,24 @@ async def test_metallb_traefik(e: OpsTest):
         with e.model_context(k8s_model):
             LOG.info("Deploy MetalLB")
             await e.model.deploy(
-                config.MK8S_METALLB_SPEAKER_CHARM,
-                application_name="metallb-speaker",
-            )
-            await e.model.deploy(
-                config.MK8S_METALLB_CONTROLLER_CHARM,
-                application_name="metallb-controller",
+                config.MK8S_METALLB_CHARM,
+                application_name="metallb",
                 config={"iprange": "42.42.42.42-42.42.42.42"},
+                channel=config.MK8S_METALLB_CHANNEL,
             )
-            await e.model.wait_for_idle(["metallb-speaker", "metallb-controller"])
+            await e.model.wait_for_idle(["metallb"])
             LOG.info("Deploy Traefik")
             await e.model.deploy(
                 config.MK8S_TRAEFIK_K8S_CHARM,
                 application_name="traefik",
+                channel=config.MK8S_TRAEFIK_K8S_CHANNEL,
                 trust=True,
             )
             LOG.info("Deploy hello kubecon")
             await e.model.deploy(
                 config.MK8S_HELLO_KUBECON_CHARM,
                 application_name="hello-kubecon",
+                channel=config.MK8S_HELLO_KUBECON_CHANNEL,
             )
             await e.model.wait_for_idle(["traefik", "hello-kubecon"])
             await e.model.relate("traefik", "hello-kubecon")
@@ -64,7 +63,5 @@ async def test_metallb_traefik(e: OpsTest):
 
         # Make sure hello-kubecon is available from ingress
         while "Hello, Kubecon" not in stdout:
-            rc, stdout, stderr = await run_unit(
-                u, f"curl http://42.42.42.42:80/{ns}-hello-kubecon {ns}"
-            )
-            LOG.info("Check LoadBalancer service %s on %s", (rc, stdout, stderr), ns)
+            rc, stdout, stderr = await run_unit(u, f"curl http://42.42.42.42:80/{ns}-hello-kubecon")
+            LOG.info("Waiting for hello kubecon message %s", (rc, stderr))
