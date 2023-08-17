@@ -3,4 +3,4 @@
 #
 
 # Snap store channel to use when installing MicroK8s
-SNAP_CHANNEL = ""
+SNAP_CHANNEL = "latest/edge"
