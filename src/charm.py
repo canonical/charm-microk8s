@@ -7,6 +7,7 @@ import json
 import logging
 import socket
 import subprocess
+import time
 from typing import Any, Union
 
 from charms.grafana_agent.v0.cos_agent import COSAgentProvider
@@ -57,6 +58,8 @@ class MicroK8sCharm(CharmBase):
             installed=False,
             joined=False,
             hostnames={},
+            dns_ip=None,
+            dns_domain=None,
         )
 
         if self.config["role"] == "worker":
@@ -72,6 +75,8 @@ class MicroK8sCharm(CharmBase):
             self.framework.observe(self.on.config_changed, self.config_containerd_proxy)
             self.framework.observe(self.on.config_changed, self.config_containerd_registries)
             self.framework.observe(self.on.config_changed, self.update_status)
+            self.framework.observe(self.on.dns_relation_joined, self.on_dns_relation_changed)
+            self.framework.observe(self.on.dns_relation_changed, self.on_dns_relation_changed)
 
             # clustering
             self.framework.observe(self.on.control_plane_relation_joined, self.on_install)
@@ -102,6 +107,7 @@ class MicroK8sCharm(CharmBase):
             self.framework.observe(self.on.config_changed, self.config_extra_sans)
             self.framework.observe(self.on.config_changed, self.config_rbac)
             self.framework.observe(self.on.config_changed, self.update_status)
+            self.framework.observe(self.on.config_changed, self.config_dns)
 
             # clustering
             self.framework.observe(self.on.peer_relation_joined, self.add_node)
@@ -137,8 +143,8 @@ class MicroK8sCharm(CharmBase):
                 dashboard_dirs=["src/grafana_dashboards"],
                 refresh_events=[self.on.peer_relation_changed, self.on.upgrade_charm],
             )
-            self.framework.observe(self.on.dns_relation_joined, self._on_dns_relation_changed)
-            self.framework.observe(self.on.dns_relation_changed, self._on_dns_relation_changed)
+            self.framework.observe(self.on.dns_relation_joined, self.on_dns_relation_changed)
+            self.framework.observe(self.on.dns_relation_changed, self.on_dns_relation_changed)
 
     def on_remove(self, _: RemoveEvent):
         try:
@@ -245,11 +251,33 @@ class MicroK8sCharm(CharmBase):
             time.sleep(2)
             self.unit.status = microk8s.get_unit_status(socket.gethostname())
 
+    def config_dns(self, _: ConfigChangedEvent):
+        if isinstance(self.unit.status, BlockedStatus):
+            return
+
+        if self._state.joined:
+            self.unit.status = MaintenanceStatus("configuring DNS")
+            microk8s.configure_dns(self._state.dns_ip, self._state.dns_domain)
+
     def record_hostnames(self, event: Union[RelationChangedEvent, RelationJoinedEvent]):
         for unit in event.relation.units:
             hostname = event.relation.data[unit].get("hostname")
             if hostname is not None:
                 self._state.hostnames[unit.name] = hostname
+
+    def on_dns_relation_changed(self, event: Union[RelationChangedEvent, RelationJoinedEvent]):
+        self._state.dns_ip = None
+        self._state.dns_domain = None
+
+        for unit in event.relation.units:
+            unit_data = event.relation.data[unit]
+            dns_ip = unit_data.get("dns-ip")
+            dns_domain = unit_data.get("domain")
+            if dns_ip and dns_domain:
+                LOG.info("Got DNS info from relation (%s, %s)", dns_ip, dns_domain)
+                self._state.dns_ip = dns_ip
+                self._state.dns_domain = dns_domain
+
 
     def on_relation_departed(self, event: RelationDepartedEvent):
         if event.departing_unit == self.unit:

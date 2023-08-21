@@ -225,3 +225,19 @@ def configure_rbac(enable: bool):
             }
         }
     )
+
+
+def configure_dns(ip: str, domain: str):
+    """update kubelet dns configuration"""
+    if ip and domain:
+        block = "\n".join([f"--cluster-dns={ip}", f"--cluster-domain={domain}"])
+    else:
+        block = ""
+
+    kubelet_args_file = snap_data_dir() / "args" / "kubelet"
+    kubelet_args = kubelet_args_file.read_text() if kubelet_args_file.exists() else ""
+    new_kubelet_args = util.ensure_block(kubelet_args, block, "# {mark} microk8s charm dns config")
+
+    if util.ensure_file(kubelet_args_file, new_kubelet_args, 0o600, 0, 0):
+        LOG.info("Restart kubelet to apply new DNS configuration (%s, domain %s)", ip, domain)
+        util.ensure_call(["snap", "restart", "microk8s.daemon-kubelite"])
