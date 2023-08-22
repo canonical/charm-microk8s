@@ -278,7 +278,6 @@ class MicroK8sCharm(CharmBase):
                 self._state.dns_ip = dns_ip
                 self._state.dns_domain = dns_domain
 
-
     def on_relation_departed(self, event: RelationDepartedEvent):
         if event.departing_unit == self.unit:
             self._state.joined = False

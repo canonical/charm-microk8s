@@ -142,46 +142,6 @@ def test_config_extra_sans(e: Environment, role: str, has_joined: bool):
         e.microk8s.configure_extra_sans.assert_not_called()
 
 
-@pytest.mark.parametrize("role", ["", "control-plane"])
-@pytest.mark.parametrize("has_joined", [False, True])
-def test_config_disable_cert_reissue(e: Environment, role: str, has_joined: bool):
-    e.microk8s.get_unit_status.return_value = ops.model.ActiveStatus("fakestatus")
-
-    e.harness.update_config({"role": role, "automatic_certificate_reissue": True})
-    e.harness.set_leader(has_joined)
-    e.harness.begin_with_initial_hooks()
-
-    e.harness.charm._state.joined = has_joined
-
-    e.harness.update_config({"automatic_certificate_reissue": True})
-    e.harness.update_config({"automatic_certificate_reissue": False})
-
-    if has_joined:
-        e.microk8s.disable_cert_reissue.assert_called_once_with()
-    else:
-        e.microk8s.disable_cert_reissue.assert_not_called()
-
-
-@pytest.mark.parametrize("role", ["", "control-plane"])
-@pytest.mark.parametrize("has_joined", [False, True])
-def test_config_extra_sans(e: Environment, role: str, has_joined: bool):
-    e.microk8s.get_unit_status.return_value = ops.model.ActiveStatus("fakestatus")
-
-    e.harness.update_config({"role": role, "extra_sans": ""})
-    e.harness.set_leader(has_joined)
-    e.harness.begin_with_initial_hooks()
-
-    e.harness.charm._state.joined = has_joined
-    e.microk8s.configure_extra_sans.reset_mock()
-
-    e.harness.update_config({"extra_sans": "2.2.2.2,k8s.local"})
-
-    if has_joined:
-        e.microk8s.configure_extra_sans.assert_called_once_with("2.2.2.2,k8s.local")
-    else:
-        e.microk8s.configure_extra_sans.assert_not_called()
-
-
 @pytest.mark.parametrize("role", ["", "control-plane", "worker"])
 def test_charm_upgrade(e: Environment, role: str):
     e.microk8s.get_unit_status.return_value = ops.model.ActiveStatus("fakestatus")
