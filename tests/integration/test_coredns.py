@@ -8,6 +8,7 @@ import logging
 import config
 import pytest
 from conftest import microk8s_kubernetes_cloud_and_model
+from juju.application import Application
 from pytest_operator.plugin import OpsTest
 
 LOG = logging.getLogger(__name__)
@@ -33,6 +34,7 @@ async def test_core_dns(e: OpsTest):
             await e.model.deploy(
                 config.MK8S_CORE_DNS_CHARM,
                 application_name="coredns",
+                channel=config.MK8S_CORE_DNS_CHANNEL,
                 trust=True,
             )
             await e.model.wait_for_idle(["coredns"])
@@ -41,11 +43,17 @@ async def test_core_dns(e: OpsTest):
             await e.model.create_offer("coredns:dns-provider", "coredns")
 
         try:
-            await e.model.consume(f"admin/{model_name}.coredns", model_name)
-            await e.model.add_relation("microk8s", "coredns")
+            LOG.info("Consume offer for dns-provider")
+            await e.model.consume(f"admin/{model_name}.coredns", "coredns")
+            LOG.info("Add relation between microk8s and coredns")
+            await e.model.integrate("microk8s", "coredns")
+            LOG.info("Wait for idle")
             await e.model.wait_for_idle(["microk8s"])
 
             with e.model_context(k8s_model):
                 await e.model.wait_for_idle(["coredns"])
         finally:
+            app: Application = e.model.applications["microk8s"]
+            LOG.info("Remove relation between microk8s and coredns")
+            await app.remove_relation("microk8s:dns", "coredns:dns-provider")
             await e.model.remove_saas("coredns")
