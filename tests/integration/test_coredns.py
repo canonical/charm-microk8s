@@ -46,7 +46,7 @@ async def test_core_dns(e: OpsTest):
             LOG.info("Consume offer for dns-provider")
             await e.model.consume(f"admin/{model_name}.coredns", "coredns")
             LOG.info("Add relation between microk8s and coredns")
-            await e.model.integrate("microk8s", "coredns")
+            await e.model.add_relation("microk8s", "coredns")
             LOG.info("Wait for idle")
             await e.model.wait_for_idle(["microk8s"])
 
