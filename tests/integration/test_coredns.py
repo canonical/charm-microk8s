@@ -8,13 +8,14 @@ import logging
 
 import config
 import pytest
+import pytest_asyncio
 from conftest import microk8s_kubernetes_cloud_and_model, run_unit
 from pytest_operator.plugin import OpsTest
 
 LOG = logging.getLogger(__name__)
 
 
-@pytest.fixture()
+@pytest_asyncio.fixture()
 async def microk8s(e: OpsTest):
     # deploy microk8s
     if "microk8s" not in e.model.applications:
@@ -30,7 +31,7 @@ async def microk8s(e: OpsTest):
     yield e.model.applications["microk8s"]
 
 
-@pytest.fixture()
+@pytest_asyncio.fixture()
 async def coredns(e: OpsTest, microk8s):
     # bootstrap a juju cloud on the deployed microk8s
     async with microk8s_kubernetes_cloud_and_model(e, "microk8s") as (k8s_alias, _):
