@@ -7,9 +7,11 @@ from typing import Tuple
 
 import config
 import pytest_asyncio
+import yaml
 from juju.action import Action
 from juju.application import Application
 from juju.unit import Unit
+from juju.utils import block_until_with_coroutine
 from pytest_operator.plugin import OpsTest
 
 LOG = logging.getLogger(__name__)
@@ -108,7 +110,17 @@ async def microk8s_kubernetes_cloud_and_model(ops_test: OpsTest, microk8s_applic
 
     finally:
         LOG.info("Destroy model %s", model_name)
-        await ops_test.forget_model("k8s-model", destroy_storage=True)
+        timeout = 5 * 60
+        await ops_test.forget_model("k8s-model", destroy_storage=True, timeout=timeout)
+
+        async def model_removed():
+            rc, stdout, _ = await ops_test.juju("models", "--format", "yaml")
+            if rc != 0:
+                return False
+            model_list = yaml.safe_load(stdout)["models"]
+            return len([m for m in model_list if m["name"] == f"admin/{model_name}"]) == 0
+
+        await block_until_with_coroutine(model_removed, timeout=timeout)
         LOG.info("Delete cloud 'k8s-cloud' on controller '%s'", ops_test.controller_name)
         res = await ops_test.juju(
             "remove-k8s", JUJU_CLOUD_NAME, "--client", "--controller", ops_test.controller_name

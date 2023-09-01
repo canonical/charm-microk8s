@@ -53,11 +53,10 @@ async def coredns(e: OpsTest, microk8s):
         k8s_model.remove_application("coredns", block_until_done=True)
 
 
-@pytest.mark.abort_on_fail
-async def test_core_dns(e: OpsTest, microk8s, coredns):
+@pytest_asyncio.fixture()
+async def related_microk8s_coredns(microk8s, coredns):
     machine_model = microk8s.model
     k8s_model = coredns.model
-    DNS_TEST = "microk8s kubectl run -i --tty --rm debug --image=busybox --restart=Never -- nslookup google.com"
 
     try:
         LOG.info("Consume offer for dns-provider")
@@ -68,15 +67,23 @@ async def test_core_dns(e: OpsTest, microk8s, coredns):
         await asyncio.gather(
             machine_model.wait_for_idle(["microk8s"]), k8s_model.wait_for_idle(["coredns"])
         )
-
-        rc = None
-        while rc != 0:
-            rc, stdout, stderr = await run_unit(microk8s.units[0], DNS_TEST)
-            LOG.info("Verify the pod dns resolution %s", (rc, stdout, stderr))
-
+        yield microk8s, coredns
     finally:
         LOG.info("Remove relation between microk8s and coredns")
         await microk8s.remove_relation("dns", "coredns")
         await asyncio.gather(
             machine_model.remove_saas("coredns"), machine_model.wait_for_idle(["microk8s"])
         )
+
+
+@pytest.mark.abort_on_fail
+async def test_core_dns(related_microk8s_coredns):
+    microk8s, _ = related_microk8s_coredns
+    DNS_TEST = "microk8s kubectl run -i --tty --rm debug --image=busybox --restart=Never -- nslookup google.com"
+
+    for _ in range(10):
+        rc, stdout, stderr = await run_unit(microk8s.units[0], DNS_TEST)
+        LOG.info("Verify the pod dns resolution %s", (rc, stdout, stderr))
+        if rc == 0:
+            break
+    assert rc == 0, "Failed to resolve DNS in 10 tries"
