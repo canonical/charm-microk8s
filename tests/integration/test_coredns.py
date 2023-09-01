@@ -1,3 +1,4 @@
+
 #!/usr/bin/env python3
 #
 # Copyright 2023 Canonical, Ltd.
@@ -7,7 +8,8 @@ import logging
 
 import config
 import pytest
-from conftest import microk8s_kubernetes_cloud_and_model
+from conftest import microk8s_kubernetes_cloud_and_model, run_unit
+from juju.unit import Unit
 from juju.application import Application
 from pytest_operator.plugin import OpsTest
 
@@ -26,6 +28,8 @@ async def test_core_dns(e: OpsTest):
             constraints=config.MK8S_CONSTRAINTS,
         )
         await e.model.wait_for_idle(["microk8s"])
+
+    u: Unit = e.model.applications["microk8s"].units[0]
 
     # bootstrap a juju cloud on the deployed microk8s
     async with microk8s_kubernetes_cloud_and_model(e, "microk8s") as (k8s_model, model_name):
@@ -52,8 +56,14 @@ async def test_core_dns(e: OpsTest):
 
             with e.model_context(k8s_model):
                 await e.model.wait_for_idle(["coredns"])
+
+            rc = None
+            while rc != 0:
+                rc, stdout, stderr = await run_unit(u, f"microk8s kubectl run -i --tty --rm debug --image=busybox --restart=Never -- nslookup google.com")
+                LOG.info("Verify the pod dns resolution %s", (rc, stdout, stderr))
+
         finally:
             app: Application = e.model.applications["microk8s"]
             LOG.info("Remove relation between microk8s and coredns")
-            await app.remove_relation("microk8s:dns", "coredns:dns-provider")
+            await app.remove_relation("dns", "coredns")
             await e.model.remove_saas("coredns")
