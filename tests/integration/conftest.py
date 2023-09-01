@@ -107,12 +107,8 @@ async def microk8s_kubernetes_cloud_and_model(ops_test: OpsTest, microk8s_applic
         yield ("k8s-model", model_name)
 
     finally:
-        await ops_test.forget_model("k8s-model")
         LOG.info("Destroy model %s", model_name)
-        res = await ops_test.juju(
-            "destroy-model", model_name, "--force", "--destroy-storage", "--yes", "--no-prompt"
-        )
-        LOG.info("%s", res)
+        await ops_test.forget_model("k8s-model", destroy_storage=True)
         LOG.info("Delete cloud 'k8s-cloud' on controller '%s'", ops_test.controller_name)
         res = await ops_test.juju(
             "remove-k8s", JUJU_CLOUD_NAME, "--client", "--controller", ops_test.controller_name
