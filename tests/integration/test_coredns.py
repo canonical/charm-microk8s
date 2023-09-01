@@ -9,7 +9,6 @@ import logging
 import config
 import pytest
 from conftest import microk8s_kubernetes_cloud_and_model, run_unit
-from juju.application import Application
 from pytest_operator.plugin import OpsTest
 
 LOG = logging.getLogger(__name__)
