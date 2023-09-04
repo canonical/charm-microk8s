@@ -225,3 +225,9 @@ def configure_rbac(enable: bool):
             }
         }
     )
+
+
+def write_local_kubeconfig():
+    """write kubeconfig file for the cluster"""
+    p = util.ensure_call(["microk8s", "config"], capture_output=True)
+    util.ensure_file(Path("/root/.kube/config"), p.stdout.decode(), 0o600, 0, 0)

@@ -292,3 +292,14 @@ def test_microk8s_configure_rbac(
     apply_launch_configuration.assert_called_once_with(
         {"extraKubeAPIServerArgs": {"--authorization-mode": method}}
     )
+
+
+@mock.patch("util.ensure_call", autospec=True)
+@mock.patch("util.ensure_file", autospec=True)
+def test_microk8s_write_local_kubeconfig(ensure_file: mock.MagicMock, ensure_call: mock.MagicMock):
+    microk8s.write_local_kubeconfig()
+
+    ensure_call.assert_called_once_with(["microk8s", "config"], capture_output=True)
+    ensure_file.assert_called_once_with(
+        Path("/root/.kube/config"), ensure_call.return_value.stdout.decode.return_value, 0o600, 0, 0
+    )
