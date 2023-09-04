@@ -244,6 +244,9 @@ class MicroK8sCharm(CharmBase):
             time.sleep(2)
             self.unit.status = microk8s.get_unit_status(socket.gethostname())
 
+        if self._state.role != "worker":
+            microk8s.write_local_kubeconfig()
+
     def record_hostnames(self, event: Union[RelationChangedEvent, RelationJoinedEvent]):
         for unit in event.relation.units:
             hostname = event.relation.data[unit].get("hostname")
