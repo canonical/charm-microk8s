@@ -139,6 +139,19 @@ class MicroK8sCharm(CharmBase):
                 refresh_events=[self.on.peer_relation_changed, self.on.upgrade_charm],
             )
 
+            # kubernetes-info
+            self.framework.observe(self.on.kubernetes_info_relation_joined, self._k8s_info)
+            self.framework.observe(self.on.kubernetes_info_relation_changed, self._k8s_info)
+
+    def _k8s_info(self, event: RelationJoinedEvent):
+        if not self.unit.is_leader():
+            return
+
+        rel = event.relation
+        rel.data[self.app]["kubelet-root-dir"] = "/var/snap/microk8s/common/var/lib/kubelet"
+        rel.data[self.app]["cni-bin-dir"] = "/var/snap/microk8s/current/opt/cni/bin"
+        rel.data[self.app]["cni-conf-dir"] = "/var/snap/microk8s/current/args/cni-network"
+
     def on_remove(self, _: RemoveEvent):
         try:
             microk8s.uninstall()

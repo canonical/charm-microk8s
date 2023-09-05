@@ -36,6 +36,8 @@ provides:
     scope: global
   cos-agent:
     interface: cos_agent
+  kubernetes-info:
+    interface: kubernetes-info
 
 requires:
   control-plane:
