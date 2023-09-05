@@ -286,3 +286,29 @@ def test_relation_dns(e: Environment, role: str, is_leader: bool, has_joined: bo
         assert e.harness.charm.unit.status == ops.model.ActiveStatus("fakestatus")
     else:
         e.microk8s.configure_dns.assert_not_called()
+
+
+@pytest.mark.parametrize("role", ["", "control-plane", "worker"])
+@pytest.mark.parametrize("is_leader", [False, True])
+@pytest.mark.parametrize("has_joined", [False, True])
+def test_relation_kubernetes_info(e: Environment, role: str, is_leader: bool, has_joined: bool):
+    e.microk8s.get_unit_status.return_value = ops.model.ActiveStatus("fakestatus")
+
+    e.harness.update_config({"role": role})
+    e.harness.set_leader(is_leader)
+    e.harness.begin_with_initial_hooks()
+
+    e.harness.charm._state.joined = has_joined
+
+    rel_id = e.harness.add_relation("kubernetes-info", "ceph-csi")
+    e.harness.add_relation_unit(rel_id, "ceph-csi/0")
+
+    rel_data = e.harness.get_relation_data(rel_id, "microk8s")
+
+    # the leader control plane node sets relation data
+    if role != "worker" and is_leader:
+        assert rel_data["kubelet-root-dir"] == "/var/snap/microk8s/common/var/lib/kubelet"
+        assert rel_data["cni-conf-dir"] == "/var/snap/microk8s/current/args/cni-network"
+        assert rel_data["cni-bin-dir"] == "/var/snap/microk8s/current/opt/cni/bin"
+    else:
+        assert not rel_data
