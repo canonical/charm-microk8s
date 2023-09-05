@@ -15,6 +15,7 @@ def test_install(e: Environment):
     e.util.install_required_packages.assert_called_once_with()
     e.microk8s.install.assert_called_once_with()
     e.microk8s.wait_ready.assert_called_once_with()
+    e.microk8s.write_local_kubeconfig.assert_not_called()
 
     assert not e.harness.charm.model.unit.opened_ports()
 
@@ -54,6 +55,7 @@ def test_control_plane_relation(e: Environment, is_leader: bool):
     rel_id = e.harness.add_relation("control-plane", "microk8s-cp")
     e.harness.add_relation_unit(rel_id, "microk8s-cp/0")
     e.microk8s.install.assert_called_once_with()
+    e.microk8s.write_local_kubeconfig.assert_not_called()
 
 
 def test_control_plane_relation_invalid(e: Environment):

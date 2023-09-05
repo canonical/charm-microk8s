@@ -26,8 +26,10 @@ def test_install(e: Environment, is_leader: bool):
     if not is_leader:
         assert isinstance(e.harness.charm.unit.status, ops.model.WaitingStatus)
         e.microk8s.configure_hostpath_storage.assert_not_called()
+        e.microk8s.write_local_kubeconfig.assert_not_called()
     else:
-        e.microk8s.configure_hostpath_storage.assert_called()
+        e.microk8s.configure_hostpath_storage.assert_called_once_with(False)
+        e.microk8s.write_local_kubeconfig.assert_called()
         assert e.harness.charm.unit.status == ops.model.ActiveStatus("fakestatus")
         assert e.harness.charm._state.joined
 
@@ -162,6 +164,7 @@ def test_follower_retrieve_join_url(e: Environment):
     e.harness.set_leader(False)
     e.harness.begin_with_initial_hooks()
 
+    e.microk8s.write_local_kubeconfig.assert_not_called()
     e.microk8s.disable_cert_reissue.assert_not_called()
     assert not e.harness.charm._state.joined
     e.microk8s.wait_ready.reset_mock()
@@ -173,6 +176,7 @@ def test_follower_retrieve_join_url(e: Environment):
     e.microk8s.join.assert_called_once_with("fakejoinurl", False)
     e.microk8s.wait_ready.assert_called_once_with()
     e.microk8s.get_unit_status.assert_called_once_with("fakehostname")
+    e.microk8s.write_local_kubeconfig.assert_called()
 
     assert e.harness.charm.unit.status == ops.model.ActiveStatus("fakestatus")
     assert e.harness.charm._state.joined
