@@ -27,21 +27,21 @@ The steps are to be followed in-order, each task must be completed by the person
 
 - [ ] **Owner**: Add the assignee and reviewer as assignees to the GitHub issue
 - [ ] **Owner**: Ensure that you are part of the ["microk8s developers" team](https://launchpad.net/~microk8s-dev)
-- [ ] **Owner**: Request a new `1.xx` CharmHub track for the `microk8s` charm.
-  - #### Email template
+- [ ] **Owner**: Request a new `1.xx` CharmHub track for the `microk8s` charm following the [charmstore instructions](https://juju.is/docs/sdk/create-a-track-for-your-charm). 
+  - #### Post template on https://discourse.charmhub.io/
 
-    **To:** snap-store-admins AT canonical.com
+    **Title:** Request for track 1.xx for the MicroK8s charm
 
-    **Cc:** k8s-crew AT canonical.com
-
-    **Subject:** [k8s-crew] Track request for MicroK8s charm
+    **Category:** charmhub requests
 
     **Body:**
 
-    Hi admins, please open a new track `1.xx` for the `microk8s` charm.
+      Hi,
 
-    Thank you,
-    $name
+      Could we please have a track "1.xx" for the respective MicroK8s charm release?
+
+      Thank you, $name
+
 - [ ] **Owner**: Create `release-1.xx` branch from latest `master`
   - `git checkout master`
   - `git pull`
