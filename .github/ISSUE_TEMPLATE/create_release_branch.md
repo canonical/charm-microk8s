@@ -54,13 +54,14 @@ The steps are to be followed in-order, each task must be completed by the person
   - [ ] Update branch from `master` to `release-1.xx` in [.github/workflows/test.yml](../workflows/test.yml)
   - [ ] Update `cancel-in-progress` from `refs/heads/master` to `refs/heads/release-1.xx` in [.github/workflows/test.yml](../workflows/test.yml)
   - [ ] Update `SNAP_CHANNEL` to `1.xx` in [src/charm_config.py](../../src/charm_config.py)
-  - [ ] Update `*_CHANNEL` in [tests/integration/config.py](../../tests/integration/config.py). Kubernetes charms should use `1.xx/edge`, others should use `edge` unless there has been a breaking change.
+  - [ ] Update `*_CHANNEL` in [tests/integration/config.py](../../tests/integration/config.py). Kubernetes charms should use `1.xx/stable`, others should use the track against which the microk8s charm should be tested. A stable release for all charms should be prefered unless we are not creating a stable release for microk8s.
   - [ ] `git commit -m 'Release 1.xx'`
   - [ ] Create PR with the changes and request review from **Reviewer**. Make sure to update the issue `Information` section with a link to the PR.
 - [ ] **Reviewer**: Review and merge PR to initialize branch.
 - [ ] **Owner**: Create launchpad builders for `release-1.xx`
   - [ ] Go to https://code.launchpad.net/~microk8s-dev/charm-microk8s/+git/charm-microk8s and do **Import now** to pick up all latest changes.
   - [ ] Under **Branches**, select `release-1.xx`, then **Create charm recipe**
+  - [ ] Set **Owner** to `microk8s-developers`
   - [ ] Set **Charm recipe name** to `microk8s-1.xx`
   - [ ] Enable **Automatically build when branch changes**
   - [ ] Enable **Automatically upload to store**
