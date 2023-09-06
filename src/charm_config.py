@@ -3,4 +3,4 @@
 #
 
 # Snap store channel to use when installing MicroK8s
-SNAP_CHANNEL = "latest/edge"
+SNAP_CHANNEL = "1.28/stable"

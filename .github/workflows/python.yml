@@ -2,7 +2,7 @@ name: Python
 
 on:
   push:
-    branches: [master]
+    branches: [release-1.28]
   pull_request:
 
 jobs:
