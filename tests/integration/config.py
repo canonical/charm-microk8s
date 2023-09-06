@@ -83,3 +83,11 @@ MK8S_COREDNS_CHARM = os.getenv("MK8S_COREDNS_CHARM", "ch:coredns")
 # MK8S_COREDNS_CHANNEL is the CharmHub channel to use for the core-dns charm.
 #   - 'edge'                    <-- install charm from 'edge' channel
 MK8S_COREDNS_CHANNEL = os.getenv("MK8S_COREDNS_CHANNEL", "edge")
+
+# MK8S_COS_BUNDLE is the cos bundle for the observability integration tests.
+#   - 'ch:cos-lite'       <-- install bundle 'cos-lite' from CharmHub
+MK8S_COS_BUNDLE = os.getenv("MK8S_COS_BUNDLE", "ch:cos-lite")
+
+# MK8S_COS_CHANNEL is the CharmHub channel to use for the cos bundle.
+#   - 'edge'                   <-- install bundle from 'edge' channel
+MK8S_COS_CHANNEL = os.getenv("MK8S_COS_CHANNEL", "edge")
