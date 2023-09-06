@@ -58,7 +58,7 @@ MK8S_TRAEFIK_K8S_CHARM = os.getenv("MK8S_TRAEFIK_K8S_CHARM", "ch:traefik-k8s")
 
 # MK8S_TRAEFIK_K8S_CHANNEL is the CharmHub channel to use for the traefik-k8s charm.
 #   - 'edge'                    <-- install charm from 'edge' channel
-MK8S_TRAEFIK_K8S_CHANNEL = os.getenv("MK8S_TRAEFIK_K8S_CHANNEL", "stable")
+MK8S_TRAEFIK_K8S_CHANNEL = os.getenv("MK8S_TRAEFIK_K8S_CHANNEL", "1.0/stable")
 
 # MK8S_HELLO_KUBECON_CHARM is the hello-kubecon charm for the ingress integration tests.
 #   - 'ch:hello-kubecon'        <-- install charm 'hello-kubecon' from CharmHub
@@ -74,7 +74,7 @@ MK8S_GRAFANA_AGENT_CHARM = os.getenv("MK8S_GRAFANA_AGENT_CHARM", "ch:grafana-age
 
 # MK8S_GRAFANA_AGENT_CHANNEL is the CharmHub channel to use for the grafana-agent charm.
 #   - 'edge'                   <-- install charm from 'edge' channel
-MK8S_GRAFANA_AGENT_CHANNEL = os.getenv("MK8S_GRAFANA_AGENT_CHANNEL", "1.0/stable")
+MK8S_GRAFANA_AGENT_CHANNEL = os.getenv("MK8S_GRAFANA_AGENT_CHANNEL", "edge")
 
 # MK8S_COREDNS_CHARM is the core-dns charm for integration tests.
 #   - 'ch:coredns'              <-- install charm 'coredns' from CharmHub
