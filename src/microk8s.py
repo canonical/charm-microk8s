@@ -250,7 +250,11 @@ def get_kubernetes_version() -> str:
     """retrieve version of kubernetes running on the unit"""
     try:
         p = util.run(["microk8s", "version"], capture_output=True)
-        return p.stdout.decode().split(" ")[1]
+        version = p.stdout.decode().split(" ")[1]
+        if version.startswith("v"):
+            version = version[1:]
+
+        return version
     except (subprocess.CalledProcessError, ValueError, IndexError, TypeError) as e:
         LOG.warning("could not retrieve microk8s version: %s", e)
         return None
