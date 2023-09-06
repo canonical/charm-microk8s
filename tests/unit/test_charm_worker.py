@@ -24,9 +24,6 @@ def test_install(e: Environment):
 
 @pytest.mark.parametrize("is_leader", [True, False])
 def test_control_plane_relation(e: Environment, is_leader: bool):
-    e.microk8s.get_unit_status.return_value = ops.model.ActiveStatus("fakestatus")
-    e.gethostname.return_value = "fakehostname"
-
     e.harness.update_config({"role": "worker"})
     e.harness.set_leader(is_leader)
     e.harness.begin_with_initial_hooks()
@@ -59,9 +56,6 @@ def test_control_plane_relation(e: Environment, is_leader: bool):
 
 
 def test_control_plane_relation_invalid(e: Environment):
-    e.microk8s.get_unit_status.return_value = ops.model.ActiveStatus("fakestatus")
-    e.gethostname.return_value = "fakehostname"
-
     e.harness.update_config({"role": "worker"})
     e.harness.begin_with_initial_hooks()
     assert isinstance(e.harness.charm.model.unit.status, ops.model.WaitingStatus)
@@ -84,9 +78,6 @@ def test_control_plane_relation_invalid(e: Environment):
 
 @pytest.mark.parametrize("is_leader", [True, False])
 def test_control_plane_relation_departed(e: Environment, is_leader: bool):
-    e.microk8s.get_unit_status.return_value = ops.model.ActiveStatus("fakestatus")
-    e.gethostname.return_value = "fakehostname"
-
     e.harness.update_config({"role": "worker"})
     e.harness.set_leader(is_leader)
     e.harness.begin_with_initial_hooks()
@@ -117,9 +108,6 @@ def test_control_plane_relation_departed(e: Environment, is_leader: bool):
 @pytest.mark.parametrize("is_leader", [False, True])
 @pytest.mark.parametrize("has_joined", [False, True])
 def test_build_scrape_configs(e: Environment, role: str, is_leader: bool, has_joined: bool):
-    e.gethostname.return_value = "fakehostname"
-    e.microk8s.get_unit_status.return_value = ops.model.ActiveStatus("fakestatus")
-
     e.harness.update_config({"role": role})
     e.harness.set_leader(is_leader)
     e.harness.begin_with_initial_hooks()

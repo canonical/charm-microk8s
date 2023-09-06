@@ -105,8 +105,6 @@ def test_update_status(e: Environment):
 @pytest.mark.parametrize("role", ["", "control-plane"])
 @pytest.mark.parametrize("has_joined", [False, True])
 def test_config_disable_cert_reissue(e: Environment, role: str, has_joined: bool):
-    e.microk8s.get_unit_status.return_value = ops.model.ActiveStatus("fakestatus")
-
     e.harness.update_config({"role": role, "automatic_certificate_reissue": True})
     e.harness.set_leader(has_joined)
     e.harness.begin_with_initial_hooks()
@@ -125,8 +123,6 @@ def test_config_disable_cert_reissue(e: Environment, role: str, has_joined: bool
 @pytest.mark.parametrize("role", ["", "control-plane"])
 @pytest.mark.parametrize("has_joined", [False, True])
 def test_config_extra_sans(e: Environment, role: str, has_joined: bool):
-    e.microk8s.get_unit_status.return_value = ops.model.ActiveStatus("fakestatus")
-
     e.harness.update_config({"role": role, "extra_sans": ""})
     e.harness.set_leader(has_joined)
     e.harness.begin_with_initial_hooks()
@@ -144,8 +140,6 @@ def test_config_extra_sans(e: Environment, role: str, has_joined: bool):
 
 @pytest.mark.parametrize("role", ["", "control-plane", "worker"])
 def test_charm_upgrade(e: Environment, role: str):
-    e.microk8s.get_unit_status.return_value = ops.model.ActiveStatus("fakestatus")
-
     e.harness.update_config({"role": role, "automatic_certificate_reissue": True})
     e.harness.begin_with_initial_hooks()
 
@@ -157,8 +151,6 @@ def test_charm_upgrade(e: Environment, role: str):
 @pytest.mark.parametrize("role", ["", "control-plane"])
 @pytest.mark.parametrize("has_joined", [False, True])
 def test_config_containerd_custom_registries(e: Environment, role: str, has_joined: bool):
-    e.microk8s.get_unit_status.return_value = ops.model.ActiveStatus("fakestatus")
-
     e.harness.update_config({"role": role, "containerd_custom_registries": "[]"})
     e.harness.set_leader(has_joined)
     e.harness.begin_with_initial_hooks()
@@ -203,8 +195,6 @@ def test_config_containerd_custom_registries(e: Environment, role: str, has_join
 @pytest.mark.parametrize("is_leader", [False, True])
 @pytest.mark.parametrize("has_joined", [False, True])
 def test_config_hostpath_storage(e: Environment, role: str, is_leader: bool, has_joined: bool):
-    e.microk8s.get_unit_status.return_value = ops.model.ActiveStatus("fakestatus")
-
     e.harness.update_config({"role": role})
     e.harness.set_leader(is_leader)
     e.harness.begin_with_initial_hooks()
@@ -232,8 +222,6 @@ def test_config_hostpath_storage(e: Environment, role: str, is_leader: bool, has
 @pytest.mark.parametrize("is_leader", [False, True])
 @pytest.mark.parametrize("has_joined", [False, True])
 def test_config_rbac(e: Environment, role: str, is_leader: bool, has_joined: bool):
-    e.microk8s.get_unit_status.return_value = ops.model.ActiveStatus("fakestatus")
-
     e.harness.update_config({"role": role})
     e.harness.set_leader(is_leader)
     e.harness.begin_with_initial_hooks()
@@ -261,8 +249,6 @@ def test_config_rbac(e: Environment, role: str, is_leader: bool, has_joined: boo
 @pytest.mark.parametrize("is_leader", [False, True])
 @pytest.mark.parametrize("has_joined", [False, True])
 def test_relation_dns(e: Environment, role: str, is_leader: bool, has_joined: bool):
-    e.microk8s.get_unit_status.return_value = ops.model.ActiveStatus("fakestatus")
-
     e.harness.update_config({"role": role})
     e.harness.set_leader(is_leader)
     e.harness.begin_with_initial_hooks()
