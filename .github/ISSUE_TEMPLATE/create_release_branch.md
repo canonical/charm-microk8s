@@ -54,7 +54,7 @@ The steps are to be followed in-order, each task must be completed by the person
   - [ ] Update branch from `master` to `release-1.xx` in [.github/workflows/test.yml](../workflows/test.yml)
   - [ ] Update `cancel-in-progress` from `refs/heads/master` to `refs/heads/release-1.xx` in [.github/workflows/test.yml](../workflows/test.yml)
   - [ ] Update `SNAP_CHANNEL` to `1.xx` in [src/charm_config.py](../../src/charm_config.py)
-  - [ ] Update `*_CHANNEL` in [tests/integration/config.py](../../tests/integration/config.py). Kubernetes charms should use `1.xx/stable`, others should use the track against which the microk8s charm should be tested. A stable release for all charms should be prefered unless we are not creating a stable release for microk8s.
+  - [ ] Update `*_CHANNEL` in [tests/integration/config.py](../../tests/integration/config.py). Kubernetes charms should use `1.xx/stable`, others should use the track against which the microk8s charm should be tested. A stable release for all charms should be preferred unless we are not creating a stable release for microk8s.
   - [ ] `git commit -m 'Release 1.xx'`
   - [ ] Create PR with the changes and request review from **Reviewer**. Make sure to update the issue `Information` section with a link to the PR.
 - [ ] **Reviewer**: Review and merge PR to initialize branch.
