@@ -12,8 +12,6 @@ from conftest import Environment
 
 @pytest.mark.parametrize("is_leader", [True, False])
 def test_install(e: Environment, is_leader: bool):
-    e.microk8s.get_unit_status.return_value = ops.model.ActiveStatus("fakestatus")
-
     e.harness.update_config({"role": "control-plane"})
     e.harness.set_leader(is_leader)
     e.harness.begin_with_initial_hooks()
@@ -40,8 +38,6 @@ def test_install(e: Environment, is_leader: bool):
 
 def test_leader_peer_relation(e: Environment):
     e.microk8s.add_node.return_value = "01010101010101010101010101010101"
-    e.microk8s.get_unit_status.return_value = ops.model.ActiveStatus("fakestatus")
-    e.gethostname.return_value = "fakehostname"
 
     e.harness.add_network("10.10.10.10")
     e.harness.update_config({"role": "control-plane"})
@@ -62,8 +58,6 @@ def test_leader_peer_relation(e: Environment):
 
 
 def test_leader_peer_relation_leave(e: Environment):
-    e.microk8s.get_unit_status.return_value = ops.model.ActiveStatus("fakestatus")
-    e.gethostname.return_value = "fakehostname"
     fakeaddress = "10.10.10.10"
 
     e.harness.add_network(fakeaddress)
@@ -90,8 +84,6 @@ def test_leader_peer_relation_leave(e: Environment):
 
 def test_leader_control_plane_relation(e: Environment):
     e.microk8s.add_node.return_value = "01010101010101010101010101010101"
-    e.microk8s.get_unit_status.return_value = ops.model.ActiveStatus("fakestatus")
-    e.gethostname.return_value = "fakehostname"
 
     e.harness.add_network("10.10.10.10")
     e.harness.update_config({"role": "control-plane"})
@@ -114,9 +106,6 @@ def test_leader_control_plane_relation(e: Environment):
 
 
 def test_follower_peer_relation(e: Environment):
-    e.microk8s.get_unit_status.return_value = ops.model.ActiveStatus("fakestatus")
-    e.gethostname.return_value = "fakehostname"
-
     e.harness.update_config({"role": "control-plane"})
     e.harness.set_leader(True)
     e.harness.begin_with_initial_hooks()
@@ -136,8 +125,6 @@ def test_follower_peer_relation(e: Environment):
 
 
 def test_follower_control_plane_relation(e: Environment):
-    e.microk8s.get_unit_status.return_value = ops.model.ActiveStatus("fakestatus")
-    e.gethostname.return_value = "fakehostname"
     e.harness.update_config({"role": "control-plane"})
     e.harness.set_leader(True)
     e.harness.begin_with_initial_hooks()
@@ -157,9 +144,6 @@ def test_follower_control_plane_relation(e: Environment):
 
 
 def test_follower_retrieve_join_url(e: Environment):
-    e.microk8s.get_unit_status.return_value = ops.model.ActiveStatus("fakestatus")
-    e.gethostname.return_value = "fakehostname"
-
     e.harness.update_config({"role": "control-plane", "automatic_certificate_reissue": False})
     e.harness.set_leader(False)
     e.harness.begin_with_initial_hooks()
@@ -184,9 +168,6 @@ def test_follower_retrieve_join_url(e: Environment):
 
 @pytest.mark.parametrize("become_leader", [True, False])
 def test_follower_become_leader_remove_departing_nodes(e: Environment, become_leader: bool):
-    e.microk8s.get_unit_status.return_value = ops.model.ActiveStatus("fakestatus")
-    e.gethostname.return_value = "fakehostname"
-
     e.harness.update_config({"role": "control-plane"})
     e.harness.set_leader(False)
     e.harness.begin_with_initial_hooks()
@@ -220,9 +201,6 @@ def test_follower_become_leader_remove_departing_nodes(e: Environment, become_le
 
 @pytest.mark.parametrize("become_leader", [True, False])
 def test_follower_become_leader_remove_already_departed_nodes(e: Environment, become_leader: bool):
-    e.microk8s.get_unit_status.return_value = ops.model.ActiveStatus("fakestatus")
-    e.gethostname.return_value = "fakehostname"
-
     e.harness.update_config({"role": "control-plane"})
     e.harness.set_leader(False)
     e.harness.begin_with_initial_hooks()
@@ -251,9 +229,7 @@ def test_follower_become_leader_remove_already_departed_nodes(e: Environment, be
 @pytest.mark.parametrize("is_leader", [False, True])
 @pytest.mark.parametrize("has_joined", [False, True])
 def test_build_scrape_configs(e: Environment, role: str, is_leader: bool, has_joined: bool):
-    e.gethostname.return_value = "fakehostname"
     e.metrics.get_tls_auth.return_value = ("fakecrt", "fakekey")
-    e.microk8s.get_unit_status.return_value = ops.model.ActiveStatus("fakestatus")
 
     e.harness.update_config({"role": role})
     e.harness.set_leader(is_leader)
@@ -286,8 +262,6 @@ def test_build_scrape_configs(e: Environment, role: str, is_leader: bool, has_jo
 
 @pytest.mark.parametrize("is_leader", (True, False))
 def test_cos_agent_relation(e: Environment, is_leader: bool):
-    e.microk8s.get_unit_status.return_value = ops.model.ActiveStatus("fakestatus")
-    e.gethostname.return_value = "fakehostname"
     e.metrics.build_scrape_jobs.return_value = [{"job_name": "fakejob"}]
     e.metrics.get_tls_auth.return_value = ("fakecrt", "fakekey")
 

@@ -269,6 +269,10 @@ class MicroK8sCharm(CharmBase):
             time.sleep(2)
             self.unit.status = microk8s.get_unit_status(socket.gethostname())
 
+        k8s_version = microk8s.get_kubernetes_version()
+        if k8s_version:
+            self.unit.set_workload_version(k8s_version)
+
         if self._state.role != "worker":
             microk8s.write_local_kubeconfig()
 

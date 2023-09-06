@@ -6,6 +6,7 @@ from unittest import mock
 
 import ops.testing
 import pytest
+from ops.model import ActiveStatus
 
 from charm import MicroK8sCharm
 
@@ -47,7 +48,14 @@ def e():
     for k, v in patchers.items():
         mocks[k] = v.start()
 
-    yield Environment(harness, **mocks)
+    e = Environment(harness, **mocks)
+
+    # default mocks
+    e.microk8s.get_kubernetes_version.return_value = "fakeversion"
+    e.microk8s.get_unit_status.return_value = ActiveStatus("fakestatus")
+    e.gethostname.return_value = "fakehostname"
+
+    yield e
 
     harness.cleanup()
     for k, v in patchers.items():

@@ -1,6 +1,7 @@
 #
 # Copyright 2023 Canonical, Ltd.
 #
+import subprocess
 from pathlib import Path
 from unittest import mock
 
@@ -312,3 +313,27 @@ def test_microk8s_configure_dns(apply_launch_configuration: mock.MagicMock):
     apply_launch_configuration.assert_called_once_with(
         {"extraKubeletArgs": {"--cluster-dns": "fakeip", "--cluster-domain": "fakedomain"}}
     )
+
+
+@mock.patch("util.run")
+def test_microk8s_get_kubernetes_version(run: mock.MagicMock):
+    # parse output
+    run.return_value.stdout = b"microk8s 1.28.1 revision 4217\n"
+    version = microk8s.get_kubernetes_version()
+    run.assert_called_once_with(["microk8s", "version"], capture_output=True)
+    assert version == "1.28.1"
+
+    # parse output (drop v prefix)
+    run.return_value.stdout = b"microk8s v1.28.1 revision 4217\n"
+    version = microk8s.get_kubernetes_version()
+    assert version == "1.28.1"
+
+    # invalid output
+    run.return_value.stdout = b"somethingwithoutspaces"
+    version = microk8s.get_kubernetes_version()
+    assert version is None
+
+    # exception
+    run.side_effect = subprocess.CalledProcessError(returncode=1, cmd="microk8s version")
+    version = microk8s.get_kubernetes_version()
+    assert version is None
