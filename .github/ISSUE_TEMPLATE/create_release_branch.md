@@ -1,5 +1,5 @@
 ---
-name: [Runbook] Create release branch
+name: "[Runbook] Create release branch"
 about: Create a new branch for a new stable Kubernetes release
 ---
 
@@ -27,7 +27,7 @@ The steps are to be followed in-order, each task must be completed by the person
 
 - [ ] **Owner**: Add the assignee and reviewer as assignees to the GitHub issue
 - [ ] **Owner**: Ensure that you are part of the ["microk8s developers" team](https://launchpad.net/~microk8s-dev)
-- [ ] **Owner**: Request a new `1.xx` CharmHub track for the `microk8s` charm following the [charmstore instructions](https://juju.is/docs/sdk/create-a-track-for-your-charm). 
+- [ ] **Owner**: Request a new `1.xx` CharmHub track for the `microk8s` charm following the [charmstore instructions](https://juju.is/docs/sdk/create-a-track-for-your-charm).
   - #### Post template on https://discourse.charmhub.io/
 
     **Title:** Request for track 1.xx for the MicroK8s charm
