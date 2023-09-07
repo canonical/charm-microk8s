@@ -1,0 +1,1 @@
+craft-store==2.4.0

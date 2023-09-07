@@ -15,6 +15,11 @@ MK8S_CHARM = os.getenv("MK8S_CHARM", "build")
 #   - ''                        <-- when installing from local charm, set to empty
 MK8S_CHARM_CHANNEL = os.getenv("MK8S_CHARM_CHANNEL", "")
 
+# MK8S_CHARM_REVISION is the CharmHub revision to install from.
+#   - 'edge'                    <-- identical to 'juju deploy microk8s --revision 10'
+#   - ''                        <-- when installing latest from a channel or local charm, set to empty
+MK8S_CHARM_REVISION = os.getenv("MK8S_CHARM_REVISION", None)
+
 # MK8S_CLUSTER_SIZES is the cluster size to deploy. It is a list of lists of how many
 # control plane and how many worker nodes to deploy.
 # A separate test is run for each cluster size.

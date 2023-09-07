@@ -14,6 +14,7 @@ async def test_observability_metrics(e: OpsTest):
         config.MK8S_CHARM,
         application_name="microk8s",
         channel=config.MK8S_CHARM_CHANNEL,
+        revision=config.MK8S_CHARM_REVISION,
         constraints=config.MK8S_CONSTRAINTS,
     )
     await e.model.wait_for_idle(["microk8s"])

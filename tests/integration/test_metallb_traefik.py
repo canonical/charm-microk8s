@@ -23,6 +23,7 @@ async def test_metallb_traefik(e: OpsTest):
             application_name="microk8s",
             config={"hostpath_storage": "true"},
             channel=config.MK8S_CHARM_CHANNEL,
+            revision=config.MK8S_CHARM_REVISION,
             constraints=config.MK8S_CONSTRAINTS,
         )
         await e.model.wait_for_idle(["microk8s"])

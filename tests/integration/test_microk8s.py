@@ -27,6 +27,7 @@ async def test_microk8s_cluster(e: OpsTest, series: str, cp_units: int, worker_u
             num_units=cp_units,
             config=charm_config,
             channel=config.MK8S_CHARM_CHANNEL,
+            revision=config.MK8S_CHARM_REVISION,
             series=series,
             constraints=config.MK8S_CONSTRAINTS,
         )
@@ -57,6 +58,7 @@ async def test_microk8s_cluster(e: OpsTest, series: str, cp_units: int, worker_u
                 num_units=worker_units,
                 config={"role": "worker", **charm_config},
                 channel=config.MK8S_CHARM_CHANNEL,
+                revision=config.MK8S_CHARM_REVISION,
                 series=series,
                 constraints=config.MK8S_CONSTRAINTS,
             )
