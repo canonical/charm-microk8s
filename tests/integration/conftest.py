@@ -80,10 +80,13 @@ async def microk8s_kubernetes_cloud_and_model(ops_test: OpsTest, microk8s_applic
 
     await ops_test.model.wait_for_idle([microk8s_application])
 
-    rc, kubeconfig, _ = await run_unit(app.units[0], "microk8s config")
+    rc, kubeconfig, _ = await run_unit(app.units[0], "microk8s config -l")
     if rc != 0:
         raise Exception(f"failed to retrieve microk8s config {rc, kubeconfig}")
 
+    # In some clouds the IP in kubeconfig returned by microk8s config is not the public IP
+    # where the API server is found.
+    kubeconfig = kubeconfig.replace("127.0.0.1", app.units[0].public_address)
     model_name = f"k8s-{ops_test._generate_model_name()}"
 
     try:
