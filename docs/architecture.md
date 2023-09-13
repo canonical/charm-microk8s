@@ -68,6 +68,7 @@ charm-microk8s:                     # Root directory
 - tests:
   - unit:
     - conftest.py                   # Shared test fixtures
+    - test_regression.py            # Regression tests against known fixed bugs
     - test_charm_control_plane.py   # Unit tests for src/charm.py (control plane specific)
     - test_charm_worker.py          # Unit tests for src/charm.py (worker specific)
     - test_charm.py                 # Unit tests for src/charm.py
