@@ -361,6 +361,7 @@ class MicroK8sCharm(CharmBase):
         self.unit.status = MaintenanceStatus("joining cluster")
         microk8s.join(join_url, self.config["role"] == "worker")
         microk8s.wait_ready()
+        self.on.config_changed.emit()
         self._state.joined = True
 
     def leave_cluster(self, _: RelationBrokenEvent):
