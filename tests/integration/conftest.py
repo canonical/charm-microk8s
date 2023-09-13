@@ -2,6 +2,7 @@
 # Copyright 2023 Canonical, Ltd.
 #
 import logging
+import time
 from contextlib import asynccontextmanager
 from typing import Tuple
 
@@ -99,6 +100,18 @@ async def microk8s_kubernetes_cloud_and_model(ops_test: OpsTest, microk8s_applic
             ops_test.controller_name,
             stdin=kubeconfig.encode(),
         )
+
+        clouds = ""
+        attempts = 0
+        while JUJU_CLOUD_NAME not in clouds or attempts >= 10:
+            clouds = await ops_test.juju(
+                "clouds",
+                "--controller",
+                ops_test.controller_name,
+            )
+            LOG.info("Waiting for cloud %s to appear in %s", JUJU_CLOUD_NAME, ops_test.controller_name)
+            time.sleep(5)
+            attempts += 1
 
         await ops_test.track_model(
             "k8s-model",
