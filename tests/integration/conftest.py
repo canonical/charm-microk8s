@@ -122,7 +122,7 @@ async def microk8s_kubernetes_cloud_and_model(ops_test: OpsTest, microk8s_applic
             cloud_name=cloud_name,
             credential_name=cloud_name,
         )
-        LOG.info("k8s-model created)
+        LOG.info("k8s-model created")
 
         yield ("k8s-model", model_name)
 
