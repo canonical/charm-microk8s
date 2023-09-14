@@ -183,8 +183,13 @@ class MicroK8sCharm(CharmBase):
 
         self.unit.status = MaintenanceStatus("installing MicroK8s")
         microk8s.install()
+
+        self.unit.status = MaintenanceStatus("initial containerd configuration")
+        self.config_containerd_proxy(None)
+        self.config_containerd_registries(None)
         try:
-            microk8s.wait_ready()
+            if not isinstance(self.unit.status, BlockedStatus):
+                microk8s.wait_ready()
         except subprocess.CalledProcessError:
             LOG.exception("timed out waiting for node to come up")
 
