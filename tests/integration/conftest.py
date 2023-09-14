@@ -86,15 +86,13 @@ async def microk8s_kubernetes_cloud_and_model(ops_test: OpsTest, microk8s_applic
     # In some clouds the IP in kubeconfig returned by microk8s config is not the public IP
     # where the API server is found.
     kubeconfig = kubeconfig.replace("127.0.0.1", app.units[0].public_address)
+    cloud_name = f"k8s-{ops_test._generate_model_name()}"
     model_name = f"k8s-{ops_test._generate_model_name()}"
-    cloud_name = f"microk8s-cloud-{ops_test._generate_model_name()}"
 
     try:
         LOG.info("Add cloud %s on controller %s", cloud_name, ops_test.controller_name)
-        out = (1, "", "")
-        attempts = 0
-        while out[0] != 0 and attempts <= 10:
-            out = await ops_test.juju(
+        for attempt in range(10):
+            rc, out, err = await ops_test.juju(
                 "add-k8s",
                 cloud_name,
                 "--client",
@@ -102,42 +100,42 @@ async def microk8s_kubernetes_cloud_and_model(ops_test: OpsTest, microk8s_applic
                 ops_test.controller_name,
                 stdin=kubeconfig.encode(),
             )
+            if rc == 0:
+                break
+
+            LOG.warning("(%d) Failed to create cloud %s: %s", attempt, cloud_name, (rc, out, err))
             time.sleep(5)
-            attempts += 1
 
-        assert (
-            out[0] == 0
-        ), f"Cloud {cloud_name} creation failed, stdout: {out[1]}, stderr: {out[2]}"
+        assert rc == 0, f"Could not create cloud {cloud_name}"
 
-        out = (0, "", "")
-        attempts = 0
-        while cloud_name not in out[1] and attempts <= 10:
-            out = await ops_test.juju(
-                "clouds",
-                "--controller",
-                ops_test.controller_name,
-            )
-            LOG.info("Waiting for cloud %s to appear in %s", cloud_name, ops_test.controller_name)
+        for attempt in range(10):
+            _, out, _ = await ops_test.juju("clouds", "--controller", ops_test.controller_name)
+            if cloud_name in out:
+                break
+
+            LOG.info("(%d) Cloud %s not available yet: %s", attempt, cloud_name, out)
             time.sleep(5)
-            attempts += 1
 
+        assert cloud_name in out, f"Cloud {cloud_name} not in list of available clouds"
+
+        LOG.info("Create model %s on cloud %s", model_name, cloud_name)
         await ops_test.track_model(
             "k8s-model",
             model_name=model_name,
             cloud_name=cloud_name,
             credential_name=cloud_name,
         )
-        LOG.info("k8s-model created")
 
         yield ("k8s-model", model_name)
-
     finally:
-        await ops_test.forget_model("k8s-model")
-        LOG.info("Destroy model %s", model_name)
-        res = await ops_test.juju(
-            "destroy-model", model_name, "--force", "--destroy-storage", "--yes", "--no-prompt"
-        )
-        LOG.info("%s", res)
+        if "k8s-model" in ops_test.models:
+            await ops_test.forget_model("k8s-model")
+            LOG.info("Destroy model %s", model_name)
+            res = await ops_test.juju(
+                "destroy-model", model_name, "--force", "--destroy-storage", "--yes", "--no-prompt"
+            )
+            LOG.info("%s", res)
+
         LOG.info("Delete cloud 'k8s-cloud' on controller '%s'", ops_test.controller_name)
         res = await ops_test.juju(
             "remove-k8s", cloud_name, "--client", "--controller", ops_test.controller_name
