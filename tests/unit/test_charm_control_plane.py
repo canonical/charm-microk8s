@@ -150,17 +150,18 @@ def test_follower_retrieve_join_url(e: Environment):
 
     e.microk8s.write_local_kubeconfig.assert_not_called()
     e.microk8s.disable_cert_reissue.assert_not_called()
+    e.microk8s.configure_extra_sans.assert_not_called()
     assert not e.harness.charm._state.joined
-    e.microk8s.wait_ready.reset_mock()
 
     rel_id = e.harness.charm.model.get_relation("peer").id
     e.harness.add_relation_unit(rel_id, f"{e.harness.charm.app.name}/1")
     e.harness.update_relation_data(rel_id, e.harness.charm.app.name, {"join_url": "fakejoinurl"})
 
     e.microk8s.join.assert_called_once_with("fakejoinurl", False)
-    e.microk8s.wait_ready.assert_called_once_with()
-    e.microk8s.get_unit_status.assert_called_once_with("fakehostname")
+    e.microk8s.wait_ready.assert_called_with()
+    e.microk8s.get_unit_status.assert_called_with("fakehostname")
     e.microk8s.write_local_kubeconfig.assert_called()
+    e.microk8s.configure_extra_sans.assert_called_once_with("%UNIT_PUBLIC_ADDRESS%")
 
     assert e.harness.charm.unit.status == ops.model.ActiveStatus("fakestatus")
     assert e.harness.charm._state.joined

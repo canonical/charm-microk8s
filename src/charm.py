@@ -78,7 +78,6 @@ class MicroK8sCharm(CharmBase):
             self.framework.observe(self.on.control_plane_relation_joined, self.on_install)
             self.framework.observe(self.on.control_plane_relation_joined, self.announce_hostname)
             self.framework.observe(self.on.control_plane_relation_changed, self.join_cluster)
-            self.framework.observe(self.on.control_plane_relation_changed, self.update_status)
             self.framework.observe(self.on.control_plane_relation_broken, self.leave_cluster)
             self.framework.observe(self.on.control_plane_relation_broken, self.update_status)
 
@@ -115,12 +114,8 @@ class MicroK8sCharm(CharmBase):
             self.framework.observe(self.on.peer_relation_joined, self.announce_hostname)
             self.framework.observe(self.on.peer_relation_joined, self.record_hostnames)
             self.framework.observe(self.on.peer_relation_joined, self.join_cluster)
-            self.framework.observe(self.on.peer_relation_joined, self.config_extra_sans)
-            self.framework.observe(self.on.peer_relation_joined, self.update_status)
             self.framework.observe(self.on.peer_relation_changed, self.record_hostnames)
             self.framework.observe(self.on.peer_relation_changed, self.join_cluster)
-            self.framework.observe(self.on.peer_relation_changed, self.config_extra_sans)
-            self.framework.observe(self.on.peer_relation_changed, self.update_status)
             self.framework.observe(self.on.peer_relation_departed, self.on_relation_departed)
             self.framework.observe(self.on.peer_relation_departed, self.remove_departed_nodes)
             self.framework.observe(self.on.peer_relation_departed, self.update_status)
@@ -361,7 +356,9 @@ class MicroK8sCharm(CharmBase):
         self.unit.status = MaintenanceStatus("joining cluster")
         microk8s.join(join_url, self.config["role"] == "worker")
         microk8s.wait_ready()
+
         self._state.joined = True
+        self.on.config_changed.emit()
 
     def leave_cluster(self, _: RelationBrokenEvent):
         if not self._state.joined:
