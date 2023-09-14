@@ -15,13 +15,13 @@ LOG = logging.getLogger(__name__)
 
 
 @pytest.mark.abort_on_fail
-async def test_metallb_traefik(e: OpsTest):
+async def test_metallb_traefik(e: OpsTest, charm_config: dict):
     # deploy microk8s
     if "microk8s" not in e.model.applications:
         await e.model.deploy(
             config.MK8S_CHARM,
             application_name="microk8s",
-            config={"hostpath_storage": "true"},
+            config={**charm_config, "hostpath_storage": "true"},
             channel=config.MK8S_CHARM_CHANNEL,
             constraints=config.MK8S_CONSTRAINTS,
         )
@@ -36,7 +36,7 @@ async def test_metallb_traefik(e: OpsTest):
             await e.model.deploy(
                 config.MK8S_METALLB_CHARM,
                 application_name="metallb",
-                config={"iprange": "42.42.42.42-42.42.42.42"},
+                config={"iprange": "10.42.42.42-10.42.42.42"},
                 channel=config.MK8S_METALLB_CHANNEL,
             )
             await e.model.wait_for_idle(["metallb"])
@@ -57,11 +57,11 @@ async def test_metallb_traefik(e: OpsTest):
             await e.model.relate("traefik", "hello-kubecon")
 
         stdout = ""
-        while "42.42.42.42" not in stdout:
+        while "10.42.42.42" not in stdout:
             rc, stdout, stderr = await run_unit(u, f"microk8s kubectl get svc traefik -n {ns}")
             LOG.info("Check LoadBalancer service %s on %s", (rc, stdout, stderr), ns)
 
         # Make sure hello-kubecon is available from ingress
         while "Hello, Kubecon" not in stdout:
-            rc, stdout, stderr = await run_unit(u, f"curl http://42.42.42.42:80/{ns}-hello-kubecon")
+            rc, stdout, stderr = await run_unit(u, f"curl http://10.42.42.42:80/{ns}-hello-kubecon")
             LOG.info("Waiting for hello kubecon message %s", (rc, stderr))
