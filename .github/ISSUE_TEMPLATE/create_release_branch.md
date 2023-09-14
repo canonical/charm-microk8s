@@ -73,7 +73,7 @@ The steps are to be followed in-order, each task must be completed by the person
 - [ ] **Owner**: Create a release jenkins job to promote jobs from `1.xx/edge` to `1.xx/stable`
   - [ ] Create a PR to include the minor version in https://github.com/charmed-kubernetes/jenkins/blob/main/jobs/release-microk8s.yaml#L215
 - [ ] **Reviewer**: Review and merge the PR for the release job.
-- [ ] **Owner**: Upload the new job with: 
+- [ ] **Owner**: Upload the new job with:
   - `tox --workdir .tox -e py3 -- jenkins-jobs --conf jobs/jjb-conf.ini update jobs/ci-master.yaml:jobs/release-microk8s.yaml` as described in https://github.com/charmed-kubernetes/jenkins/blob/main/docs/index.md#updating-jobs
 - [ ] **Reviewer**: Review the created job in jenkins.
 
