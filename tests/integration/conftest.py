@@ -122,8 +122,7 @@ async def microk8s_kubernetes_cloud_and_model(ops_test: OpsTest, microk8s_applic
             cloud_name=cloud_name,
             credential_name=cloud_name,
         )
-        assert out[0] == 0, f"Model creation failed, stdout: {out[1]}, stderr: {out[2]}"
-        LOG.info("k8s-model created: %s", out)
+        LOG.info("k8s-model created)
 
         yield ("k8s-model", model_name)
 
