@@ -103,13 +103,14 @@ async def microk8s_kubernetes_cloud_and_model(ops_test: OpsTest, microk8s_applic
 
         clouds = ""
         attempts = 0
-        while JUJU_CLOUD_NAME not in clouds or attempts >= 10:
+        while JUJU_CLOUD_NAME not in clouds and attempts <= 10:
             clouds = await ops_test.juju(
                 "clouds",
                 "--controller",
                 ops_test.controller_name,
             )
             LOG.info("Waiting for cloud %s to appear in %s", JUJU_CLOUD_NAME, ops_test.controller_name)
+            LOG.info("Clouds: %s", clouds)
             time.sleep(5)
             attempts += 1
 
