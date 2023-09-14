@@ -91,14 +91,20 @@ async def microk8s_kubernetes_cloud_and_model(ops_test: OpsTest, microk8s_applic
 
     try:
         LOG.info("Add cloud %s on controller %s", cloud_name, ops_test.controller_name)
-        out = await ops_test.juju(
-            "add-k8s",
-            cloud_name,
-            "--client",
-            "--controller",
-            ops_test.controller_name,
-            stdin=kubeconfig.encode(),
-        )
+        out = (1, "", "")
+        attempts = 0
+        while out[0] != 0 and attempts <= 10:
+            out = await ops_test.juju(
+                "add-k8s",
+                cloud_name,
+                "--client",
+                "--controller",
+                ops_test.controller_name,
+                stdin=kubeconfig.encode(),
+            )
+            time.sleep(5)
+            attempts += 1
+
         assert (
             out[0] == 0
         ), f"Cloud {cloud_name} creation failed, stdout: {out[1]}, stderr: {out[2]}"
