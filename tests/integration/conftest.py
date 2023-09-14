@@ -15,8 +15,6 @@ from pytest_operator.plugin import OpsTest
 
 LOG = logging.getLogger(__name__)
 
-JUJU_CLOUD_NAME = "microk8s-cloud"
-
 
 @pytest_asyncio.fixture(scope="module")
 async def e(ops_test: OpsTest):
@@ -101,22 +99,23 @@ async def microk8s_kubernetes_cloud_and_model(ops_test: OpsTest, microk8s_applic
             ops_test.controller_name,
             stdin=kubeconfig.encode(),
         )
-        assert out[0] == 0, f"Cloud {cloud_name} creation failed, stdout: {out[1]}, stderr: {out[2]}"
+        assert (
+            out[0] == 0
+        ), f"Cloud {cloud_name} creation failed, stdout: {out[1]}, stderr: {out[2]}"
 
-        clouds = (0, "", "")
+        out = (0, "", "")
         attempts = 0
-        while cloud_name not in clouds[1] and attempts <= 10:
-            clouds = await ops_test.juju(
+        while cloud_name not in out[1] and attempts <= 10:
+            out = await ops_test.juju(
                 "clouds",
                 "--controller",
                 ops_test.controller_name,
             )
             LOG.info("Waiting for cloud %s to appear in %s", cloud_name, ops_test.controller_name)
-            LOG.info("Clouds: %s", clouds[1])
             time.sleep(5)
             attempts += 1
 
-        out = await ops_test.track_model(
+        await ops_test.track_model(
             "k8s-model",
             model_name=model_name,
             cloud_name=cloud_name,
