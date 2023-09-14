@@ -6,6 +6,7 @@ from contextlib import asynccontextmanager
 from typing import Tuple
 
 import config
+import pytest
 import pytest_asyncio
 from juju.action import Action
 from juju.application import Application
@@ -26,19 +27,28 @@ async def e(ops_test: OpsTest):
 
     model_config = {"logging-config": "<root>=INFO;unit=DEBUG"}
     if config.MK8S_PROXY is not None:
-        model_config.update(
-            {
-                "http-proxy": config.MK8S_PROXY,
-                "https-proxy": config.MK8S_PROXY,
-                "ftp-proxy": config.MK8S_PROXY,
-            }
-        )
+        model_config["http-proxy"] = config.MK8S_PROXY
+        model_config["https-proxy"] = config.MK8S_PROXY
+        model_config["ftp-proxy"] = config.MK8S_PROXY
     if config.MK8S_NO_PROXY is not None:
-        model_config.update({"no-proxy": config.MK8S_NO_PROXY})
+        model_config["no-proxy"] = config.MK8S_NO_PROXY
 
     await ops_test.model.set_config(model_config)
 
     yield ops_test
+
+
+@pytest.fixture(scope="module")
+def charm_config():
+    """fixture with common microk8s charm configuration settings."""
+    charm_config = {}
+    if config.MK8S_PROXY is not None:
+        charm_config["containerd_http_proxy"] = config.MK8S_PROXY
+        charm_config["containerd_https_proxy"] = config.MK8S_PROXY
+    if config.MK8S_NO_PROXY is not None:
+        charm_config["containerd_no_proxy"] = config.MK8S_NO_PROXY
+
+    yield charm_config
 
 
 async def run_unit(unit: Unit, command: str) -> Tuple[int, str, str]:

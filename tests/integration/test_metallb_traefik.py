@@ -15,13 +15,13 @@ LOG = logging.getLogger(__name__)
 
 
 @pytest.mark.abort_on_fail
-async def test_metallb_traefik(e: OpsTest):
+async def test_metallb_traefik(e: OpsTest, charm_config: dict):
     # deploy microk8s
     if "microk8s" not in e.model.applications:
         await e.model.deploy(
             config.MK8S_CHARM,
             application_name="microk8s",
-            config={"hostpath_storage": "true"},
+            config={**charm_config, "hostpath_storage": "true"},
             channel=config.MK8S_CHARM_CHANNEL,
             constraints=config.MK8S_CONSTRAINTS,
         )
