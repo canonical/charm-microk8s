@@ -13,10 +13,11 @@ from pytest_operator.plugin import OpsTest
 @pytest.mark.abort_on_fail
 @pytest.mark.parametrize("cp_units, worker_units", config.MK8S_CLUSTER_SIZES)
 @pytest.mark.parametrize("series", config.MK8S_SERIES)
-async def test_microk8s_cluster(e: OpsTest, series: str, cp_units: int, worker_units: int):
+async def test_microk8s_cluster(
+    e: OpsTest, charm_config: dict, series: str, cp_units: int, worker_units: int
+):
     """Deploy a cluster, configure RBAC, wait for units to come up"""
 
-    charm_config = {}
     application_name = f"microk8s-{series or 'default'}-{cp_units}c{worker_units}w"
 
     apps = []

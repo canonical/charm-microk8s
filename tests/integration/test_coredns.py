@@ -18,13 +18,13 @@ DNS_TEST = "microk8s kubectl run -it --rm debug --image=busybox:1.28.4 --restart
 
 
 @pytest.mark.abort_on_fail
-async def test_core_dns(e: OpsTest):
+async def test_core_dns(e: OpsTest, charm_config: dict):
     # deploy microk8s
     if "microk8s" not in e.model.applications:
         await e.model.deploy(
             config.MK8S_CHARM,
             application_name="microk8s",
-            config={"hostpath_storage": "true"},
+            config={**charm_config, "hostpath_storage": "true"},
             channel=config.MK8S_CHARM_CHANNEL,
             constraints=config.MK8S_CONSTRAINTS,
         )
