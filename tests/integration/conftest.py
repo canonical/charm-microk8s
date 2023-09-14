@@ -89,28 +89,29 @@ async def microk8s_kubernetes_cloud_and_model(ops_test: OpsTest, microk8s_applic
     # where the API server is found.
     kubeconfig = kubeconfig.replace("127.0.0.1", app.units[0].public_address)
     model_name = f"k8s-{ops_test._generate_model_name()}"
+    cloud_name = f"microk8s-cloud-{ops_test._generate_model_name()}"
 
     try:
-        LOG.info("Add cloud %s on controller %s", JUJU_CLOUD_NAME, ops_test.controller_name)
+        LOG.info("Add cloud %s on controller %s", cloud_name, ops_test.controller_name)
         out = await ops_test.juju(
             "add-k8s",
-            JUJU_CLOUD_NAME,
+            cloud_name,
             "--client",
             "--controller",
             ops_test.controller_name,
             stdin=kubeconfig.encode(),
         )
-        assert out[0] == 0, f"Cloud {JUJU_CLOUD_NAME} creation failed, stdout: {out[1]}, stderr: {out[2]}"
+        assert out[0] == 0, f"Cloud {cloud_name} creation failed, stdout: {out[1]}, stderr: {out[2]}"
 
         clouds = (0, "", "")
         attempts = 0
-        while JUJU_CLOUD_NAME not in clouds[1] and attempts <= 10:
+        while cloud_name not in clouds[1] and attempts <= 10:
             clouds = await ops_test.juju(
                 "clouds",
                 "--controller",
                 ops_test.controller_name,
             )
-            LOG.info("Waiting for cloud %s to appear in %s", JUJU_CLOUD_NAME, ops_test.controller_name)
+            LOG.info("Waiting for cloud %s to appear in %s", cloud_name, ops_test.controller_name)
             LOG.info("Clouds: %s", clouds[1])
             time.sleep(5)
             attempts += 1
@@ -118,10 +119,11 @@ async def microk8s_kubernetes_cloud_and_model(ops_test: OpsTest, microk8s_applic
         out = await ops_test.track_model(
             "k8s-model",
             model_name=model_name,
-            cloud_name=JUJU_CLOUD_NAME,
-            credential_name=JUJU_CLOUD_NAME,
+            cloud_name=cloud_name,
+            credential_name=cloud_name,
         )
         assert out[0] == 0, f"Model creation failed, stdout: {out[1]}, stderr: {out[2]}"
+        LOG.info("k8s-model created: %s", out)
 
         yield ("k8s-model", model_name)
 
@@ -134,6 +136,6 @@ async def microk8s_kubernetes_cloud_and_model(ops_test: OpsTest, microk8s_applic
         LOG.info("%s", res)
         LOG.info("Delete cloud 'k8s-cloud' on controller '%s'", ops_test.controller_name)
         res = await ops_test.juju(
-            "remove-k8s", JUJU_CLOUD_NAME, "--client", "--controller", ops_test.controller_name
+            "remove-k8s", cloud_name, "--client", "--controller", ops_test.controller_name
         )
         LOG.info("%s", res)
