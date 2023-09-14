@@ -17,7 +17,7 @@ async def test_observability_metrics(e: OpsTest, charm_config: dict):
         constraints=config.MK8S_CONSTRAINTS,
         config=charm_config,
     )
-    await e.model.wait_for_idle(["microk8s"])
+    await e.model.wait_for_idle(["microk8s"], timeout=20 * 60)
 
     await e.model.deploy(
         config.MK8S_GRAFANA_AGENT_CHARM,
