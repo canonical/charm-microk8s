@@ -53,6 +53,7 @@ The steps are to be followed in-order, each task must be completed by the person
   - [ ] Update branch from `master` to `release-1.xx` in [.github/workflows/python.yml](../workflows/python.yml)
   - [ ] Update branch from `master` to `release-1.xx` in [.github/workflows/test.yml](../workflows/test.yml)
   - [ ] Update `cancel-in-progress` from `refs/heads/master` to `refs/heads/release-1.xx` in [.github/workflows/test.yml](../workflows/test.yml)
+  - [ ] Update `origin-channel` and `destination-channel` in [.github/workflows/promote.yml](../workflows/promote.yml) to test and promote the charms from `1.xx/edge` to `1.xx/stable` every day.
   - [ ] Update `SNAP_CHANNEL` to `1.xx` in [src/charm_config.py](../../src/charm_config.py)
   - [ ] Update `*_CHANNEL` in [tests/integration/config.py](../../tests/integration/config.py). Kubernetes charms should use `1.xx/stable`, others should use the track against which the microk8s charm should be tested. A stable release for all charms should be preferred unless we are not creating a stable release for microk8s.
   - [ ] `git commit -m 'Release 1.xx'`
@@ -70,12 +71,6 @@ The steps are to be followed in-order, each task must be completed by the person
   - [ ] Click **Create charm recipe** at the bottom of the page. You will be asked to authenticate with CharmHub so that LaunchPad can automatically push the charm on each build.
 - [ ] **Reviewer**: Ensure charm recipe for `release-1.xx` is created
   - List of recipes https://code.launchpad.net/~microk8s-dev/charm-microk8s/+git/charm-microk8s/+charm-recipes
-- [ ] **Owner**: Create a release jenkins job to promote jobs from `1.xx/edge` to `1.xx/stable`
-  - [ ] Create a PR to include the minor version in https://github.com/charmed-kubernetes/jenkins/blob/main/jobs/release-microk8s.yaml#L215
-- [ ] **Reviewer**: Review and merge the PR for the release job.
-- [ ] **Owner**: Upload the new job with:
-  - `tox --workdir .tox -e py3 -- jenkins-jobs --conf jobs/jjb-conf.ini update jobs/ci-master.yaml:jobs/release-microk8s.yaml` as described in https://github.com/charmed-kubernetes/jenkins/blob/main/docs/index.md#updating-jobs
-- [ ] **Reviewer**: Review the created job in jenkins.
 
 #### After release
 
