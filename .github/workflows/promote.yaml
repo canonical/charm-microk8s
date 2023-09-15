@@ -1,0 +1,44 @@
+name: Update list of images
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 10 * * *"
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v3.5.2
+      - name: Checking out repo
+        uses: actions/checkout@v3.5.2
+      # - name: Setup tmate session
+      #   uses: mxschmitt/action-tmate@v3
+      - name: Configure pytest-operator
+        uses: charmed-kubernetes/actions-operator@main
+        with:
+          provider: lxd
+          lxd-channel: 5.0/stable
+          juju-channel: 3.1/stable
+      - name: Add user to lxd group
+        run: sudo usermod -a -G lxd $USER
+      - name: Install tox
+        run: |
+          pip3 install tox
+      - name: Run integration tests
+        run: |
+          export MK8S_CHARM_CHANNEL='latest/edge'
+          sg lxd -c 'tox -e integration-3.1'
+      - name: Retrieve artifacts
+        if: always()
+        run: |
+          mkdir artifacts
+          juju debug-log -m testing --replay > artifacts/juju.log
+          juju status -m testing --format yaml > artifacts/juju.yaml
+      - name: Upload artifacts
+        if: always()
+        uses: actions/upload-artifact@v3.1.2
+        with:
+          name: Cluster - juju logs
+          path: artifacts/
