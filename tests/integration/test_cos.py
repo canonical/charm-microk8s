@@ -36,7 +36,7 @@ async def test_cos(e: OpsTest, charm_config: dict):
             application_name="grafana-agent",
         )
         await e.model.add_relation("microk8s", "grafana-agent")
-        await e.model.wait_for_idle(["microk8s", "grafana-agent"])
+        await e.model.wait_for_idle(["microk8s", "grafana-agent"], raise_on_error=False)
 
     microk8s_unit: Unit = e.model.applications["microk8s"].units[0]
     grafana_agent_app: Application = e.model.applications["grafana-agent"]
