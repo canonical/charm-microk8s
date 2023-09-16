@@ -31,7 +31,11 @@ jobs:
         if: always()
         run: |
           mkdir artifacts
-          juju status --format yaml > artifacts/juju.yaml
+          for m in `juju models | tail -n +5 | awk '{print $1}'`
+          do
+            juju debug-log --model $m --replay --no-tail > artifacts/juju-logs-model-$m.log
+            juju status --model $m --format yaml > artifacts/juju-$m.yaml
+          done
       - name: Upload artifacts
         if: always()
         uses: actions/upload-artifact@v3.1.2
