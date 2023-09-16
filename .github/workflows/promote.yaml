@@ -31,7 +31,6 @@ jobs:
         if: always()
         run: |
           mkdir artifacts
-          juju debug-log --replay > artifacts/juju.log
           juju status --format yaml > artifacts/juju.yaml
       - name: Upload artifacts
         if: always()
