@@ -2,7 +2,6 @@
 # Copyright 2023 Canonical, Ltd.
 #
 import logging
-import time
 from contextlib import asynccontextmanager
 from typing import Tuple
 
@@ -101,34 +100,15 @@ async def microk8s_kubernetes_cloud_and_model(ops_test: OpsTest, microk8s_applic
 
     try:
         LOG.info("Add cloud %s on controller %s", cloud_name, ops_test.controller_name)
-        for attempt in range(10):
-            rc, out, err = await ops_test.juju(
-                "add-k8s",
-                cloud_name,
-                "--client",
-                "--controller",
-                ops_test.controller_name,
-                stdin=kubeconfig.encode(),
-            )
-            if rc == 0:
-                break
+        await ops_test.juju(
+            "add-k8s",
+            cloud_name,
+            "--client",
+            "--controller",
+            ops_test.controller_name,
+            stdin=kubeconfig.encode(),
+        )
 
-            LOG.warning("(%d) Failed to create cloud %s: %s", attempt, cloud_name, (rc, out, err))
-            time.sleep(5)
-
-        assert rc == 0, f"Could not create cloud {cloud_name}"
-
-        for attempt in range(10):
-            _, out, _ = await ops_test.juju("clouds", "--controller", ops_test.controller_name)
-            if cloud_name in out:
-                break
-
-            LOG.info("(%d) Cloud %s not available yet: %s", attempt, cloud_name, out)
-            time.sleep(5)
-
-        assert cloud_name in out, f"Cloud {cloud_name} not in list of available clouds"
-
-        LOG.info("Create model %s on cloud %s", model_name, cloud_name)
         await ops_test.track_model(
             "k8s-model",
             model_name=model_name,

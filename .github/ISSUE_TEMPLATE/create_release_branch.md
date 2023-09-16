@@ -53,7 +53,7 @@ The steps are to be followed in-order, each task must be completed by the person
   - [ ] Update branch from `master` to `release-1.xx` in [.github/workflows/python.yml](../workflows/python.yml)
   - [ ] Update branch from `master` to `release-1.xx` in [.github/workflows/test.yml](../workflows/test.yml)
   - [ ] Update `cancel-in-progress` from `refs/heads/master` to `refs/heads/release-1.xx` in [.github/workflows/test.yml](../workflows/test.yml)
-  - [ ] Update `origin-channel` and `destination-channel` in [.github/workflows/promote.yml](../workflows/promote.yml) to test and promote the charms from `1.xx/edge` to `1.xx/stable` every day.
+  - [ ] Update `MK8S_CHARM_CHANNEL='latest/edge'`, `origin-channel` and `destination-channel` in [.github/workflows/promote.yml](../workflows/promote.yml) to test and promote the charms from `1.xx/edge` to `1.xx/stable` every day.
   - [ ] Update `SNAP_CHANNEL` to `1.xx` in [src/charm_config.py](../../src/charm_config.py)
   - [ ] Update `*_CHANNEL` in [tests/integration/config.py](../../tests/integration/config.py). Kubernetes charms should use `1.xx/stable`, others should use the track against which the microk8s charm should be tested. A stable release for all charms should be preferred unless we are not creating a stable release for microk8s.
   - [ ] `git commit -m 'Release 1.xx'`
