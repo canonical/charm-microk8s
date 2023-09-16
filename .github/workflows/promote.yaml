@@ -31,8 +31,8 @@ jobs:
         if: always()
         run: |
           mkdir artifacts
-          juju debug-log -m testing --replay > artifacts/juju.log
-          juju status -m testing --format yaml > artifacts/juju.yaml
+          juju debug-log --replay > artifacts/juju.log
+          juju status --format yaml > artifacts/juju.yaml
       - name: Upload artifacts
         if: always()
         uses: actions/upload-artifact@v3.1.2
