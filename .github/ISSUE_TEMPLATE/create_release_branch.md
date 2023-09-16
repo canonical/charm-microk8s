@@ -53,7 +53,6 @@ The steps are to be followed in-order, each task must be completed by the person
   - [ ] Update branch from `master` to `release-1.xx` in [.github/workflows/python.yml](../workflows/python.yml)
   - [ ] Update branch from `master` to `release-1.xx` in [.github/workflows/test.yml](../workflows/test.yml)
   - [ ] Update `cancel-in-progress` from `refs/heads/master` to `refs/heads/release-1.xx` in [.github/workflows/test.yml](../workflows/test.yml)
-  - [ ] Update `MK8S_CHARM_CHANNEL='latest/edge'`, `origin-channel` and `destination-channel` in [.github/workflows/promote.yml](../workflows/promote.yml) to test and promote the charms from `1.xx/edge` to `1.xx/stable` every day.
   - [ ] Update `SNAP_CHANNEL` to `1.xx` in [src/charm_config.py](../../src/charm_config.py)
   - [ ] Update `*_CHANNEL` in [tests/integration/config.py](../../tests/integration/config.py). Kubernetes charms should use `1.xx/stable`, others should use the track against which the microk8s charm should be tested. A stable release for all charms should be preferred unless we are not creating a stable release for microk8s.
   - [ ] `git commit -m 'Release 1.xx'`
@@ -71,6 +70,9 @@ The steps are to be followed in-order, each task must be completed by the person
   - [ ] Click **Create charm recipe** at the bottom of the page. You will be asked to authenticate with CharmHub so that LaunchPad can automatically push the charm on each build.
 - [ ] **Reviewer**: Ensure charm recipe for `release-1.xx` is created
   - List of recipes https://code.launchpad.net/~microk8s-dev/charm-microk8s/+git/charm-microk8s/+charm-recipes
+- [ ] **Owner**: Create a release to stable github action for the new release.
+  - [ ] On the **master** branch create a PR with a copy of `.github/workflows/promote.yml` named `.github/workflows/promote-1.xx.yml`. Update `master` with `release-1xx`, `MK8S_CHARM_CHANNEL='latest/edge'` with `MK8S_CHARM_CHANNEL='1.xx/edge'`, `origin-channel` and `destination-channel` in `.github/workflows/promote-1.xx.yml` should point to the edge and stable channels of the 1.xx track.
+- [ ] **Reviewer**: Ensure the new promotion job tests and promotes the 1.xx release.
 
 #### After release
 
