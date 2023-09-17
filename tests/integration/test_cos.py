@@ -122,7 +122,9 @@ async def test_cos(e: OpsTest, charm_config: dict):
             await grafana_agent_app.remove_relation("grafana-dashboards-provider", "grafana")
             await grafana_agent_app.remove_relation("send-remote-write", "prometheus")
             await grafana_agent_app.remove_relation("logging-consumer", "loki")
+            await e.model.wait_for_idle(["grafana-agent"])
+
             await e.model.remove_saas("prometheus")
             await e.model.remove_saas("loki")
             await e.model.remove_saas("grafana")
-            await e.model.wait_for_idle(["grafana-agent", "microk8s"])
+            await e.model.wait_for_idle(["grafana-agent"])
