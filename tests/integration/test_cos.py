@@ -26,6 +26,9 @@ async def test_cos(e: OpsTest, charm_config: dict):
             config={**charm_config, "hostpath_storage": "true"},
             channel=config.MK8S_CHARM_CHANNEL,
             constraints=config.MK8S_CONSTRAINTS,
+            # NOTE(neoaggelos/2023-09-17): grafana-agent is currently incompatible with
+            # focal due to dependency on missing libssl.so.3
+            series="jammy",
         )
         await e.model.wait_for_idle(["microk8s"])
 
