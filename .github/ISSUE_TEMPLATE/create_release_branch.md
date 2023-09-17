@@ -71,7 +71,7 @@ The steps are to be followed in-order, each task must be completed by the person
 - [ ] **Reviewer**: Ensure charm recipe for `release-1.xx` is created
   - List of recipes https://code.launchpad.net/~microk8s-dev/charm-microk8s/+git/charm-microk8s/+charm-recipes
 - [ ] **Owner**: Create a release to stable github action for the new release.
-  - [ ] On the **master** branch create a PR with a copy of `.github/workflows/promote.yml` named `.github/workflows/promote-1.xx.yml`. Update `master` with `release-1xx`, `MK8S_CHARM_CHANNEL='latest/edge'` with `MK8S_CHARM_CHANNEL='1.xx/edge'`, `origin-channel` and `destination-channel` in `.github/workflows/promote-1.xx.yml` should point to the edge and stable channels of the 1.xx track.
+  - [ ] On the **master** branch create a PR to update `.github/workflows/promote.yml` with an entry in the matrix that would look like: `- { branch: 1.xx/edge, channel: 1.xx/stable }`.
 - [ ] **Reviewer**: Ensure the new promotion job tests and promotes the 1.xx release.
 
 #### After release
