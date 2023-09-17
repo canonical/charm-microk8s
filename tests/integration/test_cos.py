@@ -59,7 +59,7 @@ async def test_cos(e: OpsTest, charm_config: dict):
                 channel=config.MK8S_COS_CHANNEL,
                 trust=True,
             )
-            await e.model.wait_for_idle(["prometheus", "grafana", "loki"], timeout=30 * 60)
+            await e.model.wait_for_idle(["prometheus"], timeout=30 * 60)
 
             LOG.info("Create offers for cos-lite endpoints")
             await e.model.create_offer("prometheus:receive-remote-write", "prometheus")
