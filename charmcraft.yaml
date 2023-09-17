@@ -16,4 +16,4 @@ parts:
   charm:
     charm-binary-python-packages:
       - pydantic==1.10.9
-      - cosl==0.0.5
+      - cosl==0.0.7
