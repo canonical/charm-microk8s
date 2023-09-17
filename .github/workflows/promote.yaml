@@ -12,11 +12,17 @@ jobs:
   test-charm:
     name: Test and release
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - { branch: master, from: latest/edge, to: latest/edge/promote }
+        #  - { branch: 1.28/edge, channel: 1.28/stable }
+
     steps:
       - name: Checking out repo
         uses: actions/checkout@v3.5.2
         with:
-          ref: MK-1362/release
+          ref: ${{ matrix.branch }}
       - name: Configure pytest-operator
         uses: charmed-kubernetes/actions-operator@main
         with:
@@ -29,7 +35,7 @@ jobs:
       - name: Run and release
         run: |
           cd release
-          DRY_RUN=true FROM_CHANNEL=latest/edge TO_CHANNEL=latest/edge/promote CONTROLLER="${CONTROLLER_NAME}" python3 ./release.py
+          FROM_CHANNEL=${{ matrix.from }} TO_CHANNEL=${{ matrix.to }} CONTROLLER="${CONTROLLER_NAME}" python3 ./release.py
       - name: Retrieve artifacts
         if: always()
         run: |
