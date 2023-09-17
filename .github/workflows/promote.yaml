@@ -7,28 +7,27 @@ on:
 
 jobs:
   test-charm:
-    name: Testing
+    name: Test and release
     runs-on: ubuntu-latest
     steps:
       - name: Checking out repo
         uses: actions/checkout@v3.5.2
         with:
-          ref: master
+          ref: MK-1362/release
       - name: Configure pytest-operator
         uses: charmed-kubernetes/actions-operator@main
         with:
           provider: lxd
           lxd-channel: 5.0/stable
           juju-channel: 3.1/stable
-      - name: Add user to lxd group
-        run: sudo usermod -a -G lxd $USER
-      - name: Install tox
+      - name: Install dependencies
         run: |
-          pip3 install tox
-      - name: Run integration tests
+          pip3 install -r release/requirement.txt
+      - name: Run and release
         run: |
-          export MK8S_CHARM_CHANNEL='latest/edge'
-          sg lxd -c 'tox -e integration-3.1'
+          CONTROLLER="$(juju controllers | tail -n 1 | awk '{print $1}')"
+          cd release
+          DRY_RUN=true FROM_CHANNEL=latest/edge TO_CHANNEL=latest/edge/promote python3 ./release.py
       - name: Retrieve artifacts
         if: always()
         run: |
@@ -44,13 +43,3 @@ jobs:
         with:
           name: Logs
           path: artifacts/
-
-  promote-charm-amd64:
-    needs: test-charm
-    uses: canonical/operator-workflows/.github/workflows/promote_charm.yaml@main
-    with:
-      origin-channel: latest/edge
-      destination-channel: latest/edge/promoted
-      base-architecture: amd64
-    secrets:
-      inherit
