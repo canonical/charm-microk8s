@@ -91,6 +91,6 @@ jobs:
     with:
       origin-channel: latest/edge
       destination-channel: latest/edge/promoted
-      base-architecture: ppc64el
+      base-architecture: armhf
     secrets:
       inherit
