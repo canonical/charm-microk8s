@@ -15,8 +15,8 @@ jobs:
     strategy:
       matrix:
         include:
-          - { branch: MK-1362/release, from: latest/edge, to: latest/edge/promote }
-        #  - { branch: 1.28/edge, channel: 1.28/stable }
+          - { branch: master, from: latest/edge, to: latest/edge/promote }
+          - { branch: 1.28/edge, channel: 1.28/stable }
 
     steps:
       - name: Checking out repo
