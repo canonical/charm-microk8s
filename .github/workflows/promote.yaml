@@ -16,7 +16,7 @@ jobs:
       matrix:
         include:
           - { branch: master, from: latest/edge, to: latest/edge/promote }
-          - { branch: release-1.28, from: 1.28/edge, channel: 1.28/stable }
+          - { branch: release-1.28, from: 1.28/edge, to: 1.28/stable }
 
     steps:
       - name: Checking out repo
