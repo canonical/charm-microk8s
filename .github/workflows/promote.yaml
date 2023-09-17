@@ -22,7 +22,7 @@ jobs:
           juju-channel: 3.1/stable
       - name: Install dependencies
         run: |
-          pip3 install -r release/requirement.txt
+          pip3 install -r release/requirements.txt
       - name: Run and release
         run: |
           CONTROLLER="$(juju controllers | tail -n 1 | awk '{print $1}')"
