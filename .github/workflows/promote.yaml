@@ -28,9 +28,8 @@ jobs:
           pip3 install -r release/requirements.txt
       - name: Run and release
         run: |
-          CONTROLLER="$CONTROLLER_NAME"
           cd release
-          DRY_RUN=true FROM_CHANNEL=latest/edge TO_CHANNEL=latest/edge/promote python3 ./release.py
+          DRY_RUN=true FROM_CHANNEL=latest/edge TO_CHANNEL=latest/edge/promote CONTROLLER="${CONTROLLER_NAME}" python3 ./release.py
       - name: Retrieve artifacts
         if: always()
         run: |
