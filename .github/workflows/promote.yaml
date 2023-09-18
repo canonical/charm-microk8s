@@ -35,7 +35,7 @@ jobs:
       - name: Run and release
         run: |
           cd release
-          FROM_CHANNEL=${{ matrix.from }} TO_CHANNEL=${{ matrix.to }} CONTROLLER="${CONTROLLER_NAME}" python3 ./release.py
+          FROM_CHANNEL=${{ matrix.from }} TO_CHANNEL=${{ matrix.to }} CONTROLLER="${CONTROLLER_NAME}" BRANCH=${{ matrix.branch }} python3 ./release.py
       - name: Retrieve artifacts
         if: always()
         run: |
