@@ -95,6 +95,7 @@ async def microk8s_kubernetes_cloud_and_model(ops_test: OpsTest, microk8s_applic
     # In some clouds the IP in kubeconfig returned by microk8s config is not the public IP
     # where the API server is found.
     kubeconfig = kubeconfig.replace("127.0.0.1", app.units[0].public_address)
+    cloud_name = f"k8s-{ops_test._generate_model_name()}"
     model_name = f"k8s-{ops_test._generate_model_name()}"
 
     try:
