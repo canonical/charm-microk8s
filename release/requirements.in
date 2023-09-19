@@ -1,0 +1,13 @@
+python-dateutil
+semver
+requests
+launchpadlib
+click
+sh
+lazr.restfulclient
+urllib3
+craft-store
+juju
+tox
+pytest-operator
+charmcraft

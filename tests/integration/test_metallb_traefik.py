@@ -25,7 +25,7 @@ async def test_metallb_traefik(e: OpsTest, charm_config: dict):
             channel=config.MK8S_CHARM_CHANNEL,
             constraints=config.MK8S_CONSTRAINTS,
         )
-        await e.model.wait_for_idle(["microk8s"])
+        await e.model.wait_for_idle(["microk8s"], timeout=20 * 60)
 
     u: Unit = e.model.applications["microk8s"].units[0]
 

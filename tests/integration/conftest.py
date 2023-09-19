@@ -15,8 +15,6 @@ from pytest_operator.plugin import OpsTest
 
 LOG = logging.getLogger(__name__)
 
-JUJU_CLOUD_NAME = "microk8s-cloud"
-
 
 @pytest_asyncio.fixture(scope="module")
 async def e(ops_test: OpsTest):
@@ -97,13 +95,14 @@ async def microk8s_kubernetes_cloud_and_model(ops_test: OpsTest, microk8s_applic
     # In some clouds the IP in kubeconfig returned by microk8s config is not the public IP
     # where the API server is found.
     kubeconfig = kubeconfig.replace("127.0.0.1", app.units[0].public_address)
+    cloud_name = f"k8s-{ops_test._generate_model_name()}"
     model_name = f"k8s-{ops_test._generate_model_name()}"
 
     try:
-        LOG.info("Add cloud %s on controller %s", JUJU_CLOUD_NAME, ops_test.controller_name)
+        LOG.info("Add cloud %s on controller %s", cloud_name, ops_test.controller_name)
         await ops_test.juju(
             "add-k8s",
-            JUJU_CLOUD_NAME,
+            cloud_name,
             "--client",
             "--controller",
             ops_test.controller_name,
@@ -113,21 +112,22 @@ async def microk8s_kubernetes_cloud_and_model(ops_test: OpsTest, microk8s_applic
         await ops_test.track_model(
             "k8s-model",
             model_name=model_name,
-            cloud_name=JUJU_CLOUD_NAME,
-            credential_name=JUJU_CLOUD_NAME,
+            cloud_name=cloud_name,
+            credential_name=cloud_name,
         )
 
         yield ("k8s-model", model_name)
-
     finally:
-        await ops_test.forget_model("k8s-model")
-        LOG.info("Destroy model %s", model_name)
-        res = await ops_test.juju(
-            "destroy-model", model_name, "--force", "--destroy-storage", "--yes", "--no-prompt"
-        )
-        LOG.info("%s", res)
+        if "k8s-model" in ops_test.models:
+            await ops_test.forget_model("k8s-model")
+            LOG.info("Destroy model %s", model_name)
+            res = await ops_test.juju(
+                "destroy-model", model_name, "--force", "--destroy-storage", "--yes", "--no-prompt"
+            )
+            LOG.info("%s", res)
+
         LOG.info("Delete cloud 'k8s-cloud' on controller '%s'", ops_test.controller_name)
         res = await ops_test.juju(
-            "remove-k8s", JUJU_CLOUD_NAME, "--client", "--controller", ops_test.controller_name
+            "remove-k8s", cloud_name, "--client", "--controller", ops_test.controller_name
         )
         LOG.info("%s", res)

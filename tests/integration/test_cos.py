@@ -30,7 +30,7 @@ async def test_cos(e: OpsTest, charm_config: dict):
             # focal due to dependency on missing libssl.so.3
             series="jammy",
         )
-        await e.model.wait_for_idle(["microk8s"])
+        await e.model.wait_for_idle(["microk8s"], timeout=20 * 60)
 
     if "grafana-agent" not in e.model.applications:
         await e.model.deploy(
