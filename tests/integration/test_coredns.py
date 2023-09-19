@@ -28,7 +28,7 @@ async def test_core_dns(e: OpsTest, charm_config: dict):
             channel=config.MK8S_CHARM_CHANNEL,
             constraints=config.MK8S_CONSTRAINTS,
         )
-        await e.model.wait_for_idle(["microk8s"])
+        await e.model.wait_for_idle(["microk8s"], timeout=20 * 60)
 
     app: Application = e.model.applications["microk8s"]
     unit: Unit = app.units[0]

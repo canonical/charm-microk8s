@@ -1,0 +1,53 @@
+name: Promote charm
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 10 * * *"
+
+env:
+  CHARMCRAFT_AUTH: ${{ secrets.CHARMHUB_TOKEN }}
+
+jobs:
+  test-charm:
+    name: Test and release
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - { branch: master, from: latest/edge, to: latest/edge/promote }
+          - { branch: release-1.28, from: 1.28/edge, to: 1.28/stable }
+
+    steps:
+      - name: Checking out repo
+        uses: actions/checkout@v3.5.2
+        with:
+          ref: ${{ matrix.branch }}
+      - name: Configure pytest-operator
+        uses: charmed-kubernetes/actions-operator@main
+        with:
+          provider: lxd
+          lxd-channel: 5.0/stable
+          juju-channel: 3.1/stable
+      - name: Install dependencies
+        run: |
+          pip3 install -r release/requirements.txt
+      - name: Run and release
+        run: |
+          cd release
+          FROM_CHANNEL=${{ matrix.from }} TO_CHANNEL=${{ matrix.to }} CONTROLLER="${CONTROLLER_NAME}" BRANCH=${{ matrix.branch }} python3 ./release.py
+      - name: Retrieve artifacts
+        if: always()
+        run: |
+          mkdir artifacts
+          for m in `juju models | tail -n +5 | awk '{print $1}'`
+          do
+            juju debug-log --model $m --replay --no-tail > artifacts/juju-logs-model-$m.log
+            juju status --model $m --format yaml > artifacts/juju-$m.yaml
+          done
+      - name: Upload artifacts
+        if: always()
+        uses: actions/upload-artifact@v3.1.2
+        with:
+          name: Logs
+          path: artifacts/
