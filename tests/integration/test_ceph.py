@@ -70,3 +70,5 @@ async def test_ceph_csi(e: OpsTest, charm_config: dict):
 
         if "ceph-ext4" in stdout and "ceph-xfs" in stdout:
             break
+
+    assert "ceph-ext4" in stdout, "Ceph StorageClasses were not created in time"
