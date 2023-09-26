@@ -38,8 +38,7 @@ async def test_ceph_csi(e: OpsTest, charm_config: dict):
             config.MK8S_CEPH_MON_CHARM,
             application_name="ceph-mon",
             channel=config.MK8S_CEPH_MON_CHANNEL,
-            config={"monitor-count": 3},
-            num_units=3,
+            config={"monitor-count": 1},
         )
     if "ceph-osd" not in e.model.applications:
         await e.model.deploy(
