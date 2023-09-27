@@ -91,3 +91,29 @@ MK8S_COS_BUNDLE = os.getenv("MK8S_COS_BUNDLE", "ch:cos-lite")
 # MK8S_COS_CHANNEL is the CharmHub channel to use for the cos bundle.
 #   - 'edge'                   <-- install bundle from 'edge' channel
 MK8S_COS_CHANNEL = os.getenv("MK8S_COS_CHANNEL", "edge")
+
+# MK8S_CEPH_MON_CHARM is the ceph-mon charm for integration tests.
+#   - 'ch:ceph-mon'         <-- install charm 'ceph-mon' from CharmHub
+MK8S_CEPH_MON_CHARM = os.getenv("MK8S_CEPH_MON_CHARM", "ch:ceph-mon")
+
+# MK8S_CEPH_MON_CHANNEL is the ceph-mon channel for integration tests.
+#   - 'edge'                <-- install charm from 'edge' channel
+#   - 'quincy/stable'       <-- install charm from 'quincy/stable' channel
+MK8S_CEPH_MON_CHANNEL = os.getenv("MK8S_CEPH_MON_CHANNEL", "quincy/stable")
+
+# MK8S_CEPH_OSD_CHARM is the ceph-osd charm for integration tests.
+#   - 'ch:ceph-osd'         <-- install charm 'ceph-osd' from CharmHub
+MK8S_CEPH_OSD_CHARM = os.getenv("MK8S_CEPH_OSD_CHARM", "ch:ceph-osd")
+
+# MK8S_CEPH_OSD_CHANNEL is the ceph-osd channel for integration tests.
+#   - 'edge'                <-- install charm from 'edge' channel
+#   - 'quincy/stable'       <-- install charm from 'quincy/stable' channel
+MK8S_CEPH_OSD_CHANNEL = os.getenv("MK8S_CEPH_OSD_CHANNEL", "quincy/stable")
+
+# MK8S_CEPH_CSI_CHARM is the ceph-csi charm for integration tests.
+#   - 'ch:ceph-csi'         <-- install charm 'ceph-csi' from CharmHub
+MK8S_CEPH_CSI_CHARM = os.getenv("MK8S_CEPH_CSI_CHARM", "ch:ceph-csi")
+
+# MK8S_CEPH_CSI_CHANNEL is the ceph-osd channel for integration tests.
+#   - 'edge'                <-- install charm from 'edge' channel
+MK8S_CEPH_CSI_CHANNEL = os.getenv("MK8S_CEPH_CSI_CHANNEL", "edge")

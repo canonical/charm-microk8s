@@ -1,9 +1,10 @@
 #
 # Copyright 2023 Canonical, Ltd.
 #
+import json
 import logging
 from contextlib import asynccontextmanager
-from typing import Tuple
+from typing import Set, Tuple
 
 import config
 import pytest
@@ -66,6 +67,18 @@ async def run_unit(unit: Unit, command: str) -> Tuple[int, str, str]:
         return int(output["Code"]), output.get("Stdout") or "", output.get("Stderr") or ""
 
     raise ValueError(f"unknown action output {output}")
+
+
+async def available_cloud_types(ops_test: OpsTest) -> Set[str]:
+    """
+    return a list of all cloud types available on the current controller.
+    """
+    _, stdout, _ = await ops_test.juju(
+        "clouds", "--controller", ops_test.controller_name, "--format", "json"
+    )
+
+    clouds = json.loads(stdout)
+    return set(value["type"] for value in clouds.values())
 
 
 @asynccontextmanager
