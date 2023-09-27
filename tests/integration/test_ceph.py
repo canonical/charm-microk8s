@@ -46,7 +46,7 @@ async def test_ceph_csi(e: OpsTest, charm_config: dict):
             application_name="ceph-osd",
             channel=config.MK8S_CEPH_OSD_CHANNEL,
             storage={"osd-devices": {"size": 5120, "count": 3}},
-            num_units=3,
+            num_units=2,
         )
         await e.model.integrate("ceph-mon", "ceph-osd")
     await e.model.wait_for_idle(["ceph-mon", "ceph-osd"])
@@ -57,6 +57,10 @@ async def test_ceph_csi(e: OpsTest, charm_config: dict):
             config.MK8S_CEPH_CSI_CHARM,
             application_name="ceph-csi",
             channel=config.MK8S_CEPH_CSI_CHANNEL,
+            config={
+                "namespace": "kube-system",
+                "provisioner-replicas": 1,
+            },
         )
         await e.model.add_relation("ceph-mon", "ceph-csi")
         await e.model.add_relation("microk8s:kubernetes-info", "ceph-csi:kubernetes-info")
