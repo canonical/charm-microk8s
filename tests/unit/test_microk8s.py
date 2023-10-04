@@ -297,24 +297,29 @@ def test_microk8s_configure_rbac(
 
 @mock.patch("util.ensure_call", autospec=True)
 @mock.patch("util.ensure_file", autospec=True)
-@mock.patch("ops_helpers.get_unit_public_address", autospec=True)
-def test_microk8s_write_local_kubeconfig(
-    get_unit_public_address: mock.MagicMock,
-    ensure_file: mock.MagicMock,
-    ensure_call: mock.MagicMock,
-):
-    get_unit_public_address.return_value = "10.0.0.10"
+def test_microk8s_write_local_kubeconfig(ensure_file: mock.MagicMock, ensure_call: mock.MagicMock):
     ensure_call.return_value.stdout = b"some kubeconfig that contains 127.0.0.1"
 
     microk8s.write_local_kubeconfig()
 
     ensure_call.assert_called_once_with(["microk8s", "config", "-l"], capture_output=True)
-    assert ensure_file.mock_calls == [
-        mock.call(
-            Path("/root/.kube/config"), "some kubeconfig that contains 127.0.0.1", 0o600, 0, 0
-        ),
-        mock.call(Path("/root/config"), "some kubeconfig that contains 10.0.0.10", 0o600, 0, 0),
-    ]
+    ensure_file.assert_called_once_with(
+        Path("/root/.kube/config"), "some kubeconfig that contains 127.0.0.1", 0o600, 0, 0
+    )
+
+
+@mock.patch("util.ensure_call", autospec=True)
+@mock.patch("ops_helpers.get_unit_public_address", autospec=True)
+def test_microk8s_get_public_kubeconfig(
+    get_unit_public_address: mock.MagicMock, ensure_call: mock.MagicMock
+):
+    get_unit_public_address.return_value = "10.0.0.10"
+    ensure_call.return_value.stdout = b"some kubeconfig that contains 127.0.0.1"
+
+    kubeconfig = microk8s.get_public_kubeconfig()
+
+    ensure_call.assert_called_once_with(["microk8s", "config", "-l"], capture_output=True)
+    assert kubeconfig == "some kubeconfig that contains 10.0.0.10"
 
 
 @mock.patch("microk8s.apply_launch_configuration")

@@ -307,3 +307,28 @@ def test_relation_kubernetes_info(e: Environment, role: str, is_leader: bool, ha
         assert rel_data["cni-bin-dir"] == "/var/snap/microk8s/current/opt/cni/bin"
     else:
         assert not rel_data
+
+
+@pytest.mark.parametrize("role", ["", "control-plane", "worker"])
+@pytest.mark.parametrize("is_leader", [False, True])
+@pytest.mark.parametrize("has_joined", [False, True])
+def test_action_get_kubeconfig(e: Environment, role: str, is_leader: bool, has_joined: bool):
+    e.microk8s.get_unit_status.return_value = ops.model.ActiveStatus("fakestatus")
+
+    e.harness.update_config({"role": role})
+    e.harness.set_leader(is_leader)
+    e.harness.begin_with_initial_hooks()
+
+    e.harness.charm._state.joined = has_joined
+
+    # NOTE(neoaggelos/2023-10-04): harness does not support unit tests for actions yet
+    action = mock.MagicMock(spec=ops.charm.ActionEvent)
+    e.harness.charm._get_kubeconfig_action(action)
+
+    if role == "worker" or not has_joined:
+        action.fail.assert_called_once()
+        action.set_results.assert_not_called()
+    else:
+        action.set_results.assert_called_once_with(
+            {"kubeconfig": e.microk8s.get_public_kubeconfig.return_value}
+        )

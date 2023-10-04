@@ -230,12 +230,13 @@ def configure_rbac(enable: bool):
 def write_local_kubeconfig():
     """write kubeconfig file for the cluster"""
     p = util.ensure_call(["microk8s", "config", "-l"], capture_output=True)
+    util.ensure_file(Path("/root/.kube/config"), p.stdout.decode(), 0o600, 0, 0)
 
-    kubeconfig = p.stdout.decode()
-    util.ensure_file(Path("/root/.kube/config"), kubeconfig, 0o600, 0, 0)
 
-    kubeconfig = kubeconfig.replace("127.0.0.1", ops_helpers.get_unit_public_address())
-    util.ensure_file(Path("/root/config"), kubeconfig, 0o600, 0, 0)
+def get_public_kubeconfig() -> str:
+    """return a kubeconfig that uses the public address of the unit"""
+    p = util.ensure_call(["microk8s", "config", "-l"], capture_output=True)
+    return p.stdout.decode().replace("127.0.0.1", ops_helpers.get_unit_public_address())
 
 
 def configure_dns(ip: str, domain: str):

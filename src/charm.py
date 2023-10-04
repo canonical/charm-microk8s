@@ -13,6 +13,7 @@ from typing import Any, Union
 from charms.grafana_agent.v0.cos_agent import COSAgentProvider
 from ops import CharmBase, main
 from ops.charm import (
+    ActionEvent,
     ConfigChangedEvent,
     InstallEvent,
     LeaderElectedEvent,
@@ -86,6 +87,9 @@ class MicroK8sCharm(CharmBase):
             self.framework.observe(self.on.dns_relation_joined, self.update_status)
             self.framework.observe(self.on.dns_relation_changed, self.config_dns)
             self.framework.observe(self.on.dns_relation_changed, self.update_status)
+
+            # actions
+            self.framework.observe(self.on.get_kubeconfig_action, self._get_kubeconfig_action)
         else:
             # lifecycle
             self.framework.observe(self.on.remove, self.on_remove)
@@ -149,6 +153,9 @@ class MicroK8sCharm(CharmBase):
             # kubernetes-info
             self.framework.observe(self.on.kubernetes_info_relation_joined, self._k8s_info)
             self.framework.observe(self.on.kubernetes_info_relation_changed, self._k8s_info)
+
+            # actions
+            self.framework.observe(self.on.get_kubeconfig_action, self._get_kubeconfig_action)
 
     def _k8s_info(self, event: RelationJoinedEvent):
         if not self.unit.is_leader():
@@ -422,6 +429,17 @@ class MicroK8sCharm(CharmBase):
             return []
 
         return metrics.build_scrape_jobs(crt, key, is_control_plane, socket.gethostname())
+
+    def _get_kubeconfig_action(self, event: ActionEvent):
+        if self._state.role == "worker":
+            event.log("ERROR: this action can only run on control plane nodes")
+            return event.fail("this action can only run on control plane nodes")
+
+        if not self._state.joined:
+            event.log("ERROR: this unit has not yet joined the cluster")
+            return event.fail("this unit has not yet joined the cluster")
+
+        event.set_results({"kubeconfig": microk8s.get_public_kubeconfig()})
 
 
 if __name__ == "__main__":  # pragma: nocover

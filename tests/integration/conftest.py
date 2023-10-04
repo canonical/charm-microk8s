@@ -88,12 +88,12 @@ async def microk8s_kubernetes_cloud_and_model(ops_test: OpsTest, microk8s_applic
 
     await ops_test.model.wait_for_idle([microk8s_application])
 
-    rc, kubeconfig, _ = await run_unit(app.units[0], "cat /root/config")
-    if rc != 0:
-        raise Exception(f"failed to retrieve microk8s config {rc, kubeconfig}")
+    # get-kubeconfig from the application
+    unit: Unit = app.units[0]
+    action: Action = await unit.run_action("get-kubeconfig")
+    result: dict = await ops_test.model.get_action_output(action.entity_id)
+    kubeconfig = result["kubeconfig"]
 
-    # In some clouds the IP in kubeconfig returned by microk8s config is not the public IP
-    # where the API server is found.
     cloud_name = f"k8s-{ops_test._generate_model_name()}"
     model_name = f"k8s-{ops_test._generate_model_name()}"
 
