@@ -50,6 +50,7 @@ def test_leader_peer_relation(e: Environment):
 
     e.microk8s.add_node.assert_called_once_with()
     relation_data = e.harness.get_relation_data(rel_id, e.harness.charm.app)
+    assert relation_data["join_token"] == "01010101010101010101010101010101"
     assert relation_data["join_url"] == "10.10.10.10:25000/01010101010101010101010101010101"
     assert e.harness.charm._state.hostnames[f"{e.harness.charm.app.name}/1"] == "f-1"
 
@@ -59,6 +60,7 @@ def test_leader_peer_relation(e: Environment):
 
 def test_leader_peer_relation_leave(e: Environment):
     fakeaddress = "10.10.10.10"
+    e.microk8s.add_node.return_value = "faketoken"
 
     e.harness.add_network(fakeaddress)
     e.harness.update_config({"role": "control-plane"})
@@ -97,6 +99,7 @@ def test_leader_control_plane_relation(e: Environment):
     e.microk8s.add_node.assert_called_once_with()
     relation_data = e.harness.get_relation_data(rel_id, e.harness.charm.app)
     relation_data = e.harness.get_relation_data(rel_id, e.harness.charm.app)
+    assert relation_data["join_token"] == "01010101010101010101010101010101"
     assert relation_data["join_url"] == "10.10.10.10:25000/01010101010101010101010101010101"
     assert e.harness.charm._state.hostnames["microk8s-worker/0"] == "f-1"
 
@@ -162,6 +165,10 @@ def test_follower_retrieve_join_url(e: Environment):
     e.microk8s.get_unit_status.assert_called_with("fakehostname")
     e.microk8s.write_local_kubeconfig.assert_called()
     e.microk8s.configure_extra_sans.assert_called_once_with("%UNIT_PUBLIC_ADDRESS%")
+    assert (
+        e.harness.get_relation_data(rel_id, e.harness.charm.unit.name)["configured_ca_crt"]
+        == "fakeca"
+    )
 
     assert e.harness.charm.unit.status == ops.model.ActiveStatus("fakestatus")
     assert e.harness.charm._state.joined
@@ -226,6 +233,35 @@ def test_follower_become_leader_remove_already_departed_nodes(e: Environment, be
     assert e.harness.charm.unit.status == ops.model.ActiveStatus("fakestatus")
 
 
+@pytest.mark.parametrize("become_leader", [True, False])
+def test_follower_become_leader_keep_join_token(e: Environment, become_leader: bool):
+    e.harness.update_config({"role": "control-plane"})
+    e.harness.set_leader(False)
+    e.harness.add_network("10.10.10.10")
+    e.harness.begin_with_initial_hooks()
+
+    prel_id = e.harness.charm.model.get_relation("peer").id
+    e.harness.update_relation_data(
+        prel_id,
+        e.harness.charm.app.name,
+        {"join_token": "faketoken", "join_url": "11.11.11.11:25000/faketoken"},
+    )
+    e.harness.set_leader(become_leader)
+
+    e.harness.add_relation_unit(prel_id, f"{e.harness.charm.app.name}/1")
+    e.harness.add_relation_unit(prel_id, f"{e.harness.charm.app.name}/2")
+
+    e.microk8s.add_node.assert_not_called()
+    data = e.harness.get_relation_data(prel_id, e.harness.charm.app.name)
+    assert data["join_token"] == "faketoken"
+    if become_leader:
+        assert data["join_url"] == "10.10.10.10:25000/faketoken"
+    else:
+        assert data["join_url"] == "11.11.11.11:25000/faketoken"
+
+    assert e.harness.charm.unit.status == ops.model.ActiveStatus("fakestatus")
+
+
 @pytest.mark.parametrize("role", ["", "control-plane"])
 @pytest.mark.parametrize("is_leader", [False, True])
 @pytest.mark.parametrize("has_joined", [False, True])
@@ -263,6 +299,7 @@ def test_build_scrape_configs(e: Environment, role: str, is_leader: bool, has_jo
 
 @pytest.mark.parametrize("is_leader", (True, False))
 def test_cos_agent_relation(e: Environment, is_leader: bool):
+    e.microk8s.add_node.return_value = "faketoken"
     e.metrics.build_scrape_jobs.return_value = [{"job_name": "fakejob"}]
     e.metrics.get_tls_auth.return_value = ("fakecrt", "fakekey")
 

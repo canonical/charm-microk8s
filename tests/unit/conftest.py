@@ -51,6 +51,7 @@ def e():
     e = Environment(harness, **mocks)
 
     # default mocks
+    e.microk8s.get_ca.return_value = "fakeca"
     e.microk8s.get_kubernetes_version.return_value = "fakeversion"
     e.microk8s.get_unit_status.return_value = ActiveStatus("fakestatus")
     e.gethostname.return_value = "fakehostname"

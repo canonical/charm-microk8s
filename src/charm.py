@@ -78,6 +78,7 @@ class MicroK8sCharm(CharmBase):
             self.framework.observe(self.on.control_plane_relation_joined, self.on_install)
             self.framework.observe(self.on.control_plane_relation_joined, self.announce_hostname)
             self.framework.observe(self.on.control_plane_relation_changed, self.join_cluster)
+            self.framework.observe(self.on.control_plane_relation_changed, self.ensure_worker_ca)
             self.framework.observe(self.on.control_plane_relation_broken, self.leave_cluster)
             self.framework.observe(self.on.control_plane_relation_broken, self.update_status)
 
@@ -116,11 +117,13 @@ class MicroK8sCharm(CharmBase):
             self.framework.observe(self.on.peer_relation_joined, self.join_cluster)
             self.framework.observe(self.on.peer_relation_changed, self.record_hostnames)
             self.framework.observe(self.on.peer_relation_changed, self.join_cluster)
+            self.framework.observe(self.on.peer_relation_changed, self.ensure_control_plane_ca)
             self.framework.observe(self.on.peer_relation_departed, self.on_relation_departed)
             self.framework.observe(self.on.peer_relation_departed, self.remove_departed_nodes)
             self.framework.observe(self.on.peer_relation_departed, self.update_status)
             self.framework.observe(self.on.workers_relation_joined, self.add_node)
             self.framework.observe(self.on.workers_relation_joined, self.update_metrics_tls_auth)
+            self.framework.observe(self.on.workers_relation_changed, self.ensure_control_plane_ca)
             self.framework.observe(self.on.workers_relation_changed, self.record_hostnames)
             self.framework.observe(self.on.workers_relation_departed, self.on_relation_departed)
             self.framework.observe(self.on.workers_relation_departed, self.remove_departed_nodes)
@@ -362,6 +365,9 @@ class MicroK8sCharm(CharmBase):
         microk8s.join(join_url, self.config["role"] == "worker")
         microk8s.wait_ready()
 
+        event.relation.data[self.unit]["configured_ca_crt"] = microk8s.get_ca(
+            self.config["role"] == "worker"
+        )
         self._state.joined = True
         self.on.config_changed.emit()
 
@@ -380,8 +386,13 @@ class MicroK8sCharm(CharmBase):
         if not self.unit.is_leader():
             return
 
-        token = microk8s.add_node()
-        event.relation.data[self.app]["join_url"] = "{}:25000/{}".format(
+        data = event.relation.data[self.app]
+        # TODO(neoaggelos): this is a bug. we must always call add-node with
+        # the token to ensure that the unit can accept microk8s join commands
+        token = data.get("join_token") or microk8s.add_node()
+
+        data["join_token"] = token
+        data["join_url"] = "{}:25000/{}".format(
             self.model.get_binding(event.relation).network.ingress_address, token
         )
 
@@ -422,6 +433,60 @@ class MicroK8sCharm(CharmBase):
             return []
 
         return metrics.build_scrape_jobs(crt, key, is_control_plane, socket.gethostname())
+
+    def ensure_worker_ca(self, event: RelationChangedEvent):
+        if not self._state.joined:
+            return
+
+        # Check if we have a custom CA certificate and key
+        data = event.relation.data[self.app]
+        ca_key = data.get("ca_key")
+        ca_crt = data.get("ca_crt")
+        if not ca_key or not ca_crt:
+            return
+
+        # Update CA if needed.
+        if microk8s.get_ca(True) != ca_crt:
+            join_url = event.relation.data[event.app].get("join_url")
+            if not join_url:
+                LOG.info("join URL not yet available")
+                return
+
+            self.unit.status = MaintenanceStatus("update unit CA")
+            microk8s.join(join_url, True)
+
+            event.relation.data[self.unit]["configured_ca_crt"] = ca_crt
+
+    def ensure_control_plane_ca(self, event: RelationChangedEvent):
+        if not self._state.joined:
+            return
+
+        # Check if we have a custom CA certificate and key
+        data = self.model.get_relation("peer").data[self.app]
+        ca_key = data.get("ca_key")
+        ca_crt = data.get("ca_crt")
+        if not ca_key or not ca_crt:
+            return
+
+        # Update CA if needed
+        if microk8s.get_ca(False) != ca_crt:
+            self.unit.status = MaintenanceStatus("update unit CA")
+            microk8s.set_ca(ca_crt, ca_key)
+
+            event.relation.data[self.unit]["configured_ca_crt"] = ca_crt
+
+        # Leader unit: post-restart cluster actions after all units have configured CA
+        if self.unit.is_leader() and data.get("configured_ca_crt") != ca_crt:
+            for rel in self.model.relations["peer"] + self.model.relations.get("workers") or []:
+                for unit in rel.units:
+                    if rel.data[unit].get("configured_ca_crt") != ca_crt:
+                        # Wait because there are units that have not yet updated their CA
+                        return
+
+            microk8s.rollout_restart_calico_node()
+            microk8s.rotate_kube_root_ca()
+
+            data["configured_ca_crt"] = ca_crt
 
 
 if __name__ == "__main__":  # pragma: nocover

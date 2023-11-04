@@ -76,7 +76,9 @@ def add_node() -> str:
     """`microk8s add-node` and return join token"""
     LOG.info("Generating token for new node")
     token = os.urandom(16).hex()
-    util.ensure_call(["microk8s", "add-node", "--token", token, "--token-ttl", "7200"])
+    util.ensure_file(
+        snap_data_dir() / "credentials" / "persistent-cluster-tokens.txt", f"{token}\n", 0o600, 0, 0
+    )
     return token
 
 
@@ -258,3 +260,54 @@ def get_kubernetes_version() -> str:
     except (subprocess.CalledProcessError, ValueError, IndexError, TypeError) as e:
         LOG.warning("could not retrieve microk8s version: %s", e)
         return None
+
+
+def get_ca(worker: bool) -> str:
+    """return the CA of the local microk8s node"""
+    ca_crt = "ca.remote.crt" if worker else "ca.crt"
+    return (snap_data_dir() / "certs" / ca_crt).read_text()
+
+
+def set_ca(ca_crt: str, ca_key: str) -> None:
+    """update the CA used by the local microk8s node"""
+    ca_dir = snap_data_dir() / "charm_ca"
+
+    ca_dir.mkdir(parents=True, exist_ok=True)
+    (ca_dir / "ca.crt").write_text(ca_crt)
+    (ca_dir / "ca.key").write_text(ca_key)
+
+    util.ensure_call(["microk8s", "refresh-certs", ca_dir.as_posix()])
+
+
+def rollout_restart_calico_node() -> None:
+    """rollout restart calico-node pods in the cluster"""
+    util.ensure_call(
+        ["microk8s", "kubectl", "rollout", "restart", "-n", "kube-system", "ds/calico-node"]
+    )
+
+
+def rotate_kube_root_ca() -> None:
+    """delete all kube-root-ca.crt configmaps from the cluster"""
+    try:
+        p = util.ensure_call(
+            ["microk8s", "kubectl", "get", "ns", "-o", "json"], capture_output=True
+        )
+        result = json.loads(p.stdout)
+        namespaces = [item["metadata"]["name"] for item in (result["items"] or [])]
+    except (subprocess.CalledProcessError, json.JSONDecodeError, KeyError, TypeError) as e:
+        LOG.warning("Failed to list cluster namespaces: %s", e)
+        namespaces = ["default", "kube-system"]
+
+    for ns in namespaces:
+        util.ensure_call(
+            [
+                "microk8s",
+                "kubectl",
+                "delete",
+                "configmap",
+                "kube-root-ca.crt",
+                "-n",
+                ns,
+                "--ignore-not-found",
+            ]
+        )

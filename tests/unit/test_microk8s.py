@@ -60,16 +60,20 @@ def test_microk8s_join(ensure_call: mock.MagicMock):
     ensure_call.assert_called_once_with(["microk8s", "join", join_url, "--worker"])
 
 
-@mock.patch("util.ensure_call")
+@mock.patch("util.ensure_file")
 @mock.patch("os.urandom")
-def test_microk8s_add_node(urandom: mock.MagicMock, ensure_call: mock.MagicMock):
+def test_microk8s_add_node(urandom: mock.MagicMock, ensure_file: mock.MagicMock):
     urandom.return_value = b"\x01" * 16
 
     token = microk8s.add_node()
     assert token == "01010101010101010101010101010101"
     urandom.assert_called_once_with(16)
-    ensure_call.assert_called_once_with(
-        ["microk8s", "add-node", "--token", token, "--token-ttl", "7200"]
+    ensure_file.assert_called_once_with(
+        Path("/var/snap/microk8s/current/credentials/persistent-cluster-tokens.txt"),
+        "01010101010101010101010101010101\n",
+        0o600,
+        0,
+        0,
     )
 
 
@@ -315,7 +319,7 @@ def test_microk8s_configure_dns(apply_launch_configuration: mock.MagicMock):
     )
 
 
-@mock.patch("util.run")
+@mock.patch("util.run", autospec=True)
 def test_microk8s_get_kubernetes_version(run: mock.MagicMock):
     # parse output
     run.return_value.stdout = b"microk8s 1.28.1 revision 4217\n"
@@ -337,3 +341,14 @@ def test_microk8s_get_kubernetes_version(run: mock.MagicMock):
     run.side_effect = subprocess.CalledProcessError(returncode=1, cmd="microk8s version")
     version = microk8s.get_kubernetes_version()
     assert version is None
+
+
+@mock.patch("microk8s.snap_data_dir", autospec=True)
+def test_microk8s_get_ca(snap_data_dir: mock.MagicMock, tmp_path: Path):
+    snap_data_dir.return_value = tmp_path
+    (tmp_path / "certs").mkdir(parents=True, exist_ok=True)
+    (tmp_path / "certs" / "ca.crt").write_text("control plane ca")
+    (tmp_path / "certs" / "ca.remote.crt").write_text("worker ca")
+
+    assert microk8s.get_ca(False) == "control plane ca"
+    assert microk8s.get_ca(True) == "worker ca"

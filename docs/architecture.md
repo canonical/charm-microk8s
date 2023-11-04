@@ -26,12 +26,12 @@ The control plane nodes will automatically form a 3-node cluster. The worker nod
 
 ![relations](./fsm/relations.png)
 
-| Charm Role    | Relation          | Interface     | Description                                                             | Application Data                                                      | Unit Data        |
-| ------------- | ----------------- | ------------- | ----------------------------------------------------------------------- | --------------------------------------------------------------------- | ---------------- |
-| control-plane | peer              | microk8s-peer | Offer join url to peer control plane nodes and store clustering actions | write `join_url`, `remove_nodes` (leader), read `join_url` (follower) | write `hostname` |
-| worker        | peer              | microk8s-peer | Unused                                                                  |                                                                       |                  |
-| control-plane | microk8s-provides | microk8s-info | Offer join url to worker nodes                                          | write `join_url`                                                      | read `hostname`  |
-| worker        | microk8s          | microk8s-info | Retrieve join url from control plane                                    | read `join_url`                                                       | write `hostname` |
+| Charm Role    | Relation          | Interface     | Description                                                             | Application Data                                                      | Unit Data                             |
+| ------------- | ----------------- | ------------- | ----------------------------------------------------------------------- | --------------------------------------------------------------------- | ------------------------------------- |
+| control-plane | peer              | microk8s-peer | Offer join url to peer control plane nodes and store clustering actions | write `join_url`, `remove_nodes` (leader), read `join_url` (follower) | write `hostname`, `configured_ca_crt` |
+| worker        | peer              | microk8s-peer | Unused                                                                  |                                                                       |                                       |
+| control-plane | microk8s-provides | microk8s-info | Offer join url to worker nodes                                          | write `join_url`                                                      | read `hostname`, `configured_ca_crt`  |
+| worker        | microk8s          | microk8s-info | Retrieve join url from control plane                                    | read `join_url`                                                       | write `hostname`, `configured_ca_crt` |
 
 ### Clustering
 
