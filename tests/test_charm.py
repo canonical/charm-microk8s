@@ -1,4 +1,6 @@
+import os
 import subprocess
+import pathlib
 
 import unittest
 from unittest.mock import call, mock_open, patch, ANY, MagicMock
@@ -30,7 +32,9 @@ class TestCharm(unittest.TestCase):
         _uname.return_value.release = "5.13"
 
         _check_output.side_effect = [b"1.1.1.1", b"2.2.2.2"]
-        self.harness.update_config({"containerd_env": ""})
+        self.harness.update_config(
+            {"containerd_http_proxy": "", "containerd_https_proxy": "", "containerd_no_proxy": ""}
+        )
 
         self.harness.set_leader(True)
         self.harness.begin_with_initial_hooks()
@@ -80,7 +84,9 @@ class TestCharm(unittest.TestCase):
         _check_output.side_effect = [b"name: microstack", b"1.1.1.1", b"2.2.2.2"]
         self.harness.update_config(
             {
-                "containerd_env": "",
+                "containerd_http_proxy": "",
+                "containerd_https_proxy": "",
+                "containerd_no_proxy": "",
                 "channel": "1.26-strict",
             }
         )
@@ -132,7 +138,9 @@ class TestCharm(unittest.TestCase):
         _uname.return_value.release = "5.13-kvm"
 
         _check_output.side_effect = [b"1.1.1.1", b"2.2.2.2"]
-        self.harness.update_config({"containerd_env": ""})
+        self.harness.update_config(
+            {"containerd_http_proxy": "", "containerd_https_proxy": "", "containerd_no_proxy": ""}
+        )
 
         self.harness.set_leader(False)
         self.harness.begin_with_initial_hooks()
@@ -199,9 +207,10 @@ class TestCharm(unittest.TestCase):
 
     @patch("subprocess.check_output")
     @patch("subprocess.check_call")
-    @patch("yaml.dump")
-    @patch("builtins.open", new_callable=mock_open, read_data="")
+    @patch("yaml.safe_dump")
+    @patch("pathlib.Path.open", new_callable=mock_open, read_data="")
     def test_action_kubeconfig(self, _open, _yaml_dump, _check_call, _check_output):
+        home = os.environ.get("HOME") or "/home/ubuntu"
         self.harness.begin()
         _check_output.side_effect = [b"clusters: [{cluster: {server: https://some-address:16443}}]", b"192.0.2.1"]
 
@@ -211,17 +220,20 @@ class TestCharm(unittest.TestCase):
             _check_output.call_args_list,
             [call(["/snap/bin/microk8s", "config"]), call(["unit-get", "public-address"])],
         )
-        self.assertEqual(_check_call.call_args_list, [call(["chown", "-R", "ubuntu:ubuntu", "/home/ubuntu/config"])])
 
-        _yaml_dump.assert_called_once_with({"clusters": [{"cluster": {"server": "https://192.0.2.1:16443"}}]}, _open())
+        expected_cluster = {"clusters": [{"cluster": {"server": "https://192.0.2.1:16443"}}]}
+        _yaml_dump.assert_has_calls([call(expected_cluster, _open()), call(expected_cluster)])
 
-        event.set_results.assert_called_once_with({"kubeconfig": "/home/ubuntu/config"})
+        event.set_results.assert_called_once_with(
+            {"kubeconfig": pathlib.Path(f"{home}/config"), "content": _yaml_dump()}
+        )
 
     @patch("subprocess.check_output")
     @patch("subprocess.check_call")
-    @patch("yaml.dump")
-    @patch("builtins.open", new_callable=mock_open, read_data="")
+    @patch("yaml.safe_dump")
+    @patch("pathlib.Path.open", new_callable=mock_open, read_data="")
     def test_action_kubeconfig_ipv6(self, _open, _yaml_dump, _check_call, _check_output):
+        home = os.environ.get("HOME") or "/home/ubuntu"
         self.harness.begin()
         _check_output.side_effect = [b"clusters: [{cluster: {server: https://some-address:16443}}]", b"2001:db8::1"]
 
@@ -231,10 +243,10 @@ class TestCharm(unittest.TestCase):
             _check_output.call_args_list,
             [call(["/snap/bin/microk8s", "config"]), call(["unit-get", "public-address"])],
         )
-        self.assertEqual(_check_call.call_args_list, [call(["chown", "-R", "ubuntu:ubuntu", "/home/ubuntu/config"])])
 
-        _yaml_dump.assert_called_once_with(
-            {"clusters": [{"cluster": {"server": "https://[2001:db8::1]:16443"}}]}, _open()
+        expected_cluster = {"clusters": [{"cluster": {"server": "https://[2001:db8::1]:16443"}}]}
+        _yaml_dump.assert_has_calls([call(expected_cluster, _open()), call(expected_cluster)])
+
+        event.set_results.assert_called_once_with(
+            {"kubeconfig": pathlib.Path(f"{home}/config"), "content": _yaml_dump()}
         )
-
-        event.set_results.assert_called_once_with({"kubeconfig": "/home/ubuntu/config"})

@@ -5,9 +5,10 @@ import yaml
 import logging
 import subprocess
 import os
+import shlex
 from pathlib import Path
 
-from ops.charm import RelationEvent
+from ops.charm import RelationEvent, ConfigChangedEvent
 from ops.framework import EventSource, Object, ObjectEvents, StoredState
 from ops.model import ActiveStatus, BlockedStatus, MaintenanceStatus
 
@@ -20,6 +21,9 @@ from containerd_config import ContainerdConfig, InvalidRegistriesError, Registry
 from utils import (
     check_kubernetes_version_is_older,
     close_port,
+    ensure_block,
+    ensure_call,
+    ensure_file,
     get_departing_unit_name,
     get_microk8s_node,
     get_microk8s_nodes_json,
@@ -36,6 +40,10 @@ logger = logging.getLogger(__name__)
 CONTAINERD_ENV_SNAP_PATH = "/var/snap/microk8s/current/args/containerd-env"
 CSR_CONF_TEMPLATE_SNAP_PATH = "/var/snap/microk8s/current/certs/csr.conf.template"
 NO_CERT_REISSUE_LOCKFILE = "/var/snap/microk8s/current/var/lock/no-cert-reissue"
+
+
+def snap_data_dir() -> Path:
+    return Path("/var/snap/microk8s/current")
 
 
 class EventError(Exception):
@@ -136,7 +144,7 @@ class MicroK8sCluster(Object):
         self.hostnames = HostnameManager(charm, relation_name)
 
         self.framework.observe(charm.on.install, self._on_install)
-        self.framework.observe(charm.on.config_changed, self._containerd_env)
+        self.framework.observe(charm.on.config_changed, self._config_containerd_proxy)
         self.framework.observe(charm.on.config_changed, self._custom_registries)
         self.framework.observe(charm.on.config_changed, self._coredns_config)
         self.framework.observe(charm.on.config_changed, self._ingress_ports)
@@ -244,21 +252,40 @@ class MicroK8sCluster(Object):
             close_port("80/tcp")
             close_port("443/tcp")
 
-    def _containerd_env(self, event):
-        try:
-            with open(CONTAINERD_ENV_SNAP_PATH) as env:
-                existing = env.read()
-        except Exception:
-            # We could be racing install, or who knows what else, so just try again later.
-            event.defer()
+    def _config_containerd_proxy(self, _: ConfigChangedEvent):
+        if isinstance(self.model.unit.status, BlockedStatus):
             return
-        configured = self.model.config["containerd_env"]
-        if existing == configured:
+
+        self._set_containerd_proxy_options(
+            self.model.config["containerd_http_proxy"],
+            self.model.config["containerd_https_proxy"],
+            self.model.config["containerd_no_proxy"],
+        )
+
+    def _set_containerd_proxy_options(self, http_proxy: str, https_proxy: str, no_proxy: str):
+        """update containerd http proxy configuration and restart containerd if changed"""
+
+        proxy_config = []
+        if http_proxy:
+            proxy_config.append(f"http_proxy={shlex.quote(http_proxy)}")
+        if https_proxy:
+            proxy_config.append(f"https_proxy={shlex.quote(https_proxy)}")
+        if no_proxy:
+            proxy_config.append(f"no_proxy={shlex.quote(no_proxy)}")
+
+        if not proxy_config:
+            logger.debug("No containerd proxy configuration specified")
             return
-        # This file is only read on startup, so just truncate and append.
-        with open(CONTAINERD_ENV_SNAP_PATH, "w") as env:
-            env.write(configured)
-        subprocess.check_call(["systemctl", "restart", "snap.microk8s.daemon-containerd.service"])
+
+        logger.info("Set containerd http proxy configuration %s", proxy_config)
+
+        path = snap_data_dir() / "args" / "containerd-env"
+        containerd_env = path.read_text() if path.exists() else ""
+        new_containerd_env = ensure_block(containerd_env, "\n".join(proxy_config), "# {mark} managed by microk8s charm")
+
+        if ensure_file(path, new_containerd_env, 0o600, 0, 0):
+            logger.info("Restart containerd to apply environment configuration")
+            ensure_call(["snap", "restart", "microk8s.daemon-containerd"])
 
     def _custom_registries(self, event):
         configured = self.model.config["custom_registries"]
