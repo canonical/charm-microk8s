@@ -1,3 +1,6 @@
+# 🚧 Deprecation Notice 🚧
+This charm is no longer under active development and there will be no further updates. For similar functionality, consider the currently-in-development [‘k8s’ charm](https://charmhub.io/k8s).
+
 # MicroK8s
 
 ## The smallest, fastest Kubernetes
