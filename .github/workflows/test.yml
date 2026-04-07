@@ -15,7 +15,7 @@ jobs:
     runs-on: ubuntu-20.04
     steps:
       - name: Check out code
-        uses: actions/checkout@v3.5.2
+        uses: actions/checkout@8e5e7e5ab8b370d6c329ec480221332ada57f0ab # v3.5.2
       - name: Install charmcraft
         run: sudo snap install charmcraft --classic
       - name: Build charm
@@ -23,7 +23,7 @@ jobs:
           charmcraft pack -v --destructive-mode
           mv microk8s*.charm microk8s.charm
       - name: Upload charm
-        uses: actions/upload-artifact@v3.1.2
+        uses: actions/upload-artifact@0b7f8abb1508181956e8e162db84b466c27e18ce # v3.1.2
         with:
           name: microk8s.charm
           path: ./microk8s.charm
@@ -41,11 +41,11 @@ jobs:
         juju: [3.1]
     steps:
       - name: Checking out repo
-        uses: actions/checkout@v3.5.2
+        uses: actions/checkout@8e5e7e5ab8b370d6c329ec480221332ada57f0ab # v3.5.2
       # - name: Setup tmate session
-      #   uses: mxschmitt/action-tmate@v3
+      #   uses: mxschmitt/action-tmate@c0afd6f790e3a5564914980036ebf83216678101 # v3
       - name: Configure pytest-operator
-        uses: charmed-kubernetes/actions-operator@main
+        uses: charmed-kubernetes/actions-operator@ea90ed489690bf3b1c1fcca6ac5f9edab70aecb0 # main
         with:
           provider: lxd
           lxd-channel: 5.0/stable
@@ -53,7 +53,7 @@ jobs:
       - name: Add user to lxd group
         run: sudo usermod -a -G lxd $USER
       - name: Fetch charm
-        uses: actions/download-artifact@v3.0.2
+        uses: actions/download-artifact@9bc31d5ccc31df68ecc42ccf4149144866c47d8a # v3.0.2
         with:
           name: microk8s.charm
           path: build
@@ -76,7 +76,7 @@ jobs:
           juju status -m testing --format yaml > artifacts/juju.yaml
       - name: Upload artifacts
         if: always()
-        uses: actions/upload-artifact@v3.1.2
+        uses: actions/upload-artifact@0b7f8abb1508181956e8e162db84b466c27e18ce # v3.1.2
         with:
           name: Cluster - ${{ matrix.control_plane}}cp${{ matrix.workers}}w - ${{ matrix.series }} - juju ${{ matrix.juju }}
           path: artifacts/
@@ -91,11 +91,11 @@ jobs:
         juju: [3.1]
     steps:
       - name: Checking out repo
-        uses: actions/checkout@v3.5.2
+        uses: actions/checkout@8e5e7e5ab8b370d6c329ec480221332ada57f0ab # v3.5.2
       # - name: Setup tmate session
-      #   uses: mxschmitt/action-tmate@v3
+      #   uses: mxschmitt/action-tmate@c0afd6f790e3a5564914980036ebf83216678101 # v3
       - name: Configure pytest-operator
-        uses: charmed-kubernetes/actions-operator@main
+        uses: charmed-kubernetes/actions-operator@ea90ed489690bf3b1c1fcca6ac5f9edab70aecb0 # main
         with:
           provider: lxd
           lxd-channel: 5.0/stable
@@ -103,7 +103,7 @@ jobs:
       - name: Add user to lxd group
         run: sudo usermod -a -G lxd $USER
       - name: Fetch charm
-        uses: actions/download-artifact@v3.0.2
+        uses: actions/download-artifact@9bc31d5ccc31df68ecc42ccf4149144866c47d8a # v3.0.2
         with:
           name: microk8s.charm
           path: build
@@ -125,7 +125,7 @@ jobs:
           juju status -m testing --format yaml > artifacts/juju.yaml
       - name: Upload artifacts
         if: always()
-        uses: actions/upload-artifact@v3.1.2
+        uses: actions/upload-artifact@0b7f8abb1508181956e8e162db84b466c27e18ce # v3.1.2
         with:
           name: Traefik - juju ${{ matrix.juju }}
           path: artifacts/
@@ -140,11 +140,11 @@ jobs:
         juju: [3.1]
     steps:
       - name: Checking out repo
-        uses: actions/checkout@v3.5.2
+        uses: actions/checkout@8e5e7e5ab8b370d6c329ec480221332ada57f0ab # v3.5.2
       # - name: Setup tmate session
-      #   uses: mxschmitt/action-tmate@v3
+      #   uses: mxschmitt/action-tmate@c0afd6f790e3a5564914980036ebf83216678101 # v3
       - name: Configure pytest-operator
-        uses: charmed-kubernetes/actions-operator@main
+        uses: charmed-kubernetes/actions-operator@ea90ed489690bf3b1c1fcca6ac5f9edab70aecb0 # main
         with:
           provider: lxd
           lxd-channel: 5.0/stable
@@ -152,7 +152,7 @@ jobs:
       - name: Add user to lxd group
         run: sudo usermod -a -G lxd $USER
       - name: Fetch charm
-        uses: actions/download-artifact@v3.0.2
+        uses: actions/download-artifact@9bc31d5ccc31df68ecc42ccf4149144866c47d8a # v3.0.2
         with:
           name: microk8s.charm
           path: build
@@ -174,7 +174,7 @@ jobs:
           juju status -m testing --format yaml > artifacts/juju.yaml
       - name: Upload artifacts
         if: always()
-        uses: actions/upload-artifact@v3.1.2
+        uses: actions/upload-artifact@0b7f8abb1508181956e8e162db84b466c27e18ce # v3.1.2
         with:
           name: Observability - juju ${{ matrix.juju }}
           path: artifacts/
@@ -189,11 +189,11 @@ jobs:
         juju: [3.1]
     steps:
       - name: Checking out repo
-        uses: actions/checkout@v3.5.2
+        uses: actions/checkout@8e5e7e5ab8b370d6c329ec480221332ada57f0ab # v3.5.2
       # - name: Setup tmate session
-      #   uses: mxschmitt/action-tmate@v3
+      #   uses: mxschmitt/action-tmate@c0afd6f790e3a5564914980036ebf83216678101 # v3
       - name: Configure pytest-operator
-        uses: charmed-kubernetes/actions-operator@main
+        uses: charmed-kubernetes/actions-operator@ea90ed489690bf3b1c1fcca6ac5f9edab70aecb0 # main
         with:
           provider: lxd
           lxd-channel: 5.0/stable
@@ -201,7 +201,7 @@ jobs:
       - name: Add user to lxd group
         run: sudo usermod -a -G lxd $USER
       - name: Fetch charm
-        uses: actions/download-artifact@v3.0.2
+        uses: actions/download-artifact@9bc31d5ccc31df68ecc42ccf4149144866c47d8a # v3.0.2
         with:
           name: microk8s.charm
           path: build
@@ -223,7 +223,7 @@ jobs:
           juju status -m testing --format yaml > artifacts/juju.yaml
       - name: Upload artifacts
         if: always()
-        uses: actions/upload-artifact@v3.1.2
+        uses: actions/upload-artifact@0b7f8abb1508181956e8e162db84b466c27e18ce # v3.1.2
         with:
           name: CoreDNS - juju ${{ matrix.juju }}
           path: artifacts/
@@ -238,11 +238,11 @@ jobs:
         juju: [3.1]
     steps:
       - name: Checking out repo
-        uses: actions/checkout@v3.5.2
+        uses: actions/checkout@8e5e7e5ab8b370d6c329ec480221332ada57f0ab # v3.5.2
       # - name: Setup tmate session
-      #   uses: mxschmitt/action-tmate@v3
+      #   uses: mxschmitt/action-tmate@c0afd6f790e3a5564914980036ebf83216678101 # v3
       - name: Configure pytest-operator
-        uses: charmed-kubernetes/actions-operator@main
+        uses: charmed-kubernetes/actions-operator@ea90ed489690bf3b1c1fcca6ac5f9edab70aecb0 # main
         with:
           provider: lxd
           lxd-channel: 5.0/stable
@@ -250,7 +250,7 @@ jobs:
       - name: Add user to lxd group
         run: sudo usermod -a -G lxd $USER
       - name: Fetch charm
-        uses: actions/download-artifact@v3.0.2
+        uses: actions/download-artifact@9bc31d5ccc31df68ecc42ccf4149144866c47d8a # v3.0.2
         with:
           name: microk8s.charm
           path: build
@@ -272,7 +272,7 @@ jobs:
           juju status -m testing --format yaml > artifacts/juju.yaml
       - name: Upload artifacts
         if: always()
-        uses: actions/upload-artifact@v3.1.2
+        uses: actions/upload-artifact@0b7f8abb1508181956e8e162db84b466c27e18ce # v3.1.2
         with:
           name: Ceph - juju ${{ matrix.juju }}
           path: artifacts/

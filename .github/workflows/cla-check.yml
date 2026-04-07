@@ -10,4 +10,4 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Check if CLA signed
-        uses: canonical/has-signed-canonical-cla@1.2.0
+        uses: canonical/has-signed-canonical-cla@9a7e0da38a13dbc25b14c389851bcf1624f4784d # 1.2.0
